@@ -5,18 +5,25 @@ using System.Threading.Tasks;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody))]
-public class PlayerRunner : Player, IDamageable
+public class PlayerRunner : Player, IDamageable, IBuffReceiver
 {
     [Header("Statistics")]
     [Networked] public float HP { get; set; } = 300f;
-    [Networked] public float Stamina { get; set; } = 100f;
+    [Networked] public float Stamina { get; set; } = 100f; // 소모 1초 후 회복
     [Networked] public float RunningPower { get; set; } = 30f;
     [Networked] public float DamageReduction { get; set; } = 0f;
     [Networked] public float WeaponDamageScaler { get; set; } = 1f;
+    [Networked] public float WeaponAttackSpeedScaler { get; set; } = 1f;
+    [Networked] public float WeaponReloadSpeedScaler { get; set; } = 1f;
     [Networked] public NetworkBool IsDead { get; set; }
 
     [Header("Movement")]
-    [SerializeField] private float _moveSpeed = 6f; // 이동 속도
+    [SerializeField] private float _moveSpeed = 6f; // 이동 속도 -> Networked로 변경
+    // 업그레이드: 체력, 이동 속도, 기력량, 기력 회복 속도, 무기 데미지
+
+    [SerializeField] private ParticleSystem _swiftnessVFX;
+
+    public Sprite[] skillIcons;
 
     private Rigidbody _rigidbody; // 리지드바디
     private RunnerItemConsumer _itemConsumer; // 아이템 소비자
@@ -79,6 +86,7 @@ public class PlayerRunner : Player, IDamageable
                 else
                     CastSkill(data.SelectedSkill);
             }
+            UpdateSkillIcon(data.SelectedSkill);
 
             // 러너 상호작용
             var interactUsing = data.InteractInput.IsSet(NetworkInputData.INTERACT_INPUT);
@@ -142,8 +150,16 @@ public class PlayerRunner : Player, IDamageable
         _rigidbody.AddForce(3f * _moveSpeed * transform.forward, ForceMode.Impulse);
         var originalDrag = _rigidbody.linearDamping;
         _rigidbody.linearDamping = 2f; // 슬라이드 시 마찰력 증가
-        Stamina -= 10f;
-        StageManager.Instance.UIController.RunnerUI.Display.Player.SetStaminaBarRatio(Stamina / 100f); // UI 기력바 갱신
+        if (_isSwiftness && _swiftnessSlideCount > 0)
+        {
+            _swiftnessSlideCount--;
+            Debug.Log($"스위프트니스 슬라이드 남음: {_swiftnessSlideCount}회");
+        }
+        else
+        {
+            Stamina -= 10f;
+            StageManager.Instance.UIController.RunnerUI.Display.Player.SetStaminaBarRatio(Stamina / 100f); // UI 기력바 갱신
+        }
         await Task.Delay(1000); // 1초 동안 슬라이드 상태 유지
         _rigidbody.linearDamping = originalDrag;
         _isSliding = false;
@@ -166,11 +182,20 @@ public class PlayerRunner : Player, IDamageable
         _skillCaster.Cast(skillType, this);
     }
 
+    private void UpdateSkillIcon(int skillIndex)
+    {
+        if (skillIndex < 1 || skillIndex > skillIcons.Length)
+            return;
+        StageManager.Instance.UIController.RunnerUI.Display.Player.SetSkillIcon(skillIcons[skillIndex - 1]);
+    }
+
     public void StartTumble()
     {
         if (_isTumbling) return; // 이미 텀블 상태면 무시
         _isTumbling = true;
         _rigidbody.linearVelocity = _moveSpeed * transform.forward;
+        transform.Find("Root").DOLocalMoveY(2f, 0.5f).SetLoops(2, LoopType.Yoyo).SetEase(Ease.InOutQuad);
+        transform.Find("Root").DOLocalRotate(new Vector3(360f, 0f, 0f), 1f, RotateMode.FastBeyond360).SetEase(Ease.Linear);
         DOTween.Sequence()
             .AppendInterval(1.0f)
             .AppendCallback(() => _isTumbling = false);
@@ -196,12 +221,13 @@ public class PlayerRunner : Player, IDamageable
 
     public void StartOutOfBody()
     {
+        // 사선은 앞으로 나가는 영혼한테 따라가도록 구현
         if (_isOutOfBody) return; // 이미 영혼 상태면 무시
         _isOutOfBody = true;
         _outOfBodySpiritObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         _outOfBodySpiritObject.transform.position = transform.position + transform.forward * 1f;
         _outOfBodySequence = DOTween.Sequence()
-            .Append(_outOfBodySpiritObject.transform.DOMove(transform.position + transform.forward * 50f, 5.0f).SetEase(Ease.Linear))
+            .Append(_outOfBodySpiritObject.transform.DOMove(transform.position + transform.forward * 20f, 2.0f).SetEase(Ease.Linear))
             .AppendCallback(() => EndOutOfBody());
     }
 
@@ -221,15 +247,20 @@ public class PlayerRunner : Player, IDamageable
     {
         if (_isSwiftness) return; // 이미 스위프트니스 상태면 무시
         _isSwiftness = true;
-        // 무기 공격 속도
-        // 장전 속도 대폭 증가
+        WeaponAttackSpeedScaler *= 1.5f; // 공격 속도 50% 증가
+        WeaponReloadSpeedScaler *= 1.5f; // 장전 속도 50% 증가
         _swiftnessSlideCount = 3; // 슬라이드 3회 획득
+        Debug.Log("스위프트니스 상태 시작");
+        _swiftnessVFX.Play();
         DOTween.Sequence()
             .AppendInterval(10.0f) // 10초 지속
             .AppendCallback(() =>
             {
+                WeaponAttackSpeedScaler /= 1.5f; // 공격 속도 원래대로
+                WeaponReloadSpeedScaler /= 1.5f; // 장전 속도 원래대로
                 _isSwiftness = false;
                 _swiftnessSlideCount = 0;
+                _swiftnessVFX.Stop();
                 Debug.Log("스위프트니스 상태 종료");
             });
     }
@@ -246,4 +277,43 @@ public class PlayerRunner : Player, IDamageable
         if (HP <= 0f) // 체력이 0 이하라면
             IsDead = true; // 죽음 처리
     }
+
+    // 증폭 타워: IBuffReceiver 인터페이스 구현, Enter 시 BuffEnter(), Exit 시 BuffExit()
+    // 
+
+    #region Runner Upgrade Methods
+    public void AttackUp(float amount)
+    {
+        WeaponDamageScaler += amount;
+    }
+
+    public void SpeedUp()
+    {
+        
+    }
+    #endregion
+
+    #region BuffReceiver Methods
+    public void BuffEnter(IBuffParam buffParam)
+    {
+        switch (buffParam)
+        {
+            case AmplificationTowerBuffParam amplificationTowerBuffParam:
+                WeaponDamageScaler += amplificationTowerBuffParam.AttackBonus;
+                _moveSpeed += amplificationTowerBuffParam.SpeedBonus;
+                break;
+            default:
+                break;
+        }
+    }
+    public void BuffStay(IBuffParam buffParam)
+    {
+        // 버프 지속 로직 구현
+    }
+
+    public void BuffExit(IBuffParam buffParam)
+    {
+        // 버프 종료 로직 구현
+    }
+    #endregion
 }

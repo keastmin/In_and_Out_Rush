@@ -1,11 +1,10 @@
 using Fusion;
-using KDM;
 using System.Collections.Generic;
 using UnityEngine;
 
 public sealed class AmplificationTower : SupportTower, ICanDragObject
 {
-    private HashSet<IBuffRecieve> _recievers;
+    private HashSet<IBuffReceiver> _recievers;
 
     protected override void TowerFixedUpdateNetwork()
     {

@@ -506,7 +506,7 @@ Camera:
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
-    m_Bits: 471
+    m_Bits: 983
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
@@ -2235,12 +2235,44 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3368162126827994253, guid: 4c2035059c69fbc42b20cd4a6d5d7c03, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3368162126827994253, guid: 4c2035059c69fbc42b20cd4a6d5d7c03, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5358047709951428462, guid: 4c2035059c69fbc42b20cd4a6d5d7c03, type: 3}
       propertyPath: m_Name
       value: Player Builder UI
       objectReference: {fileID: 0}
-    - target: {fileID: 5358047709951428462, guid: 4c2035059c69fbc42b20cd4a6d5d7c03, type: 3}
-      propertyPath: m_IsActive
+    - target: {fileID: 6629992142042331127, guid: 4c2035059c69fbc42b20cd4a6d5d7c03, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6629992142042331127, guid: 4c2035059c69fbc42b20cd4a6d5d7c03, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6629992142042331127, guid: 4c2035059c69fbc42b20cd4a6d5d7c03, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7038232785959304414, guid: 4c2035059c69fbc42b20cd4a6d5d7c03, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7038232785959304414, guid: 4c2035059c69fbc42b20cd4a6d5d7c03, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7038232785959304414, guid: 4c2035059c69fbc42b20cd4a6d5d7c03, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7038232785959304414, guid: 4c2035059c69fbc42b20cd4a6d5d7c03, type: 3}
+      propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
@@ -2375,7 +2407,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2984146816420512075, guid: e4f76d1c9ebcfc94da4fe245963476d1, type: 3}
       propertyPath: _playerPosition
-      value: 1
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2984146816420512075, guid: e4f76d1c9ebcfc94da4fe245963476d1, type: 3}
+      propertyPath: _testSessionName
+      value: TestA
       objectReference: {fileID: 0}
     - target: {fileID: 8681410219602733062, guid: e4f76d1c9ebcfc94da4fe245963476d1, type: 3}
       propertyPath: m_LocalPosition.x

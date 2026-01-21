@@ -14,9 +14,18 @@ public class PlayerBuilderTowerSelectState : IPlayerState
     {
         Debug.Log("Tower Select 상태 진입");
 
-        var manager = StageManager.Instance;
-        if (manager != null)
-            manager.UIController.BuilderUI.ActivationTowerSelectUI(true);
+        // 선택된 타워 타입 정하기
+        TowerType type = TowerType.Attack;
+        foreach(var tower in _player.SelectedTowers)
+        {
+            if(tower.Type == TowerType.Center || tower.Type == TowerType.Support)
+            {
+                type = tower.Type;
+                break;
+            }
+        }
+        
+        _player.BuilderUI.ActivationTowerSelectUI(true, type);
     }
 
     public void Update()
@@ -37,9 +46,7 @@ public class PlayerBuilderTowerSelectState : IPlayerState
 
     public void Exit()
     {
-        var manager = StageManager.Instance;
-        if (manager != null)
-            manager.UIController.BuilderUI.ActivationTowerSelectUI(false);
+        _player.BuilderUI.ActivationTowerSelectUI(false);
     }
 
     private void TransitionTo()

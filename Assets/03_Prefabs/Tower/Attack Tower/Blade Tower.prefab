@@ -438,6 +438,11 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 6499190095465434370, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
   m_PrefabInstance: {fileID: 6661312010346456425}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &875207329756897483 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5788506057211119010, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
+  m_PrefabInstance: {fileID: 6661312010346456425}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &4591599094736637546 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7190305726298204931, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
@@ -469,6 +474,8 @@ MonoBehaviour:
     Mineral: 0
     Gas: 0
   _ghost: {fileID: 7665473588800853303, guid: 0bf0c54a9fca10e42892d87a65465f48, type: 3}
+  _selectedChecker: {fileID: 875207329756897483}
+  _selectedImage: {fileID: 0}
   _attackSpeed: 1
   _attackPosition: {fileID: 0}
   _enemyLayer:
@@ -476,8 +483,6 @@ MonoBehaviour:
     m_Bits: 64
   _targettingRange: 5
   _rotateSpeed: 10
-  _selectedChecker: {fileID: 6955318143968693727}
-  _selectedImage: {fileID: 0}
   _propertiesType: 0
   _flameEffect: {fileID: 4591599094736637546}
   _blitzEffect: {fileID: 7300171442849357270}
@@ -487,11 +492,6 @@ MonoBehaviour:
   AttackRange: 3
   CanHit: 0
   HitColliders: []
---- !u!1 &6955318143968693727 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 4393255916219869366, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
-  m_PrefabInstance: {fileID: 6661312010346456425}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &7300171442849357270 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 4124963853794736319, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}

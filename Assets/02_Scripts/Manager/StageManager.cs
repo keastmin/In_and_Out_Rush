@@ -77,6 +77,9 @@ public class StageManager : NetworkBehaviour
         // 로컬 시스템 - UI 초기화
         InitUIController();
 
+        // 연구소 UI에 러너 참조 주입
+        LaboratoryUIInjectionPlayerRunner(UIController.BuilderUI, PlayerRunner);
+
         // 마지막으로 빌더에게 필요한 참조들 바인드 해주기
         BuilderReferenceBind(
             PlayerBuilder,
@@ -141,6 +144,12 @@ public class StageManager : NetworkBehaviour
     }
 
     #region 참조 주입
+
+    // 연구소 UI에 PlayerRunner 참조 주입
+    private void LaboratoryUIInjectionPlayerRunner(PlayerBuilderUI builderUI, PlayerRunner runner)
+    {
+        builderUI.LaboratoryUIInjectionRunner(runner);
+    }
 
     // 빌더에게 필요한 참조 주입
     private void BuilderReferenceBind(PlayerBuilder builder, PlayerBuilderUI builderUI, HexagonGrid hexagonGrid, Laboratory laboratory)

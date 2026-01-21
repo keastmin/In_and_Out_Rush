@@ -12,6 +12,12 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
     public TowerGhost TowerGhost => _towerGhost;
     public Cost BuildCost => _buildCost;
     public bool IsStandByBuild => _isStandByBuild;
+    public bool IsCenterTower => _tower.IsCenter;
+    public bool HasBuffRange => _tower.HasBuffRange;
+    public float BuffRange => _tower.BuffRange;
+    public string TowerID => _tower.TowerID;
+
+    private PlayerBuilderTowerSystem _towerSystem;
 
     #region API
 
@@ -19,10 +25,26 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
     /// 외부에서 호출해야하는 초기화 함수
     /// </summary>
     /// <param name="builderUI">빌더의 UI 컴포넌트</param>
-    public void Init(PlayerBuilderUI builderUI)
+    public void Init(PlayerBuilderUI builderUI, PlayerBuilderTowerSystem towerSystem)
     {
         _isStandByBuild = false;
+        _towerSystem = towerSystem;
         LinkBuildTowerAction(builderUI);
+    }
+
+    /// <summary>
+    /// 해당 타워를 건설 가능한지 확인하는 함수
+    /// </summary>
+    /// <param name="towerId">설치할 타워의 ID</param>
+    /// <returns>설치 가능 여부</returns>
+    public bool TowerBuildConditionChecker(string towerId)
+    {
+        bool canBuild = true;
+        if (towerId == TowerIDContainer.TELEPORT_TOWER_ID)
+        {
+            canBuild = TeleportTowerBuildConditionChecker();
+        }
+        return canBuild;
     }
 
     /// <summary>
@@ -38,7 +60,6 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
             grid.ChangeCellState(index, CellState.Tower); // 타워 설치 인덱스에 타워 상태로 변경
             RPC_BuildTower(_towerRef, _buildCost, pos);
         }
-        RevertStandBy();
     }
 
     /// <summary>
@@ -92,9 +113,44 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
     private void RPC_BuildTower(NetworkPrefabRef towerRef, Cost cost, Vector3 position)
     {
-        ResourceSystem.Instance.Mineral -= cost.Mineral; // 미네랄 차감
-        ResourceSystem.Instance.Gas -= cost.Gas; // 가스 차감
-        Runner.Spawn(towerRef, position, Quaternion.identity); // 타워 스폰
+        if (HasStateAuthority)
+        {
+            ResourceSystem.Instance.Mineral -= cost.Mineral; // 미네랄 차감
+            ResourceSystem.Instance.Gas -= cost.Gas; // 가스 차감
+            NetworkObject tower = Runner.Spawn(towerRef, position, Quaternion.identity); // 타워 스폰
+            TeleportTowerSetting(tower); // 텔레포트 타워라면 빌더에게 텔레포트 관련 세팅을 요청
+        }
+    }
+
+    // 텔레포트 타워일시 설치 후 텔레포트 타워 관련 설정 세팅
+    private void TeleportTowerSetting(NetworkObject no)
+    {
+        if (no.TryGetComponent(out Tower tower))
+        {
+            if (tower.TowerID == TowerIDContainer.TELEPORT_TOWER_ID)
+            {
+                RPC_TeleportTowerSetting(no);
+            }
+        }
+    }
+
+    // 빌더에게 텔레포트 타워를 저장할 것을 요청
+    [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
+    private void RPC_TeleportTowerSetting(NetworkObject no)
+    {
+        if (HasInputAuthority)
+        {
+            if (no.TryGetComponent(out TeleportTower tower))
+                _towerSystem.AddTeleportTowerArray(tower);
+        }
+    }
+
+    // 텔레포트 타워 조건을 확인하는 함수
+    private bool TeleportTowerBuildConditionChecker()
+    {
+        if (_towerSystem.TeleportTowerCount == 2)
+            return false;
+        return true;
     }
 
     #endregion

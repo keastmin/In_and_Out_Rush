@@ -36,6 +36,7 @@ public class TrackMonsterSpawnSystem : NetworkSystemBase
 
             monster.SetTrack(track);
             monster.Initialize();
+            monster.SetTrackMonsterPriority(i); // 몬스터의 우선순위 할당
 
             yield return new WaitForSeconds(spawnInterval);
         }

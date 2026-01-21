@@ -8,7 +8,18 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
     private Dictionary<TowerGhost, Tower> _ghostToTowerDic; // 타워 고스트로 타워 찾기
     private Dictionary<Tower, Vector3> _towerToVecDic; // 타워로 위치 찾기
 
+    private PlayerBuilderTowerSystem _towerSystem; // 타워 시스템 참조
+
     #region API
+
+    /// <summary>
+    /// 타워 이동 컴포넌트 초기화 함수
+    /// </summary>
+    /// <param name="towerSystem">타워 시스템 참조</param>
+    public void InitTowerMove(PlayerBuilderTowerSystem towerSystem)
+    {
+        _towerSystem = towerSystem;
+    }
 
     public void TowerMoveSet(HashSet<Tower> towers)
     {
@@ -51,6 +62,10 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
         return canMove;
     }
 
+    /// <summary>
+    /// 타워의 이동 확정
+    /// </summary>
+    /// <param name="grid">그리드 컴포넌트의 참조</param>
     public void TowerMove(HexagonGrid grid)
     {
         int arrayCount = _ghostToTowerDic.Count;
@@ -70,6 +85,8 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
 
             netId[currentCount] = tower.Object.Id;
             vec[currentCount++] = g.transform.position;
+
+            TowerMoveProcess(tower);
         }
 
         // 타워 위치 이동 RPC 호출
@@ -98,6 +115,13 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
         foreach(var tower in towers)
         {
             var ghost = Instantiate(tower.Ghost);
+
+            // 버프가 있다면 고스트에 반영
+            if (tower.HasBuffRange)
+            {
+                ghost.SetGhostBuffRange(tower.BuffRange);
+            }
+
             _ghosts.Add(ghost);
             _ghostToTowerDic.Add(ghost, tower);
         }
@@ -164,6 +188,30 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
                 continue;
             obj.TryGetComponent(out NetworkTransform nt);
             nt.Teleport(pos[i]);
+        }
+    }
+
+    /// <summary>
+    /// 각 타워가 움직임 이후 처리되어야 하는 절차를 수행하는 함수
+    /// </summary>
+    /// <param name="tower">절차를 처리할 타워</param>
+    private void TowerMoveProcess(Tower tower)
+    {
+        string towerId = tower.TowerID;
+
+        // 텔레포트 타워의 움직임 이후 절차
+        if(towerId == TowerIDContainer.TELEPORT_TOWER_ID)
+        {
+            TeleportTowerMoveProcess(tower);
+        }
+    }
+
+    // 텔레포트 타워가 수행할 절차
+    private void TeleportTowerMoveProcess(Tower tower)
+    {
+        if(tower.TryGetComponent(out TeleportTower teleportTower))
+        {
+            teleportTower.SetCoolDown();
         }
     }
 

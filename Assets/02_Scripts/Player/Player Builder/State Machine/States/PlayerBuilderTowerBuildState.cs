@@ -6,10 +6,7 @@ public class PlayerBuilderTowerBuildState : IPlayerState
 {
     private PlayerBuilder _player;
 
-    private Tower _tower;
     private TowerGhost _towerGhost;
-    private NetworkPrefabRef _towerRef;
-    private Cost _towerCost;
     private Vector3 _towerBuildPosition;
     private Vector2Int _towerBuildIndex;
     private bool _canTowerBuild;
@@ -26,20 +23,29 @@ public class PlayerBuilderTowerBuildState : IPlayerState
 
         // 타워 가이드 생성
         _towerGhost = Object.Instantiate(_player.BuilderTowerBuild.TowerGhost);
+        if (_player.BuilderTowerBuild.HasBuffRange)
+        {
+            _towerGhost.SetGhostBuffRange(_player.BuilderTowerBuild.BuffRange);
+        }
 
         // 타워 건설 가능을 false로 초기화
         _canTowerBuild = false;
     }
 
     public void Update()
-    { 
+    {
+        // 센터 타워인가?
+        bool isCenter = _player.BuilderTowerBuild.IsCenterTower;
+
         // 타워 설치 전 예시 타워 설치
-        _canTowerBuild = SnapshotTowerGhost();
+        _canTowerBuild = SnapshotTowerGhost(isCenter);
 
         if (Input.GetMouseButtonDown(0) && _canTowerBuild && !EventSystem.current.IsPointerOverGameObject())
         {
             // 좌클릭을 하면 타워 설치
+            if (isCenter) _player.SetCenterTowerCount(_player.CenterTowerCount + 1); // 센터타워라면 카운트 하나 증가 
             _player.BuilderTowerBuild.BuildTower(_player.Grid, _towerBuildIndex); // 타워 설치
+            _player.BuilderTowerBuild.RevertStandBy(); // 되돌리기
         }
         else if (Input.GetMouseButtonDown(1))
         {
@@ -94,7 +100,7 @@ public class PlayerBuilderTowerBuildState : IPlayerState
     }
 
     // 타워 예시를 스냅샷하는 함수
-    private bool SnapshotTowerGhost()
+    private bool SnapshotTowerGhost(bool isCenter)
     {
         Vector3 mouseHitPoint;
         bool isValid = IsValidMouseRay(out mouseHitPoint);
@@ -110,9 +116,11 @@ public class PlayerBuilderTowerBuildState : IPlayerState
             bool isInTerritory = _player.Grid.IsPointInTerritory(_towerBuildIndex); // 영역 내부인가?
             bool isMineralEnough = StageManager.Instance.ResourceSystem.Mineral >= _player.BuilderTowerBuild.BuildCost.Mineral; // 미네랄이 충분한가?
             bool isGasEnough = StageManager.Instance.ResourceSystem.Gas >= _player.BuilderTowerBuild.BuildCost.Gas; // 가스가 충분한가?
+            bool isExceededCenterCount = (!isCenter) || (isCenter && _player.CenterTowerCount < _player.MaxCenterTowerCount); // 설치할 타워가 센터 타워이고 센터 타워의 개수가 충분한가?
+            bool eachTowerCondition = _player.BuilderTowerBuild.TowerBuildConditionChecker(_player.BuilderTowerBuild.TowerID); // 각 타워의 설치 조건을 검사
 
             // 타워 설치 가능 여부 판별 후 타워 고스트 색 변경
-            if (_player.Grid.IsEmptyCell(_towerBuildIndex) && isInTerritory && isMineralEnough && isGasEnough)
+            if (_player.Grid.IsEmptyCell(_towerBuildIndex) && isInTerritory && isMineralEnough && isGasEnough && isExceededCenterCount && eachTowerCondition)
             {
                 // 타워 설치가 가능하다면 푸른색으로 변경하고 타워 설치 가능 플래그를 true로 변경
                 _towerGhost.EnableTower();
@@ -120,7 +128,7 @@ public class PlayerBuilderTowerBuildState : IPlayerState
             }
             else
             {
-                // 타워 설치가 가능하다면 붉은색
+                // 타워 설치가 불가능하다면 붉은색
                 _towerGhost.DisableTower();
             }
         }

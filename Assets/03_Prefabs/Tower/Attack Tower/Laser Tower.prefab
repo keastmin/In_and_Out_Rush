@@ -585,11 +585,6 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 4124963853794736319, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
   m_PrefabInstance: {fileID: 3005064187948860934}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &1532309158598782640 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 4393255916219869366, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
-  m_PrefabInstance: {fileID: 3005064187948860934}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2870992353503217571 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1036938011115028901, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
@@ -616,6 +611,8 @@ MonoBehaviour:
     Mineral: 5
     Gas: 0
   _ghost: {fileID: 3643084436076818065, guid: d4047c01a64313f429c07ff99a6dd73f, type: 3}
+  _selectedChecker: {fileID: 8782237397610169252}
+  _selectedImage: {fileID: 0}
   _attackSpeed: 2
   _attackPosition: {fileID: 5333304996924359817}
   _enemyLayer:
@@ -623,8 +620,6 @@ MonoBehaviour:
     m_Bits: 64
   _targettingRange: 5
   _rotateSpeed: 10
-  _selectedChecker: {fileID: 1532309158598782640}
-  _selectedImage: {fileID: 0}
   _propertiesType: 0
   _flameEffect: {fileID: 5367509017210301701}
   _blitzEffect: {fileID: 1192030240813252281}
@@ -635,7 +630,6 @@ MonoBehaviour:
   _laserLength: 6
   _laserDamage: 3
   _laserWidthDecreaseRate: 1
-  _head: {fileID: 3835537074577292614}
 --- !u!120 &215352874251757992
 LineRenderer:
   serializedVersion: 2
@@ -751,5 +745,10 @@ GameObject:
 --- !u!4 &8324309076444236548 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6499190095465434370, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
+  m_PrefabInstance: {fileID: 3005064187948860934}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &8782237397610169252 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5788506057211119010, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
   m_PrefabInstance: {fileID: 3005064187948860934}
   m_PrefabAsset: {fileID: 0}

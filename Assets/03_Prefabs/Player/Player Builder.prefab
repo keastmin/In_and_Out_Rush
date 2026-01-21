@@ -13,9 +13,9 @@ GameObject:
   - component: {fileID: 2695761604568023699}
   - component: {fileID: 1348447139255107765}
   - component: {fileID: 5337325868287337551}
+  - component: {fileID: 1425796438643454213}
   - component: {fileID: 1367329938437336398}
   - component: {fileID: 8593551356125243380}
-  - component: {fileID: 381393472815718579}
   m_Layer: 0
   m_Name: Player Builder
   m_TagString: Untagged
@@ -55,10 +55,16 @@ MonoBehaviour:
   _cameraMaxZoomDistance: 11
   _cameraWheelPerZoomDistance: 10
   _zoomSmoothTime: 0.12
+  _clickDetectLayer:
+    serializedVersion: 2
+    m_Bits: 385
   _dragThresholdPixel: 5
   _dragDetectLayer:
     serializedVersion: 2
     m_Bits: 256
+  _maxCenterTowerCount: 3
+  _increaseAmountProbaility: 10
+  _maxIncreaseAmountProbability: 30
   _builderUI: {fileID: 0}
   _dragSystem: {fileID: 0}
   _builderMover: {fileID: 0}
@@ -68,7 +74,9 @@ MonoBehaviour:
   _environmentalLayer:
     serializedVersion: 2
     m_Bits: 128
-  Test: {fileID: 7847402044693984832, guid: 835635a8a678b20408884e501d6461dd, type: 3}
+  _centerTowerCount: 0
+  _increaseProperties: 0
+  _increaseProbability: 0
   DragSelectedColliders: []
 --- !u!114 &2695761604568023699
 MonoBehaviour:
@@ -114,6 +122,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d606aadc31fb12a498b352707137e54b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &1425796438643454213
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2585997719371933276}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5af0ebf0e83ad6549ae680752d720046, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  __teleportArray: []
 --- !u!114 &1367329938437336398
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -150,17 +171,5 @@ MonoBehaviour:
   - {fileID: 2695761604568023699}
   - {fileID: 1348447139255107765}
   - {fileID: 5337325868287337551}
+  - {fileID: 1425796438643454213}
   ForceRemoteRenderTimeframe: 0
---- !u!114 &381393472815718579
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2585997719371933276}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 667a8dfdb35ff39418bb1752d46baf78, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _hexagonGrid: {fileID: 0}

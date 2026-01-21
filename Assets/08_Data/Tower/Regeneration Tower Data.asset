@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43488c12847d0364199c9ab9f6f2544e, type: 3}
+  m_Name: Regeneration Tower Data
+  m_EditorClassIdentifier: 
+  Tower: {fileID: 2250402001114345989, guid: 2f80002e6f4605a4cb749ca82f04bfed, type: 3}
+  TowerGhost: {fileID: 8744631464877653142, guid: 2ec9a71eec4a7044390268b585ebd20b, type: 3}
+  TowerPrefabRef:
+    RawGuidValue: 2f80002e6f4605a4cb749ca82f04bfed

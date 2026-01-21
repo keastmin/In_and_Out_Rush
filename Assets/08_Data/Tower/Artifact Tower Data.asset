@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43488c12847d0364199c9ab9f6f2544e, type: 3}
+  m_Name: Artifact Tower Data
+  m_EditorClassIdentifier: 
+  Tower: {fileID: 6766747623519042757, guid: a1027db6c8e3ec94a948ef5f3550cd2e, type: 3}
+  TowerGhost: {fileID: 4712250449522736509, guid: 763291e856d437d4789bf69e314f12ab, type: 3}
+  TowerPrefabRef:
+    RawGuidValue: a1027db6c8e3ec94a948ef5f3550cd2e

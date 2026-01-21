@@ -69,10 +69,17 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 554064233507888941, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
       insertIndex: 1
       addedObject: {fileID: 2987248330911051840}
-    - targetCorrespondingSourceObject: {fileID: 554064233507888941, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 6738767568107957932}
   m_SourcePrefab: {fileID: 100100000, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
+--- !u!1 &1219560907678390276 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5788506057211119010, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
+  m_PrefabInstance: {fileID: 4663521085442727334}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &2553892069381617317 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7190305726298204931, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
+  m_PrefabInstance: {fileID: 4663521085442727334}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &5118422083082584715 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 554064233507888941, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
@@ -90,44 +97,40 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 96e8b7129f3ea8d4e89df07a9429fb51, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _additionalInfo: []
   _cost:
     Mineral: 0
     Gas: 0
-  _attackSpeed: 0.3
-  _attackPosition: {fileID: 5158920055649005697}
-  _enemyLayer:
+  _ghost: {fileID: 7665473588800853303, guid: aacfe1e481b51134cbb4c0e2e843f225, type: 3}
+  _type: 1
+  _selectedChecker: {fileID: 1219560907678390276}
+  _selectedImage: {fileID: 0}
+  _buffRange: 25
+  _buffRangeTransform: {fileID: 0}
+  _bullet: {fileID: 3383989042019545065, guid: b09406aae9916994e8ce9e5cadb1e573, type: 3}
+  _bulletSpeed: 40
+  _firePosition: {fileID: 5158920055649005697}
+  _damage: 2
+  _fireRate: 0.5
+  _layer:
     serializedVersion: 2
     m_Bits: 64
-  _targettingRange: 10
-  _rotateSpeed: 10
-  _currTarget: {fileID: 0}
-  _bullet: {fileID: 3383989042019545065, guid: b09406aae9916994e8ce9e5cadb1e573, type: 3}
-  _bulletSpeed: 20
-  _bulletDamage: 2
-  _bulletCount: 5
---- !u!135 &6738767568107957932
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5118422083082584715}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 5
-  m_Center: {x: 0, y: 0, z: 0}
+  _range: 20
+  _flamePropertiesEffect: {fileID: 2553892069381617317}
+  _blitzPropertiesEffect: {fileID: 8756958642325513497}
+  _bioPropertiesEffect: {fileID: 5682370755753876483}
 --- !u!4 &5158920055649005697 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 513425532071931175, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
+  m_PrefabInstance: {fileID: 4663521085442727334}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &5682370755753876483 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1036938011115028901, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
+  m_PrefabInstance: {fileID: 4663521085442727334}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &8756958642325513497 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4124963853794736319, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
   m_PrefabInstance: {fileID: 4663521085442727334}
   m_PrefabAsset: {fileID: 0}

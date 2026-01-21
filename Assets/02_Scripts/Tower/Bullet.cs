@@ -1,111 +1,97 @@
-using Fusion;
 using UnityEngine;
 
-public class Bullet : NetworkBehaviour
+[RequireComponent(typeof(Rigidbody))]
+public class Bullet : MonoBehaviour
 {
-    private Transform _target;
-    private float _speed;
-    private float _damage;
-    private int _hitMask;          // 맞출 레이어(적 레이어 마스크)
-    private Collider _targetCollider;
+    [Header("도착 판정(미세 오차용)")]
+    [SerializeField] private float _arriveDistance = 0.05f;
+
+    private Collider _target;
+    private Vector3 _lastTargetPos;
+    private float _bulletSpeed;
 
     private Rigidbody _rb;
-    private SphereCollider _spc;
+    private Vector3 _prevPos;
+    private bool _initialized;
 
-    private Vector3 _lastDir;
-
-    [SerializeField] private float _maxLife = 5f;
-    private float _life;
-
-    private bool _isHit = false;
-
-    public override void Spawned()
-    {
-        if (!HasStateAuthority)
-            Runner.SetIsSimulated(Object, false);
-    }
+    private float ArriveSqr => _arriveDistance * _arriveDistance;
 
     private void Awake()
     {
-        TryGetComponent(out _rb);
-        _rb.isKinematic = false;
-        _rb.useGravity = false;
-        _rb.interpolation = RigidbodyInterpolation.None; // Fusion이 보정
-        _rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-
-        TryGetComponent(out _spc);
-        _spc.isTrigger = true;
-
-        _isHit = false;
+        _rb = GetComponent<Rigidbody>();
     }
 
-    // Tower에서 적 레이어 마스크를 함께 넘겨주세요.
-    public void Init(Transform target, float speed, float damage, LayerMask hitMask, Collider targetCollider)
+    public void InitBullet(Collider target, float speed)
     {
         _target = target;
-        _speed = speed;
-        _damage = damage;
-        _hitMask = hitMask.value;
-        _targetCollider = targetCollider;
+        _bulletSpeed = speed;
 
-        _lastDir = (target.position - transform.position).normalized;
-        _life = 0f;
+        // 타겟이 즉시 파괴될 수 있으니 "마지막 위치"를 확보해 둠
+        _lastTargetPos = target != null ? target.bounds.center : transform.position;
+
+        _prevPos = _rb.position;
+        _initialized = true;
+
+        // 첫 틱부터 바로 날아가게
+        UpdateVelocityTowardLastPos();
     }
 
-    public override void FixedUpdateNetwork()
+    private void FixedUpdate()
     {
-        if (HasStateAuthority)
-        {
-            if (_isHit)
-            {
-                if (_targetCollider.TryGetComponent(out Monster monster))
-                {
-                    monster.TakeDamage(_damage);
-                }
+        if (!_initialized) return;
 
-                Runner.Despawn(Object);
-            }
-            else
-            {
-                ChaseTarget();
-            }
-        }
-    }
+        // 지난 틱 대비 이동량(이미 물리 시뮬이 반영된 현재 위치 기준)
+        Vector3 currPos = _rb.position;
+        Vector3 step = currPos - _prevPos;
 
-    private void ChaseTarget()
-    {
-        _life += Runner.DeltaTime;
-        if (_life > _maxLife)
+        // 타겟이 살아있으면 마지막 위치 갱신
+        SetLastTargetPosition();
+
+        // 1) _lastTargetPos에 도착(근접)했으면 제거
+        Vector3 toTarget = _lastTargetPos - currPos;
+        if (toTarget.sqrMagnitude <= ArriveSqr)
         {
-            Runner.Despawn(Object);
+            Destroy(gameObject);
             return;
         }
 
-        Vector3 dir;
-        if (_target)
+        // 2) _lastTargetPos를 "지나쳤으면" 제거
+        //    (이전 프레임에서의 이동 방향(step) 기준으로, 타겟이 뒤로 넘어가면 지나친 것)
+        if (step.sqrMagnitude > 1e-8f && Vector3.Dot(toTarget, step) <= 0f)
         {
-            Vector3 from = _rb.position;
-            Vector3 aimPos = _target.position;
-
-            dir = (aimPos - from).normalized;
-            _lastDir = dir;
-        }
-        else
-        {
-            dir = _lastDir;
+            Destroy(gameObject);
+            return;
         }
 
-        _rb.linearVelocity = dir * _speed;
+        // 다음 틱 비교를 위해 현재 위치 저장
+        _prevPos = currPos;
+
+        // 다음 물리 스텝에서 사용할 속도 갱신
+        UpdateVelocityTowardLastPos();
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void SetLastTargetPosition()
     {
-        if (HasStateAuthority)
+        // UnityEngine.Object는 Destroy되면 (== null)로 null처럼 취급됨
+        if (_target != null)
+            _lastTargetPos = _target.bounds.center;
+    }
+
+    private void UpdateVelocityTowardLastPos()
+    {
+        Vector3 dir = _lastTargetPos - _rb.position;
+        if (dir.sqrMagnitude <= 1e-8f)
         {
-            if (other == _targetCollider)
-            {
-                _isHit = true;
-            }
+            SetLinearVelocity(Vector3.zero);
+            return;
         }
+
+        dir.Normalize();
+        SetLinearVelocity(dir * _bulletSpeed);
+    }
+
+    private void SetLinearVelocity(Vector3 v)
+    {
+        _rb.linearVelocity = v;
     }
 }

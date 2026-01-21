@@ -7,6 +7,9 @@ public class TrackMonster : Monster
 {
     protected Track track;
     protected int currentPointIndex;
+    private int _priority; // 스폰 우선순위
+
+    public int Priority => _priority; // 스폰 우선순위
 
 #if UNITY_EDITOR
     void OnDrawGizmos()
@@ -21,6 +24,12 @@ public class TrackMonster : Monster
     public override void Initialize()
     {
         currentPointIndex = 0;
+    }
+
+    // 타워가 타겟으로 설정할 우선순위: 낮을수록 우선 타겟팅
+    public void SetTrackMonsterPriority(int priority)
+    {
+        _priority = priority;
     }
 
     public override void UpdateMonster() => FollowTrack();

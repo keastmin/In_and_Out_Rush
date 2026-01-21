@@ -3,7 +3,7 @@ using Unity.Cinemachine;
 using UnityEngine;
 using System.Collections.Generic;
 
-[RequireComponent(typeof(PlayerBuilderTowerBuild), typeof(PlayerBuilderGridInteractor))]
+[RequireComponent(typeof(PlayerBuilderTowerBuild))]
 public class PlayerBuilder : Player
 {
     [Header("Camera")]
@@ -13,9 +13,17 @@ public class PlayerBuilder : Player
     [SerializeField] private float _cameraWheelPerZoomDistance = 10f;
     [SerializeField] private float _zoomSmoothTime = 0.12f; // 작을수록 더 빠르게 붙음
 
+    [Header("Click")]
+    [SerializeField] private LayerMask _clickDetectLayer;
+
     [Header("Drag")]
     [SerializeField] private float _dragThresholdPixel = 5f; 
     [SerializeField] private LayerMask _dragDetectLayer;
+
+    [Header("Build")]
+    [SerializeField] private int _maxCenterTowerCount = 3; // 최대 센터 타워 설치 가능 개수
+    [SerializeField] private float _increaseAmountProbaility = 10f; // 속성 확률 증가량
+    [SerializeField] private float _maxIncreaseAmountProbability = 30f; // 최대 속성 확률 증가량
 
     [Header("Reference")]
     [SerializeField] private PlayerBuilderUI _builderUI; // UI 참조
@@ -46,6 +54,11 @@ public class PlayerBuilder : Player
     public HashSet<Tower> SelectedTowers => _selectedTowers;
     public int SelectedTowersCount => SelectedTowers.Count;
 
+    // 설치된 타워 정보
+    [SerializeField] private int _centerTowerCount = 0; // 센터타워 개수
+    [SerializeField] private TowerPropertiesType _increaseProperties = TowerPropertiesType.None; // 확률이 증가한 속성
+    [SerializeField] private float _increaseProbability = 0f; // 증가한 확률
+
     // UI와의 상호작용 변수
     public bool IsOpeningLaboratory { get; set; }
 
@@ -57,6 +70,7 @@ public class PlayerBuilder : Player
     private PlayerBuilderTowerBuild _builderTowerBuild; // 타워 건설 도움 컴포넌트
     private PlayerBuilderTowerSell _builderTowerSell; // 타워 판매 도움 컴포넌트
     private PlayerBuilderTowerMove _builderTowerMove; // 타워 이전 도움 컴포넌트
+    private PlayerBuilderTowerSystem _builderTowerSystem; // 설치된 타워들을 관리하는 컴포넌트
 
     #endregion
 
@@ -78,6 +92,12 @@ public class PlayerBuilder : Player
     public Vector2 CurrentMousePoint => _currentMousePoint;
     public float DragThresholdPixel => _dragThresholdPixel;
     public LayerMask DragDetectLayer => _dragDetectLayer;
+    public int CenterTowerCount => _centerTowerCount;
+    public TowerPropertiesType IncreaseProperties => _increaseProperties;
+    public float IncreaseProbability => _increaseProbability;
+    public int MaxCenterTowerCount => _maxCenterTowerCount;
+    public float IncreaseAmountProbability => _increaseAmountProbaility;
+    public float MaxIncreaseAmountProbability => _maxIncreaseAmountProbability;
 
     #endregion
 
@@ -133,16 +153,21 @@ public class PlayerBuilder : Player
         _hexagonGrid = hexagonGrid;
         _laboratory = laboratory;
 
+        // 타워 시스템 컴포넌트 참조 받아오기
+        TryGetComponent(out _builderTowerSystem);
+
         // 연구소 관련 액션 연결
-        _builderUI.OnClickLaboratoryButtonAction += OpenLaboratory;
-        _laboratory.OnClickLaboratoryObjectAction += OpenLaboratory;
+        _builderUI.OnClickLaboratoryButtonAction += IsOpenLaboratory;
+        _laboratory.OnClickLaboratoryObjectAction += IsOpenLaboratory;
 
         // 타워 판매 액션 연결
         TryGetComponent(out _builderTowerSell);
+        _builderTowerSell.InitTowerSell(_builderTowerSystem);
         _builderUI.OnClickSellTowerButtonAction += TowerSell;
 
         // 타워 이전 액션 연결
         TryGetComponent(out _builderTowerMove);
+        _builderTowerMove.InitTowerMove(_builderTowerSystem);
         _builderUI.OnClickMoveTowerButtonAction += ActiveTowerMoveState;
 
         // 타워 속성부여 액션 연결
@@ -150,7 +175,7 @@ public class PlayerBuilder : Player
 
         // 타워 건설 관련 컴포넌트 초기화
         TryGetComponent(out _builderTowerBuild);
-        _builderTowerBuild.Init(_builderUI);
+        _builderTowerBuild.Init(_builderUI, _builderTowerSystem);
     }
 
     #endregion
@@ -160,13 +185,8 @@ public class PlayerBuilder : Player
     // 월드를 향해 좌클릭을 눌렀을 때 이미 선택된 오브젝트들을 초기화 하고 새로운 정보 수집
     public void ClickLeftMouseDownOnWorld()
     {
-        // 이미 클릭된 오브젝트가 있을 때
-        if (ClickObject != null)
-        {
-            // 이미 등록된 클릭 오브젝트 해제
-            ClickObject.OnCancelClickThisObject();
-            ClickObject = null;
-        }
+        // 이미 클릭된 오브젝트가 있을 때 클리어
+        ClickObjectClear();
 
         // 이미 선택된 드래그 오브젝트가 있을 때
         if (DragObjectHash.Count > 0)
@@ -184,7 +204,7 @@ public class PlayerBuilder : Player
         // 새로운 오브젝트 수집 시도
         var cam = Camera.main;
         var ray = cam.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out var hit, 5000))
+        if (Physics.Raycast(ray, out var hit, 5000, _clickDetectLayer))
         {
             var inter = hit.collider.GetComponentInParent<ICanClickObject>();
             if (inter != null)
@@ -199,7 +219,19 @@ public class PlayerBuilder : Player
     public void ClickLeftMouseUpOnWorld()
     {
         if (ClickObject != null)
+        {
             ClickObject.OnLeftMouseUpThisObject();
+        }
+    }
+
+    // 클릭 오브젝트 초기화
+    public void ClickObjectClear()
+    {
+        if (ClickObject != null)
+        {
+            ClickObject.OnCancelClickThisObject();
+            ClickObject = null;
+        }
     }
 
     #endregion
@@ -265,14 +297,39 @@ public class PlayerBuilder : Player
     #region 월드 오브젝트 상호작용
 
     // 타워 속성 부여
-    public void TowerAddProperties()
+    public void TowerAddProperties(int typeIndex)
     {
-        Debug.Log("타워 속성부여 이벤트 눌림");
-        foreach(var tower in SelectedTowers)
+        if (SelectedTowers.Count > 0)
         {
-            if(tower.TryGetComponent(out AttackTower attackTower))
+            Debug.Log("타워 속성부여 이벤트 눌림");
+            foreach (var tower in SelectedTowers)
             {
-                attackTower.AddProperties(TowerPropertiesType.None);
+                if (tower.TryGetComponent(out AttackTower attackTower))
+                {
+                    attackTower.AddProperties(IncreaseProperties, IncreaseProbability);
+                }
+                else if(tower.TryGetComponent(out CenterTower centerTower))
+                {
+                    TowerPropertiesType type = (TowerPropertiesType)typeIndex;
+                    bool isAdd = centerTower.AddProperties(type);
+                    
+                    // 속성 부여 성공 시 공격 타워 속성 확률 변동
+                    if (isAdd)
+                    {
+                        // 속성이 없으면 확률업 속성 부여
+                        if (IncreaseProperties == TowerPropertiesType.None)
+                        {
+                            _increaseProperties = type;
+                        }
+
+                        // 동일 속성이면 확률 증가
+                        if (IncreaseProperties == type)
+                        {
+                            _increaseProbability = Mathf.Min(IncreaseProbability + IncreaseAmountProbability,
+                                                             MaxIncreaseAmountProbability);
+                        }
+                    }
+                }
             }
         }
     }
@@ -282,7 +339,7 @@ public class PlayerBuilder : Player
     {
         ClickObject = null;
         DragObjectHash.Clear();
-        _builderTowerSell.SellTower(_hexagonGrid, SelectedTowers);
+        _builderTowerSell.SellTower(_hexagonGrid, SelectedTowers, this);
     }
 
     // 공격 타워 선택 함수
@@ -297,13 +354,17 @@ public class PlayerBuilder : Player
         _selectedTowers.Clear();
     }
 
+    // 센터 타워 개수를 설정
+    public void SetCenterTowerCount(int centerCount)
+    {
+        _centerTowerCount = centerCount;
+    }
+
     #endregion
 
     #region 연구실 로직
 
-    public void OpenLaboratory() => IsOpeningLaboratory = true;
-
-    public void CloseLaboratory() => IsOpeningLaboratory = false;
+    public void IsOpenLaboratory(bool isOpen) => IsOpeningLaboratory = isOpen;
 
     #endregion
 

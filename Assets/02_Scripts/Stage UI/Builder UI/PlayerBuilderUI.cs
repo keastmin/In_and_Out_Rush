@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class PlayerBuilderUI : MonoBehaviour
@@ -14,15 +15,19 @@ public class PlayerBuilderUI : MonoBehaviour
 
     [SerializeField] private TextMeshProUGUI _buildUIText;
 
+    [Header("Properties UI")]
+    [SerializeField] private GameObject _randomPropertiesUI;
+    [SerializeField] private GameObject[] _selectPropertiesUI;
+
     public bool IsLaboratoryUIActive => _laboratoryUI.activeSelf;
 
     #region Action
 
     public event Action<TowerData> OnClickTowerBuildButtonAction; // 타워 건설 버튼을 눌렀을 때의 액션
-    public event Action OnClickLaboratoryButtonAction; // 실험실 버튼을 눌렀을 떄의 액션
+    public event Action<bool> OnClickLaboratoryButtonAction; // 실험실 버튼을 눌렀을 떄의 액션
     public event Action OnClickSellTowerButtonAction; // 타워 판매 버튼을 눌렀을 때의 액션
     public event Action OnClickMoveTowerButtonAction; // 타워 움직임 버튼을 눌렀을 때의 액션
-    public event Action OnClickUpgradeTowerButtonAction; // 타워 속성 부여 버튼을 눌렀을 때의 액션
+    public event Action<int> OnClickUpgradeTowerButtonAction; // 타워 속성 부여 버튼을 눌렀을 때의 액션
 
     #endregion
 
@@ -45,7 +50,7 @@ public class PlayerBuilderUI : MonoBehaviour
     // 실험실 버튼 클릭 이벤트
     public void OnClickLaboratoryButton(bool isActive)
     {
-        OnClickLaboratoryButtonAction?.Invoke();
+        OnClickLaboratoryButtonAction?.Invoke(isActive);
     }
 
     // 타워 선택 버튼 클릭 이벤트
@@ -67,9 +72,9 @@ public class PlayerBuilderUI : MonoBehaviour
     }
 
     // 타워 속성 부여 버튼 클릭 이벤트
-    public void OnClickTowerUpgradeButton()
+    public void OnClickTowerUpgradeButton(int typeIndex)
     {
-        OnClickUpgradeTowerButtonAction?.Invoke();
+        OnClickUpgradeTowerButtonAction?.Invoke(typeIndex);
     }
 
     #endregion
@@ -96,27 +101,45 @@ public class PlayerBuilderUI : MonoBehaviour
     }
 
     // 타워 선택 UI 활성화/비활성화
-    public void ActivationTowerSelectUI(bool isActive)
+    public void ActivationTowerSelectUI(bool isActive, TowerType type = TowerType.Attack)
     {
         _builderMainUI.SetActive(!isActive);
         _towerSelectUI.SetActive(isActive);
+
+        switch (type)
+        {
+            case TowerType.Attack:
+                _randomPropertiesUI?.SetActive(true);
+                SelectPropertiesButtonsActive(false);
+                break;
+            case TowerType.Center:
+                _randomPropertiesUI?.SetActive(false);
+                SelectPropertiesButtonsActive(true);
+                break;
+            case TowerType.Support:
+                _randomPropertiesUI?.SetActive(false);
+                SelectPropertiesButtonsActive(false);
+                break;
+        }
     }
 
     #endregion
 
-    // 플레이어 필더가 존재하는지 확인
-    private bool IsPlayerBuilderExist(out PlayerBuilder builder)
+    private void SelectPropertiesButtonsActive(bool isActive)
     {
-        builder = null;
-        var manager = StageManager.Instance;
-        if(manager != null)
+        foreach (var ui in _selectPropertiesUI)
+            ui?.SetActive(isActive);
+    }
+
+    /// <summary>
+    /// 연구소 UI에 PlayerRunner 참조 주입
+    /// </summary>
+    /// <param name="runner">PlayerRunner 참조</param>
+    public void LaboratoryUIInjectionRunner(PlayerRunner runner)
+    {
+        if(_laboratoryUI.TryGetComponent(out LaboratoryUI labUI))
         {
-            builder = manager.PlayerBuilder;
-            if(builder != null)
-            {
-                return true;
-            }
+            labUI.InjectionRunnerReference(runner);
         }
-        return false;
     }
 }

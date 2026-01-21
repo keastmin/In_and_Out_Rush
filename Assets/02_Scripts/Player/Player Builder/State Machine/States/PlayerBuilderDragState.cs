@@ -15,7 +15,7 @@ public class PlayerBuilderDragState : IPlayerState
         _player.DragStart();
 
         // 클릭 오브젝트가 있다면 취소 처리
-        _player.ClickLeftMouseUpOnWorld();
+        _player.ClickObjectClear();
     }
 
     public void Update()

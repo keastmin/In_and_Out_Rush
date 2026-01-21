@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Laboratory : NetworkBehaviour, ICanClickObject
 {
-    public event Action OnClickLaboratoryObjectAction;
+    public event Action<bool> OnClickLaboratoryObjectAction;
 
     #region IInteractableObject
 
@@ -16,7 +16,7 @@ public class Laboratory : NetworkBehaviour, ICanClickObject
     // 빌더의 연구소를 통한 강화 UI 띄우기
     public void OnLeftMouseUpThisObject()
     {
-        OnClickLaboratoryObjectAction?.Invoke();
+        OnClickLaboratoryObjectAction?.Invoke(true);
     }
 
     public void OnCancelClickThisObject()

@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43488c12847d0364199c9ab9f6f2544e, type: 3}
+  m_Name: Amplification Tower Data
+  m_EditorClassIdentifier: 
+  Tower: {fileID: 2149867995664661275, guid: 5d319501e68ced54e8fb9c594f7e3986, type: 3}
+  TowerGhost: {fileID: 4419506441653720354, guid: 492d204235216354ba9eef5c105451e6, type: 3}
+  TowerPrefabRef:
+    RawGuidValue: 5d319501e68ced54e8fb9c594f7e3986

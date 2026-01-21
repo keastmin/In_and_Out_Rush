@@ -98,6 +98,11 @@ PrefabInstance:
       insertIndex: 3
       addedObject: {fileID: 2502629201869543890}
   m_SourcePrefab: {fileID: 100100000, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
+--- !u!1 &1219560907678390276 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5788506057211119010, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
+  m_PrefabInstance: {fileID: 4663521085442727334}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2553892069381617317 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7190305726298204931, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
@@ -124,6 +129,8 @@ MonoBehaviour:
     Mineral: 5
     Gas: 0
   _ghost: {fileID: 7665473588800853303, guid: 162515771d3bb6042a6510821b3d1553, type: 3}
+  _selectedChecker: {fileID: 1219560907678390276}
+  _selectedImage: {fileID: 0}
   _attackSpeed: 1
   _attackPosition: {fileID: 5158920055649005697}
   _enemyLayer:
@@ -131,14 +138,12 @@ MonoBehaviour:
     m_Bits: 64
   _targettingRange: 5
   _rotateSpeed: 10
-  _selectedChecker: {fileID: 8957621462386128144}
-  _selectedImage: {fileID: 0}
   _propertiesType: 0
   _flameEffect: {fileID: 2553892069381617317}
   _blitzEffect: {fileID: 8756958642325513497}
   _bioEffect: {fileID: 5682370755753876483}
   _currTarget: {fileID: 0}
-  _bullet: {fileID: 3383989042019545065, guid: 022974b8ab27faa45b10e7989d5d7305, type: 3}
+  _bullet: {fileID: 4963649366916377928, guid: 022974b8ab27faa45b10e7989d5d7305, type: 3}
   _bulletSpeed: 20
   _bulletDamage: 2
 --- !u!114 &2502629201869543890
@@ -171,10 +176,5 @@ GameObject:
 --- !u!1 &8756958642325513497 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 4124963853794736319, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
-  m_PrefabInstance: {fileID: 4663521085442727334}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &8957621462386128144 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 4393255916219869366, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
   m_PrefabInstance: {fileID: 4663521085442727334}
   m_PrefabAsset: {fileID: 0}

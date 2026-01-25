@@ -5152,8 +5152,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75e96b398c6569b4187f2f6575ae1577, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _HP: 300
+  _Health: 100
   _Stamina: 100
+  _StaminaRecoveryRate: 10
+  _MovementSpeed: 6
+  _WeaponDamage: 1
   _RunningPower: 30
   _DamageReduction: 0
   _WeaponDamageScaler: 1
@@ -5161,7 +5164,6 @@ MonoBehaviour:
   _WeaponReloadSpeedScaler: 1
   _IsDead:
     _value: 0
-  _moveSpeed: 6
   _swiftnessVFX: {fileID: 6092269608685176354}
   skillIcons:
   - {fileID: 1471596959, guid: e1a81109ab95c0344a014a0e72fa1378, type: 3}

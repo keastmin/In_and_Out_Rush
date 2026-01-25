@@ -1,15 +1,19 @@
 using DG.Tweening;
 using Fusion;
+using Fusion.Addons.Physics;
 using System;
 using System.Threading.Tasks;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody))]
-public class PlayerRunner : Player, IDamageable, IBuffReceiver
+public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
 {
     [Header("Statistics")]
-    [Networked] public float HP { get; set; } = 300f;
+    [Networked] public float Health { get; set; } = 300f;
     [Networked] public float Stamina { get; set; } = 100f; // 소모 1초 후 회복
+    [Networked] public float StaminaRecoveryRate { get; set; } = 10f; // 초당 회복량
+    [Networked] public float MovementSpeed { get; set; } = 6f;
+    [Networked] public float WeaponDamage { get; set; } = 1f;
     [Networked] public float RunningPower { get; set; } = 30f;
     [Networked] public float DamageReduction { get; set; } = 0f;
     [Networked] public float WeaponDamageScaler { get; set; } = 1f;
@@ -17,8 +21,6 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver
     [Networked] public float WeaponReloadSpeedScaler { get; set; } = 1f;
     [Networked] public NetworkBool IsDead { get; set; }
 
-    [Header("Movement")]
-    [SerializeField] private float _moveSpeed = 6f; // 이동 속도 -> Networked로 변경
     // 업그레이드: 체력, 이동 속도, 기력량, 기력 회복 속도, 무기 데미지
 
     [SerializeField] private ParticleSystem _swiftnessVFX;
@@ -59,7 +61,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver
             // 러너 이동
             if (_isSliding == false && _isTumbling == false)
             {
-                float speed = data.DashInput.IsSet(NetworkInputData.DASH_INPUT) ? _moveSpeed * 2f : _moveSpeed;
+                float speed = data.DashInput.IsSet(NetworkInputData.DASH_INPUT) ? MovementSpeed * 2f : MovementSpeed;
                 data.PlayerRunnerDirection.Normalize();
                 _rigidbody.linearVelocity = speed * data.PlayerRunnerDirection;
                 transform.LookAt(transform.position + data.PlayerRunnerDirection);
@@ -134,7 +136,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver
     {
         if (HasStateAuthority)
         {
-            HP = 100f;
+            Health = 100f;
             IsDead = false;
             _isSliding = false;
             _isInvincible = false;
@@ -147,7 +149,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver
         Debug.Log("슬라이드 시작");
         _isSliding = true;
         _rigidbody.linearVelocity = Vector3.zero; // 슬라이드 시작 시 현재 속도 초기화
-        _rigidbody.AddForce(3f * _moveSpeed * transform.forward, ForceMode.Impulse);
+        _rigidbody.AddForce(3f * MovementSpeed * transform.forward, ForceMode.Impulse);
         var originalDrag = _rigidbody.linearDamping;
         _rigidbody.linearDamping = 2f; // 슬라이드 시 마찰력 증가
         if (_isSwiftness && _swiftnessSlideCount > 0)
@@ -193,7 +195,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver
     {
         if (_isTumbling) return; // 이미 텀블 상태면 무시
         _isTumbling = true;
-        _rigidbody.linearVelocity = _moveSpeed * transform.forward;
+        _rigidbody.linearVelocity = MovementSpeed * transform.forward;
         transform.Find("Root").DOLocalMoveY(2f, 0.5f).SetLoops(2, LoopType.Yoyo).SetEase(Ease.InOutQuad);
         transform.Find("Root").DOLocalRotate(new Vector3(360f, 0f, 0f), 1f, RotateMode.FastBeyond360).SetEase(Ease.Linear);
         DOTween.Sequence()
@@ -271,10 +273,10 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver
         if (IsDead) return; // 이미 죽었으면 무시
         if (_isInvincible) return; // 무적 상태면 무시
 
-        HP -= damage; // 체력 감소
-        StageManager.Instance.UIController.RunnerUI.Display.Player.SetHealthBarRatio(HP / 100f); // UI 체력바 갱신
+        Health -= damage; // 체력 감소
+        StageManager.Instance.UIController.RunnerUI.Display.Player.SetHealthBarRatio(Health / 100f); // UI 체력바 갱신
 
-        if (HP <= 0f) // 체력이 0 이하라면
+        if (Health <= 0f) // 체력이 0 이하라면
             IsDead = true; // 죽음 처리
     }
 
@@ -300,7 +302,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver
         {
             case AmplificationTowerBuffParam amplificationTowerBuffParam:
                 WeaponDamageScaler += amplificationTowerBuffParam.AttackBonus;
-                _moveSpeed += amplificationTowerBuffParam.SpeedBonus;
+                MovementSpeed += amplificationTowerBuffParam.SpeedBonus;
                 break;
             default:
                 break;
@@ -314,6 +316,59 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver
     public void BuffExit(IBuffParam buffParam)
     {
         // 버프 종료 로직 구현
+    }
+    #endregion
+
+    #region Supply Methods
+    public void Supply(IObtainable obtainable)
+    {
+        switch (obtainable)
+        {
+            case Item item:
+                Debug.Log("아이템 획득");
+                break;
+            case Weapon weapon:
+                Debug.Log("무기 획득");
+                break;
+            case Skill skill:
+                Debug.Log("스킬 획득");
+                break;
+            default:
+                Debug.Log("알 수 없는 획득물");
+                break;
+        }
+    }
+    #endregion
+
+    #region Teleport Methods
+    public void TeleportTo(Vector3 position)
+    {
+        RPC_TeleportTo(position);
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    private void RPC_TeleportTo(Vector3 position)
+    {
+        if (HasStateAuthority)
+        {
+            TryGetComponent(out NetworkRigidbody3D networkRigidbody);
+            networkRigidbody.Teleport(position, transform.rotation);
+        }
+    }
+
+    public void ReceiveArmor(float amount)
+    {
+        
+    }
+
+    public float Heal(float amount)
+    {
+        if (IsDead) return 0f; // 이미 죽었으면 무시
+
+        float healedAmount = Mathf.Min(amount, 100f - Health);
+        Health += healedAmount; // 체력 회복
+        StageManager.Instance.UIController.RunnerUI.Display.Player.SetHealthBarRatio(Health / 100f); // UI 체력바 갱신
+        return healedAmount;
     }
     #endregion
 }

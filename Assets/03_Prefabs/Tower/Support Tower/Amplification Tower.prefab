@@ -187,7 +187,15 @@ MonoBehaviour:
     Gas: 0
   _ghost: {fileID: 4419506441653720354, guid: 492d204235216354ba9eef5c105451e6, type: 3}
   _type: 2
+  _towerId: Amplification Tower
   _selectedChecker: {fileID: 4248311435974450162}
   _selectedImage: {fileID: 0}
   _buffRange: 25
   _buffRangeTransform: {fileID: 6981587791884122296}
+  _buffParam:
+    TowerAttackSpeedBonus: 20
+    AttackBonus: 10
+    SpeedBonus: 10
+  _detectLayers:
+    serializedVersion: 2
+    m_Bits: 1280

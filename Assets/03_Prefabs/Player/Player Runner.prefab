@@ -5116,7 +5116,7 @@ GameObject:
   - component: {fileID: 2540990109086367435}
   - component: {fileID: -1275711506324664378}
   - component: {fileID: -8069737387449572781}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Player Runner
   m_TagString: Untagged
   m_Icon: {fileID: 0}

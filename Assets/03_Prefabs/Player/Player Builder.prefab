@@ -16,7 +16,7 @@ GameObject:
   - component: {fileID: 1425796438643454213}
   - component: {fileID: 1367329938437336398}
   - component: {fileID: 8593551356125243380}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Player Builder
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -134,7 +134,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5af0ebf0e83ad6549ae680752d720046, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  __teleportArray: []
+  _teleportTowerArray: []
 --- !u!114 &1367329938437336398
 MonoBehaviour:
   m_ObjectHideFlags: 0

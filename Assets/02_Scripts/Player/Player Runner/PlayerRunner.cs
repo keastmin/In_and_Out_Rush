@@ -104,7 +104,10 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
             // 러너 상호작용
             var interactUsing = data.InteractInput.IsSet(NetworkInputData.INTERACT_INPUT);
             if (interactUsing)
+            {
+                Interact();
                 Debug.Log("상호작용 사용");
+            }
 
             // 러너 연구소 상호작용
             var laboratoryUsing = data.LaboratoryInput.IsSet(NetworkInputData.LABORATORY_INPUT);
@@ -213,6 +216,16 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
         if (skillIndex < 1 || skillIndex > skillIcons.Length)
             return;
         StageManager.Instance.UIController.RunnerUI.Display.Player.SetSkillIcon(skillIcons[skillIndex - 1]);
+    }
+
+    private void Interact()
+    {
+        if (Physics.Raycast(transform.position + Vector3.up, transform.forward, out RaycastHit hit, 3f))
+        {
+            var hasInteractableTower = hit.collider.TryGetComponent<IRunnerInteractableTower>(out var interactableTower);
+            if (hasInteractableTower)
+                interactableTower.Interact(this);
+        }
     }
 
     public void StartTumble()

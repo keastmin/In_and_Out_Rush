@@ -13,6 +13,7 @@ public class NetworkInputSystem : NetworkBehaviour, INetworkRunnerCallbacks
     private bool _slideInput = false; // 러너의 슬라이드 입력
     private bool _itemInput = false; // 러너 아이템 입력
     private bool _skillInput = false; // 러너 스킬 입력
+    private bool _interactInput = false; // 러너 상호작용 입력
     private int _selectedItem = 0; // 러너 아이템
     private bool _mouseButton0 = false; // 마우스 좌클릭
     private bool _mouseButton1 = false; // 마우스 우클릭
@@ -25,6 +26,7 @@ public class NetworkInputSystem : NetworkBehaviour, INetworkRunnerCallbacks
         _slideInput = _slideInput | Input.GetKeyDown(KeyCode.LeftControl); // 왼쪽 컨트롤을 통해 _slideInput 여부 검사
         _itemInput = _itemInput | Input.GetKeyDown(KeyCode.Q); // Q키를 통해 _itemInput 여부 검사
         _skillInput = _skillInput | Input.GetKeyDown(KeyCode.E); // E키를 통해 _skillInput 여부 검사
+        _interactInput = _interactInput | Input.GetKeyDown(KeyCode.F); // F키를 통해 _interactInput 여부 검사
         _mouseButton0 = _mouseButton0 | Input.GetMouseButtonDown(0); // 마우스 좌클릭 여부 검사
         _mouseButton1 = _mouseButton1 | Input.GetMouseButtonDown(1); // 마우스 우클릭 여부 검사
         if (Input.GetKeyDown(KeyCode.Alpha1))
@@ -90,8 +92,11 @@ public class NetworkInputSystem : NetworkBehaviour, INetworkRunnerCallbacks
         _skillInput = false;
         data.SelectedSkill = _selectedItem;
 
-        // 상호작용
-        data.InteractInput.Set(NetworkInputData.INTERACT_INPUT, Input.GetKey(KeyCode.F));
+        // 타워 상호작용
+        data.InteractInput.Set(NetworkInputData.INTERACT_INPUT, _interactInput);
+        _interactInput = false;
+
+        // 연구소 상호작용
         data.LaboratoryInput.Set(NetworkInputData.LABORATORY_INPUT, Input.GetKey(KeyCode.Space));
 
         // 무기 사용

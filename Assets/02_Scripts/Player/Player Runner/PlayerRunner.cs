@@ -5,11 +5,16 @@ using System;
 using System.Threading.Tasks;
 using UnityEngine;
 
+// TODO: 상호작용 여러번 적용되는 현상 수정, 클라이언트 UI에서도 체력이 갱신되도록 수정, 증폭 타워 BuffExit 구현
+
 [RequireComponent(typeof(Rigidbody))]
 public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
 {
+    private static readonly float MAX_HEALTH = 100f; // 임시
+
     [Header("Statistics")]
-    [Networked] public float Health { get; set; } = 300f;
+    [Networked, OnChangedRender(nameof(OnHealthChanged))]
+    public float Health { get; set; } = 100f;
     [Networked] public float Stamina { get; set; } = 100f; // 소모 1초 후 회복
     [Networked] public float StaminaRecoveryRate { get; set; } = 10f; // 초당 회복량
     [Networked] public float MovementSpeed { get; set; } = 6f;
@@ -42,6 +47,11 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
 
     public event Action<PlayerRunner> OnPositionChanged; // 영역 관련 이벤트
 
+    public void OnHealthChanged()
+    {
+        StageManager.Instance.UIController.RunnerUI.Display.Player.SetHealthBarRatio(Health / MAX_HEALTH); // UI 체력바 갱신
+    }
+
     private void Awake()
     {
         _rigidbody = GetComponent<Rigidbody>();
@@ -72,6 +82,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
             if (slideUsing)
             {
                 _ = StartSlide();
+                RPC_DecreaseHealthTest(2f);
             }
                 
             // 러너 아이템 사용
@@ -117,6 +128,19 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
         }
     }
 
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    private void RPC_DecreaseHealthTest(float amount)
+    {
+        if (HasStateAuthority)
+        {
+            Health -= amount; // 체력 감소
+            // StageManager.Instance.UIController.RunnerUI.Display.Player.SetHealthBarRatio(Health / MAX_HEALTH); // UI 체력바 갱신
+
+            if (Health <= 0f) // 체력이 0 이하라면
+                IsDead = true; // 죽음 처리
+        }
+    }
+
     public override void Render()
     {
         base.Render(); // vfx, 비주얼적인 요소
@@ -136,7 +160,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
     {
         if (HasStateAuthority)
         {
-            Health = 100f;
+            Health = MAX_HEALTH; // MaxHealth는 100f로 하드 코딩
             IsDead = false;
             _isSliding = false;
             _isInvincible = false;
@@ -274,14 +298,11 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
         if (_isInvincible) return; // 무적 상태면 무시
 
         Health -= damage; // 체력 감소
-        StageManager.Instance.UIController.RunnerUI.Display.Player.SetHealthBarRatio(Health / 100f); // UI 체력바 갱신
+        StageManager.Instance.UIController.RunnerUI.Display.Player.SetHealthBarRatio(Health / MAX_HEALTH); // UI 체력바 갱신
 
         if (Health <= 0f) // 체력이 0 이하라면
             IsDead = true; // 죽음 처리
     }
-
-    // 증폭 타워: IBuffReceiver 인터페이스 구현, Enter 시 BuffEnter(), Exit 시 BuffExit()
-    // 
 
     #region Runner Upgrade Methods
     public void AttackUp(float amount)
@@ -289,9 +310,9 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
         WeaponDamageScaler += amount;
     }
 
-    public void SpeedUp()
+    public void SpeedUp(float amount)
     {
-        
+        MovementSpeed += amount;
     }
     #endregion
 
@@ -316,6 +337,15 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
     public void BuffExit(IBuffParam buffParam)
     {
         // 버프 종료 로직 구현
+        switch (buffParam)
+        {
+            case AmplificationTowerBuffParam amplificationTowerBuffParam:
+                WeaponDamageScaler -= amplificationTowerBuffParam.AttackBonus;
+                MovementSpeed -= amplificationTowerBuffParam.SpeedBonus;
+                break;
+            default:
+                break;
+        }
     }
     #endregion
 
@@ -365,9 +395,9 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
     {
         if (IsDead) return 0f; // 이미 죽었으면 무시
 
-        float healedAmount = Mathf.Min(amount, 100f - Health);
+        float healedAmount = Mathf.Min(amount, MAX_HEALTH - Health);
         Health += healedAmount; // 체력 회복
-        StageManager.Instance.UIController.RunnerUI.Display.Player.SetHealthBarRatio(Health / 100f); // UI 체력바 갱신
+        StageManager.Instance.UIController.RunnerUI.Display.Player.SetHealthBarRatio(Health / MAX_HEALTH); // UI 체력바 갱신
         return healedAmount;
     }
     #endregion

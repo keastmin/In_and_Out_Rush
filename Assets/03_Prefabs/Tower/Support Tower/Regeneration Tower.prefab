@@ -94,6 +94,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Regeneration Tower
       objectReference: {fileID: 0}
+    - target: {fileID: 7204309550748268822, guid: 3302635113343d046a4921212bd4e79a, type: 3}
+      propertyPath: SyncScale
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7346283071106774194, guid: 3302635113343d046a4921212bd4e79a, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0

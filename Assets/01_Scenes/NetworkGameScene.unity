@@ -1846,6 +1846,63 @@ MonoBehaviour:
   _gridOffset: {x: 0, y: 0, z: 0}
   _hexagonType: 1
   _recheckRadius: 2
+--- !u!1001 &1532805953
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 2819567517167211890, guid: 16a75431e336df44a89baf2323564ec9, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0.9533844
+      objectReference: {fileID: 0}
+    - target: {fileID: 2819567517167211890, guid: 16a75431e336df44a89baf2323564ec9, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -1.6683135
+      objectReference: {fileID: 0}
+    - target: {fileID: 2819567517167211890, guid: 16a75431e336df44a89baf2323564ec9, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -3.2889462
+      objectReference: {fileID: 0}
+    - target: {fileID: 2819567517167211890, guid: 16a75431e336df44a89baf2323564ec9, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2819567517167211890, guid: 16a75431e336df44a89baf2323564ec9, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2819567517167211890, guid: 16a75431e336df44a89baf2323564ec9, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2819567517167211890, guid: 16a75431e336df44a89baf2323564ec9, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2819567517167211890, guid: 16a75431e336df44a89baf2323564ec9, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2819567517167211890, guid: 16a75431e336df44a89baf2323564ec9, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2819567517167211890, guid: 16a75431e336df44a89baf2323564ec9, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5033802363253270362, guid: 16a75431e336df44a89baf2323564ec9, type: 3}
+      propertyPath: m_Name
+      value: Tower Manager
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 16a75431e336df44a89baf2323564ec9, type: 3}
 --- !u!1 &1573621951
 GameObject:
   m_ObjectHideFlags: 0
@@ -2405,14 +2462,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Game Scene Setup
       objectReference: {fileID: 0}
-    - target: {fileID: 2984146816420512075, guid: e4f76d1c9ebcfc94da4fe245963476d1, type: 3}
-      propertyPath: _playerPosition
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2984146816420512075, guid: e4f76d1c9ebcfc94da4fe245963476d1, type: 3}
-      propertyPath: _testSessionName
-      value: TestA
-      objectReference: {fileID: 0}
     - target: {fileID: 8681410219602733062, guid: e4f76d1c9ebcfc94da4fe245963476d1, type: 3}
       propertyPath: m_LocalPosition.x
       value: -35.429146
@@ -2541,3 +2590,4 @@ SceneRoots:
   - {fileID: 2049226344}
   - {fileID: 1196457874}
   - {fileID: 25276490}
+  - {fileID: 1532805953}

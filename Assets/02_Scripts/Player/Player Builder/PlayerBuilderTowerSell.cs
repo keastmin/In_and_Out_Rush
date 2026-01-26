@@ -50,9 +50,6 @@ public class PlayerBuilderTowerSell : NetworkBehaviour
                     builder.SetCenterTowerCount(builder.CenterTowerCount - 1);
                 }
             }
-
-            // 각 타워가 판매될 때 수행되어야 하는 절차 수행
-            TowerSellProcess(t);
         }
 
         if (n == 0) return;
@@ -91,23 +88,6 @@ public class PlayerBuilderTowerSell : NetworkBehaviour
         {
             ResourceSystem.Instance.Mineral += (int)(cost.Mineral * 0.5f);
             ResourceSystem.Instance.Gas += (int)(cost.Gas * 0.5f);
-        }
-    }
-
-    // 각 타워가 판매될 때 수행하는 함수
-    private void TowerSellProcess(Tower tower)
-    {
-        string id = tower.TowerID;
-        if (id == TowerIDContainer.TELEPORT_TOWER_ID)
-            TeleportTowerSellProcess(tower);
-    }
-
-    // 텔레포트 타워가 판매될 때 수행되어야 하는 절차
-    private void TeleportTowerSellProcess(Tower tower)
-    {
-        if (tower.TryGetComponent(out TeleportTower teleportTower))
-        {
-            _towerSystem.RemoveTeleportTowerArray(teleportTower);
         }
     }
 

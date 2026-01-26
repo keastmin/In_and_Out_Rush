@@ -118,37 +118,14 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
             ResourceSystem.Instance.Mineral -= cost.Mineral; // 미네랄 차감
             ResourceSystem.Instance.Gas -= cost.Gas; // 가스 차감
             NetworkObject tower = Runner.Spawn(towerRef, position, Quaternion.identity); // 타워 스폰
-            TeleportTowerSetting(tower); // 텔레포트 타워라면 빌더에게 텔레포트 관련 세팅을 요청
         }
     }
 
-    // 텔레포트 타워일시 설치 후 텔레포트 타워 관련 설정 세팅
-    private void TeleportTowerSetting(NetworkObject no)
-    {
-        if (no.TryGetComponent(out Tower tower))
-        {
-            if (tower.TowerID == TowerIDContainer.TELEPORT_TOWER_ID)
-            {
-                RPC_TeleportTowerSetting(no);
-            }
-        }
-    }
-
-    // 빌더에게 텔레포트 타워를 저장할 것을 요청
-    [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
-    private void RPC_TeleportTowerSetting(NetworkObject no)
-    {
-        if (HasInputAuthority)
-        {
-            if (no.TryGetComponent(out TeleportTower tower))
-                _towerSystem.AddTeleportTowerArray(tower);
-        }
-    }
 
     // 텔레포트 타워 조건을 확인하는 함수
     private bool TeleportTowerBuildConditionChecker()
     {
-        if (_towerSystem.TeleportTowerCount == 2)
+        if (TowerManager.Instance.GetTowerCount(TowerIDContainer.TELEPORT_TOWER_ID) >= 2)
             return false;
         return true;
     }

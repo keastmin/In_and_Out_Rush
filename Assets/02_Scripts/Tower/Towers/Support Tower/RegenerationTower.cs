@@ -30,7 +30,7 @@ public class RegenerationTower : SupportTower
         if (HasStateAuthority)
         {
             // 감지
-            int detectCount = Physics.OverlapSphereNonAlloc(transform.position, _buffRange, _detectedColliders, _detectLayer);
+            int detectCount = Physics.OverlapSphereNonAlloc(transform.position, _buffRange / 2, _detectedColliders, _detectLayer);
 
             _detectedRunner = null;
             if (detectCount > 0)

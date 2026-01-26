@@ -34,7 +34,7 @@ public sealed class AmplificationTower : SupportTower, ICanDragObject
             }
 
             // Collider 객체들 감지
-            int detectCount = Physics.OverlapSphereNonAlloc(transform.position, _buffRange, _detectedColliders, _detectLayers);
+            int detectCount = Physics.OverlapSphereNonAlloc(transform.position, _buffRange / 2, _detectedColliders, _detectLayers);
 
             // IBuffReceiver 구분
             int receiverCount = 0;

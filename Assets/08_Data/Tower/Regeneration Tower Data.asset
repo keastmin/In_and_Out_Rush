@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 43488c12847d0364199c9ab9f6f2544e, type: 3}
   m_Name: Regeneration Tower Data
   m_EditorClassIdentifier: 
-  Tower: {fileID: 2250402001114345989, guid: 2f80002e6f4605a4cb749ca82f04bfed, type: 3}
+  Tower: {fileID: 6505049582381019717, guid: 2f80002e6f4605a4cb749ca82f04bfed, type: 3}
   TowerGhost: {fileID: 8744631464877653142, guid: 2ec9a71eec4a7044390268b585ebd20b, type: 3}
   TowerPrefabRef:
     RawGuidValue: 2f80002e6f4605a4cb749ca82f04bfed

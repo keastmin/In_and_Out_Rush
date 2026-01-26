@@ -26,7 +26,7 @@ public class Tower : GridPlaceable, ICanClickObject
     public float BuffRange => _buffRange;
     public string TowerID => _towerId;
 
-    [Networked, OnChangedRender(nameof(OnChangeBuffScale))] private float NetBuffRange { get; set; }
+    [Networked, OnChangedRender(nameof(OnChangeBuffScale))] protected float NetBuffRange { get; set; }
 
     private void Awake()
     {
@@ -36,13 +36,23 @@ public class Tower : GridPlaceable, ICanClickObject
 
     public override void Spawned()
     {
-        SetBuffRange(_buffRange);
+        if (HasStateAuthority)
+            NetBuffRange = _buffRange;
+
+        OnChangeBuffScale();
+
+        // SetBuffRange(_buffRange);
         TowerSpawned();
     }
 
     public override void FixedUpdateNetwork()
     {
         TowerFixedUpdateNetwork();
+    }
+
+    public override void Despawned(NetworkRunner runner, bool hasState)
+    {
+        TowerDespawned();
     }
 
     /// <summary>
@@ -63,6 +73,11 @@ public class Tower : GridPlaceable, ICanClickObject
 
     }
 
+    protected virtual void TowerDespawned()
+    {
+
+    }
+
     protected void SetId(string id)
     {
         _towerId = id;
@@ -74,9 +89,11 @@ public class Tower : GridPlaceable, ICanClickObject
     /// <param name="range">버프 범위</param>
     public void SetBuffRange(float range)
     {
-        if (_buffRangeTransform != null)
+        if (_buffRangeTransform == null) return;
+
+        if (HasStateAuthority)
         {
-            RPC_SetBuffRange(range);
+            NetBuffRange = range;
         }
     }
 
@@ -102,16 +119,6 @@ public class Tower : GridPlaceable, ICanClickObject
     #endregion
 
     #region Helper
-
-    [Rpc(RpcSources.All, RpcTargets.All)]
-    private void RPC_SetBuffRange(float range)
-    {
-        if (HasStateAuthority)
-        {
-            NetBuffRange = range;
-        }
-        _buffRange = range;
-    }
 
     private void OnChangeBuffScale()
     {

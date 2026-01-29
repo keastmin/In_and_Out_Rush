@@ -110,7 +110,7 @@ MonoBehaviour:
   _buffRange: 25
   _buffRangeTransform: {fileID: 0}
   _moveCoolDown: 30
-  _OtherTeleportTower: {fileID: 0}
+  OtherTeleportTower: {fileID: 0}
 --- !u!1 &4747944615274685271 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 971639999673581450, guid: 3302635113343d046a4921212bd4e79a, type: 3}

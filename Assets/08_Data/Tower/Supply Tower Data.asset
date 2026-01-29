@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 43488c12847d0364199c9ab9f6f2544e, type: 3}
   m_Name: Supply Tower Data
   m_EditorClassIdentifier: 
-  Tower: {fileID: 1146928591292937236, guid: e3f49f64756682c439b6b2e9766f389f, type: 3}
+  Tower: {fileID: 5367626044543591184, guid: e3f49f64756682c439b6b2e9766f389f, type: 3}
   TowerGhost: {fileID: 6129584132952286905, guid: dbc8853dd08e47c4fb2e6d3d7e8d894c, type: 3}
   TowerPrefabRef:
     RawGuidValue: e3f49f64756682c439b6b2e9766f389f

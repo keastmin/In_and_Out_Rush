@@ -1,17 +1,26 @@
+using Fusion;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class SupplyTower<T> : SupportTower, IRunnerInteractableTower
+public class SupplyTower : SupportTower, IRunnerInteractableTower
 {
-    private List<T> _obtainableList;
+    private const int _maxSlots = 10;
 
-    /// <summary>
-    /// 보급 물자 채워넣기
-    /// </summary>
-    /// <param name="obtainables"></param>
-    public void FillObtainableList(List<T> obtainables)
+    [Networked, Capacity(_maxSlots), OnChangedRender(nameof(OnEmptySupplies))]
+    private NetworkLinkedList<int> Supplies => default;
+
+    protected override void TowerSpawned()
     {
-        _obtainableList = obtainables;
+        // 빌더만 실행
+        if (NetworkManager.Instance.Registry.RefToPosition[Runner.LocalPlayer] == PlayerPosition.Builder)
+        {
+            // 러너에게 빌더가 가지고 있는 보급품 목록 전달 - RPC로 호스트가 공유 변수를 초기화 하도록 함
+            int[] supplyNumArray = SupplyTowerManager.Instance.GetSupplyNumArray();
+            RPC_SetSuppliesList(supplyNumArray);
+
+            // Laboratory UI의 보급 슬롯을 초기화하는 로직
+            SupplyTowerManager.Instance.RevertLaboratorySupplySlotRevert();
+        }
     }
 
     /// <summary>
@@ -20,14 +29,43 @@ public class SupplyTower<T> : SupportTower, IRunnerInteractableTower
     /// <param name="runner">전달 받을 플레이어 러너</param>
     public void Interact(PlayerRunner runner)
     {
-        foreach(T obtainable in _obtainableList)
+        foreach (var suppliesNum in Supplies)
         {
-            // runner.Supply(obtainable);
+            if (SupplyTowerManager.Instance.NumToSupplies.TryGetValue(suppliesNum, out var supply))
+                runner.Supply(supply());
+        }
+
+        RPC_RunnerGetSupplies();
+    }
+
+    /// <summary>
+    /// 호스트에게 보급품 공유변수 초기화를 요청하는 함수
+    /// </summary>
+    /// <param name="supplyArray">보급품 목록</param>
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    private void RPC_SetSuppliesList(int[] supplyArray)
+    {
+        if (HasStateAuthority)
+        {
+            for (int i = 0; i < supplyArray.Length; i++)
+            {
+                Supplies.Add(supplyArray[i]);
+            }
         }
     }
 
-    private void DestroySupplyTower()
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    private void RPC_RunnerGetSupplies()
     {
+        if (HasStateAuthority)
+            Supplies.Clear();
+    }
 
+    private void OnEmptySupplies()
+    {
+        if (HasStateAuthority && Supplies.Count == 0)
+        {
+            Runner.Despawn(this.Object);
+        }
     }
 }

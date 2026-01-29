@@ -56,6 +56,7 @@ public class RegenerationTower : SupportTower
 
                 if (!_receiveArmor)
                 {
+                    // 인터페이스 호출부
                     _enteringRunner.ReceiveArmor(_armor);
                     _receiveArmor = true;
                 }
@@ -70,6 +71,8 @@ public class RegenerationTower : SupportTower
                     _currentTimer = 0f;
 
                     float request = Mathf.Min(_healPerSec, _maxHeal);
+
+                    // 인터페이스 호출부
                     float healed = _enteringRunner.Heal(request);
                     _maxHeal -= healed;
                     if (_maxHeal < 0f) _maxHeal = 0f;

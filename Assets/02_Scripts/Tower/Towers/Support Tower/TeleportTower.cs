@@ -31,10 +31,9 @@ public class TeleportTower : SupportTower, IRunnerInteractableTower
     {
         if(OtherTeleportTower != null)
         {
-            OtherTeleportTower.TryGetComponent(out TeleportTower otherTower);
-            if (CoolDown.ExpiredOrNotRunning(Runner) && otherTower.CoolDown.ExpiredOrNotRunning(Runner))
+            if (CoolDown.ExpiredOrNotRunning(Runner) && OtherTeleportTower.CoolDown.ExpiredOrNotRunning(Runner))
             {
-                Vector3 position = otherTower.transform.position + Vector3.forward * 2f;
+                Vector3 position = OtherTeleportTower.transform.position + Vector3.forward * 2f;
 
                 Debug.Log("텔레포트 요청");
                 runner.TeleportTo(position);

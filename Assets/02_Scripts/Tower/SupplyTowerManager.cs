@@ -1,0 +1,75 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class SupplyTowerManager : MonoBehaviour
+{
+    public static SupplyTowerManager Instance { get; private set; }
+
+    private List<int> _suppliesNums; // 보급품의 넘버를 기억해두는 리스트
+
+    public event Action OnUIRevertAction; // Laboratory UI에서 보급 관련 UI를 초기화 하는 이벤트
+
+    // 각 보급품을 나타내는 상수
+    public const int SKILL_SUPPLY_NUM = 1;
+    public const int WEAPON_SUPPLY_NUM = 2;
+    public const int ITEM_SUPPLY_NUM = 3;
+
+    // 보급품 번호와 해당 보급품 객체를 생성하는 함수를 담은 딕셔너리
+    public Dictionary<int, Func<IObtainable>> NumToSupplies;
+
+    private void Awake()
+    {
+        Instance = this;
+
+        // 딕셔너리 채우기
+        NumToSupplies = new Dictionary<int, Func<IObtainable>>
+        {
+            { SKILL_SUPPLY_NUM,     () => new Skill()   },
+            { WEAPON_SUPPLY_NUM,    () => new Weapon()  },
+            { ITEM_SUPPLY_NUM,      () => new Item()    },
+        };
+
+        _suppliesNums = new List<int>();
+    }
+
+    /// <summary>
+    /// 보급품 리스트를 채우는 함수
+    /// </summary>
+    /// <param name="num">채울 보급품의 번호</param>
+    public void FillSupplyList(int num)
+    {
+        _suppliesNums.Add(num);
+    }
+
+    /// <summary>
+    /// 보급 타워가 설치될 때 호출되어야 하는 함수로 연구소 UI의 보급 슬롯을 초기화
+    /// </summary>
+    public void RevertLaboratorySupplySlotRevert()
+    {
+        OnUIRevertAction?.Invoke();
+    }
+
+    /// <summary>
+    /// 현재 리스트를 배열로 바꿔서 반환하는 함수
+    /// </summary>
+    /// <returns>배열로 변경된 리스트</returns>
+    public int[] GetSupplyNumArray()
+    {
+        int listCount = _suppliesNums.Count;
+        int[] supplyArray = new int[listCount];
+        for (int i = 0; i < listCount; i++)
+            supplyArray[i] = _suppliesNums[i];
+
+        RevertSupplyManagerSlot();
+        return supplyArray;
+    }
+
+    /// <summary>
+    /// 매니저가 가지고 있는 보급품 목록을 초기화 하는 함수
+    /// </summary>
+    private void RevertSupplyManagerSlot()
+    {
+        _suppliesNums.Clear();
+    }
+}

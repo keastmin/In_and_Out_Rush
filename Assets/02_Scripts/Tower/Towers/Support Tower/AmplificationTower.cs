@@ -51,6 +51,7 @@ public sealed class AmplificationTower : SupportTower, ICanDragObject
             {
                 if (!_receivers.Contains(_detectedReceivers[i]))
                 {
+                    // 인터페이스 호출부
                     _detectedReceivers[i].BuffEnter(_buffParam);
                     _receivers.Add(_detectedReceivers[i]);
                 }
@@ -70,7 +71,6 @@ public sealed class AmplificationTower : SupportTower, ICanDragObject
 
                 if (isExit)
                 {
-                    receiver.BuffExit(_buffParam);
                     _removeCandidates.Add(receiver);
                 }
             }
@@ -78,10 +78,19 @@ public sealed class AmplificationTower : SupportTower, ICanDragObject
             // 나간 객체 해시에서 제거
             foreach(var receiver in _removeCandidates)
             {
+                // 인터페이스 호출부
+                receiver.BuffExit(_buffParam);
                 _receivers.Remove(receiver);
             }
             _removeCandidates.Clear();
         }
+    }
+
+    // 타워가 디스폰될 때 버프 끄기
+    protected override void TowerDespawned()
+    {
+        foreach (var receiver in _receivers)
+            receiver.BuffExit(_buffParam);
     }
 
     #region ICanDragObject 구현부

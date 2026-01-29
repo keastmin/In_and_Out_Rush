@@ -15,7 +15,7 @@ PrefabInstance:
     - target: {fileID: 734427710426334360, guid: 3302635113343d046a4921212bd4e79a, type: 3}
       propertyPath: 'NetworkedBehaviours.Array.data[0]'
       value: 
-      objectReference: {fileID: 1774915619511125161}
+      objectReference: {fileID: 5367626044543591184}
     - target: {fileID: 1522401907864096044, guid: 3302635113343d046a4921212bd4e79a, type: 3}
       propertyPath: _type
       value: 2
@@ -79,7 +79,7 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 6530074897574667525, guid: 3302635113343d046a4921212bd4e79a, type: 3}
       insertIndex: 1
-      addedObject: {fileID: 1774915619511125161}
+      addedObject: {fileID: 5367626044543591184}
   m_SourcePrefab: {fileID: 100100000, guid: 3302635113343d046a4921212bd4e79a, type: 3}
 --- !u!1 &1707401287513294514 stripped
 GameObject:
@@ -91,7 +91,7 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 6530074897574667525, guid: 3302635113343d046a4921212bd4e79a, type: 3}
   m_PrefabInstance: {fileID: 1930387285671213368}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1774915619511125161
+--- !u!114 &5367626044543591184
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -100,7 +100,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 4635718627050314813}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9a3c5ff212a4b6b44ab6cf81da905adf, type: 3}
+  m_Script: {fileID: 11500000, guid: 0af194b812a11444eaeaa1af0b5e71b6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   _additionalInfo: []
@@ -108,7 +108,7 @@ MonoBehaviour:
     Mineral: 0
     Gas: 0
   _ghost: {fileID: 6129584132952286905, guid: dbc8853dd08e47c4fb2e6d3d7e8d894c, type: 3}
-  _type: 2
+  _type: 0
   _towerId: Supply Tower
   _selectedChecker: {fileID: 1707401287513294514}
   _selectedImage: {fileID: 0}

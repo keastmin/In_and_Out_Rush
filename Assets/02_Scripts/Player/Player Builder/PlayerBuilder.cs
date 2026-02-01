@@ -385,9 +385,14 @@ public class PlayerBuilder : Player
         _zoomVel = 0f;
     }
 
+    private bool _isLock = false;
+
     // 자기 자신이 빌더라면 마우스로 화면 제어
     public void BuilderCamMove()
     {
+        if (Input.GetKeyDown(KeyCode.V)) _isLock = !_isLock;
+        if (_isLock) return;
+
         float border = _cameraBorderThickness;         // 화면 끝 감지 영역(픽셀)
         float moveSpeed = _cameraMoveSpeed;      // 카메라 이동 속도(유닛/초)
         Vector3 moveDir = Vector3.zero;

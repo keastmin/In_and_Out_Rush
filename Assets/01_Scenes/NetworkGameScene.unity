@@ -1726,7 +1726,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1496064362}
-  - component: {fileID: 1496064366}
   - component: {fileID: 1496064365}
   - component: {fileID: 1496064364}
   - component: {fileID: 1496064363}
@@ -1797,7 +1796,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: e127479eb5cb6654d8cba7e04c5b3b46, type: 2}
+  - {fileID: 2100000, guid: 85722f425666c0841a0cc92b89dc1db6, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1827,25 +1826,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1496064361}
   m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
---- !u!114 &1496064366
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1496064361}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9b05a401668617e4db94549c0953af99, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _territorySystem: {fileID: 1028244186}
-  _gridBasePlaneCollider: {fileID: 1496064363}
-  _gridCellCount: {x: 45, y: 39}
-  _hexagonSize: 1.5
-  _gridOffset: {x: 0, y: 0, z: 0}
-  _hexagonType: 1
-  _recheckRadius: 2
 --- !u!1001 &1532805953
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2087,10 +2067,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 6118610569785656979, guid: 8ee0ca47d4ca2f542a19a96fdec5cdec, type: 3}
-      propertyPath: Grid
-      value: 
-      objectReference: {fileID: 1496064366}
     - target: {fileID: 6118610569785656979, guid: 8ee0ca47d4ca2f542a19a96fdec5cdec, type: 3}
       propertyPath: TrackView
       value: 
@@ -2942,10 +2918,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 3151271085711062086, guid: ab96cc02b2c8e614e8f17e28a1695214, type: 3}
-      propertyPath: SortKey
-      value: 2588835924
-      objectReference: {fileID: 0}
+    - target: {fileID: 5364914651094475112, guid: ab96cc02b2c8e614e8f17e28a1695214, type: 3}
+      propertyPath: _plane
+      value: 
+      objectReference: {fileID: 1496064361}
+    - target: {fileID: 5364914651094475112, guid: ab96cc02b2c8e614e8f17e28a1695214, type: 3}
+      propertyPath: _territorySystem
+      value: 
+      objectReference: {fileID: 1028244186}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

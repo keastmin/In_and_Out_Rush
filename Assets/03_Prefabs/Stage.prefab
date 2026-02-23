@@ -60,7 +60,6 @@ MonoBehaviour:
   ResourceSystem: {fileID: 0}
   cinemachineSystemPrefab: {fileID: 7730110464124259016, guid: aed0d24cf0400854f840e4956fa0356b, type: 3}
   UIController: {fileID: 0}
-  GridSystem: {fileID: 0}
   TerritoryView: {fileID: 0}
   TrackView: {fileID: 0}
 --- !u!114 &2054033773519288605

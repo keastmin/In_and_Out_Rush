@@ -36,6 +36,8 @@ public class Tower : GridPlaceable, ICanClickObject
 
     public override void Spawned()
     {
+        base.Spawned();
+
         if (HasStateAuthority)
             NetBuffRange = _buffRange;
 
@@ -52,6 +54,7 @@ public class Tower : GridPlaceable, ICanClickObject
 
     public override void Despawned(NetworkRunner runner, bool hasState)
     {
+        base.Despawned(runner, hasState);
         TowerDespawned();
     }
 

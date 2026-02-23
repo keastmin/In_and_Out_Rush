@@ -97,12 +97,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 96e8b7129f3ea8d4e89df07a9429fb51, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _additionalInfo: []
+  _buildRange: 1
+  _requireTerritory: 1
   _cost:
     Mineral: 0
     Gas: 0
   _ghost: {fileID: 7665473588800853303, guid: aacfe1e481b51134cbb4c0e2e843f225, type: 3}
   _type: 1
+  _towerId: 
   _selectedChecker: {fileID: 1219560907678390276}
   _selectedImage: {fileID: 0}
   _buffRange: 25

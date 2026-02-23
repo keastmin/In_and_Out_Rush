@@ -1,3 +1,4 @@
+using Grid;
 using UnityEngine;
 
 public class PlayerBuilderTowerMoveState : IPlayerState
@@ -11,20 +12,23 @@ public class PlayerBuilderTowerMoveState : IPlayerState
 
     public void Enter()
     {
+        // 그리드 오버레이 활성화
+        GridManager.Instance.SetCellStateOverlayEnabled(true);
+
         _player.BuilderUI.ActivationTowerBuildUI(true, "Left Mouse: Complete, RightMouse: Cancel");
         _player.BuilderTowerMove.TowerMoveSet(_player.SelectedTowers);
     }
 
     public void Update()
     {
-        Vector3 mouseWorldPos = GetMouseWorldPos(_player.Grid);
-        bool canMove = _player.BuilderTowerMove.TowerGhostSnapShot(_player.Grid, mouseWorldPos);
+        Vector3 mouseWorldPos = GetMouseWorldPos();
+        bool canMove = _player.BuilderTowerMove.TowerGhostSnapShot(mouseWorldPos);
         bool moveComplete = false;
         
         if(canMove && Input.GetMouseButtonDown(0))
         {
             moveComplete = true;
-            _player.BuilderTowerMove.TowerMove(_player.Grid);
+            _player.BuilderTowerMove.TowerMove();
         }
 
         TransitionTo(moveComplete);
@@ -37,6 +41,9 @@ public class PlayerBuilderTowerMoveState : IPlayerState
 
     public void Exit()
     {
+        // 그리드 오버레이 비활성화
+        GridManager.Instance.SetCellStateOverlayEnabled(false);
+
         _player.BuilderTowerMove.TowerMoveClear();
         _player.BuilderUI.ActivationTowerBuildUI(false);
     }
@@ -53,10 +60,10 @@ public class PlayerBuilderTowerMoveState : IPlayerState
         }
     }
 
-    private Vector3 GetMouseWorldPos(HexagonGrid grid)
+    private Vector3 GetMouseWorldPos()
     {
         Vector3 pos = Vector3.zero;
-        float height = grid.GridHeight;
+        float height = GridManager.Instance.GridHeight;
         Plane plane = new Plane(Vector3.up, height);
 
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);

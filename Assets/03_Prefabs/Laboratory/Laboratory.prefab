@@ -269,7 +269,6 @@ GameObject:
   - component: {fileID: 412510657842204910}
   - component: {fileID: 1113385613191258577}
   - component: {fileID: -994325378248675283}
-  - component: {fileID: -4441776559822801483}
   - component: {fileID: 3975940740451406387}
   m_Layer: 0
   m_Name: Laboratory
@@ -306,6 +305,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a8bdc5ca5e3b5014db9ccfd451aa7379, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _buildRange: 1
+  _requireTerritory: 1
+  _defaultRange: 1
+  _ignoreTerritoryOnSpawn: 1
 --- !u!114 &-994325378248675283
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -325,20 +328,6 @@ MonoBehaviour:
   NetworkedBehaviours:
   - {fileID: 1113385613191258577}
   ForceRemoteRenderTimeframe: 0
---- !u!114 &-4441776559822801483
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5528802654777136540}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 1541381998, guid: e725a070cec140c4caffb81624c8c787, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  Guid:
-    RawGuidValue: cb7c4388cdc1a4b4084f48f24a1af3a8
 --- !u!136 &3975940740451406387
 CapsuleCollider:
   m_ObjectHideFlags: 0

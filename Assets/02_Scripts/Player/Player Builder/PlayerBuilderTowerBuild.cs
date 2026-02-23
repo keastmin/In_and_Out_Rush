@@ -1,4 +1,5 @@
 using Fusion;
+using Grid;
 using UnityEngine;
 
 public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
@@ -16,15 +17,16 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
     public bool HasBuffRange => _tower.HasBuffRange;
     public float BuffRange => _tower.BuffRange;
     public string TowerID => _tower.TowerID;
+    public int BuildRange => (_tower != null) ? _tower.BuildRange : 0;
 
     private PlayerBuilderTowerSystem _towerSystem;
 
     #region API
 
     /// <summary>
-    /// 외부에서 호출해야하는 초기화 함수
+    /// 외부에서 호출하는 초기화 함수
     /// </summary>
-    /// <param name="builderUI">빌더의 UI 컴포넌트</param>
+    /// <param name="builderUI">빌더 UI 컴포넌트</param>
     public void Init(PlayerBuilderUI builderUI, PlayerBuilderTowerSystem towerSystem)
     {
         _isStandByBuild = false;
@@ -33,9 +35,9 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
     }
 
     /// <summary>
-    /// 해당 타워를 건설 가능한지 확인하는 함수
+    /// 해당 타워가 설치 가능한지 검사
     /// </summary>
-    /// <param name="towerId">설치할 타워의 ID</param>
+    /// <param name="towerId">설치할 타워 ID</param>
     /// <returns>설치 가능 여부</returns>
     public bool TowerBuildConditionChecker(string towerId)
     {
@@ -48,22 +50,19 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
     }
 
     /// <summary>
-    /// 건설 준비중인 타워를 설치하는 함수
+    /// 선택된 셀 인덱스에 타워 설치 요청
     /// </summary>
-    /// <param name="grid">타워를 설치할 때 기반이 되는 육각 그리드</param>
-    /// <param name="index">타워를 설치할 그리드의 인덱스</param>
-    public void BuildTower(HexagonGrid grid, Vector2Int index)
+    public void BuildTower(Vector2Int index)
     {
-        if(_towerRef != default && _tower != null)
+        if (_towerRef != default && _tower != null)
         {
-            Vector3 pos = grid.GetNearCellPositionFromIndex(index);
-            grid.ChangeCellState(index, CellState.Tower); // 타워 설치 인덱스에 타워 상태로 변경
+            Vector3 pos = GridManager.Instance.GetCellCenterPositionFromIndex(index);
             RPC_BuildTower(_towerRef, _buildCost, pos);
         }
     }
 
     /// <summary>
-    /// 타워 건설 준비중을 원래대로 되돌리는 함수
+    /// 설치 대기 상태 해제
     /// </summary>
     public void RevertStandBy()
     {
@@ -78,12 +77,11 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
     #region Core
 
     /// <summary>
-    /// 빌더 UI의 타워 건설 버튼을 누르면 작동할 액션 연결
+    /// 빌더 UI의 타워 건설 버튼 액션 연결
     /// </summary>
-    /// <param name="builderUI">빌더의 UI 컴포넌트</param>
     private void LinkBuildTowerAction(PlayerBuilderUI builderUI)
     {
-        if(builderUI != null)
+        if (builderUI != null)
         {
             builderUI.OnClickTowerBuildButtonAction += InjectionTowerData;
         }
@@ -92,24 +90,24 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
     // 설치할 타워 데이터 주입
     private void InjectionTowerData(TowerData data)
     {
-        if(data != null)
+        if (data != null)
         {
             _tower = data.Tower;
             _towerGhost = data.TowerGhost;
             _towerRef = data.TowerPrefabRef;
 
-            if(_tower != null)
+            if (_tower != null)
             {
                 _buildCost = _tower.Cost;
             }
 
-            // 타워 설치 준비
+            // 설치 대기 상태 진입
             if (_tower != null && _towerGhost != null && _towerRef != null)
                 _isStandByBuild = true;
         }
     }
 
-    // Host에게 자원 차감과 타워 스폰 요청
+    // Host에게 자원 차감 + 타워 스폰 요청
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
     private void RPC_BuildTower(NetworkPrefabRef towerRef, Cost cost, Vector3 position)
     {
@@ -117,12 +115,11 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
         {
             ResourceSystem.Instance.Mineral -= cost.Mineral; // 미네랄 차감
             ResourceSystem.Instance.Gas -= cost.Gas; // 가스 차감
-            NetworkObject tower = Runner.Spawn(towerRef, position, Quaternion.identity); // 타워 스폰
+            Runner.Spawn(towerRef, position, Quaternion.identity); // 타워 스폰
         }
     }
 
-
-    // 텔레포트 타워 조건을 확인하는 함수
+    // 텔레포트 타워 설치 조건 검사
     private bool TeleportTowerBuildConditionChecker()
     {
         if (TowerManager.Instance.GetTowerCount(TowerIDContainer.TELEPORT_TOWER_ID) >= 2)

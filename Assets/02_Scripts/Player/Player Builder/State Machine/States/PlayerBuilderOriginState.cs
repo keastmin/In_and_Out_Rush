@@ -52,11 +52,11 @@ public class PlayerBuilderOriginState : IPlayerState
 
     private void TransitionTo()
     {
-        if(_player.IsOpeningLaboratory)
+        if (_player.IsOpeningLaboratory)
         {
             _player.StateMachine.TransitionToState(_player.StateMachine.LaboratoryState);
         }
-        else if(_player.BuilderTowerBuild.IsStandByBuild)
+        else if (_player.BuilderTowerBuild.IsStandByBuild)
         {
             _player.StateMachine.TransitionToState(_player.StateMachine.TowerBuildState);
         }

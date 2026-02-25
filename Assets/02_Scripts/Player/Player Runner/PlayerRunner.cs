@@ -111,15 +111,21 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
 
             // 러너 연구소 상호작용
             var laboratoryUsing = data.LaboratoryInput.IsSet(NetworkInputData.LABORATORY_INPUT);
-            if (laboratoryUsing)
+            if (StageManager.Instance.CinemachineSystem != null)
             {
-                var lab = StageManager.Instance.Laboratory;
-                StageManager.Instance.CinemachineSystem.SetTrackingTarget(lab.transform);
-                Debug.Log("연구소 보기");
-            }
-            else
-            {
-                StageManager.Instance.CinemachineSystem.SetTrackingTarget(transform);
+                if (laboratoryUsing)
+                {
+                    var lab = StageManager.Instance.Laboratory;
+                    if (lab != null)
+                    {
+                        StageManager.Instance.CinemachineSystem.SetTrackingTarget(lab.transform);
+                        Debug.Log("연구소 보기");
+                    }
+                }
+                else
+                {
+                    StageManager.Instance.CinemachineSystem.SetTrackingTarget(transform);
+                }
             }
 
             var weaponUsing = data.WeaponInput.IsSet(NetworkInputData.WEAPON_INPUT);

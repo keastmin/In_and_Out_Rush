@@ -17,10 +17,16 @@ public sealed class SentryGunTower : AttackTower
 
     protected override void TowerSpawned()
     {
+        Debug.Log("Tower 스폰됨");
         if (HasStateAuthority)
         {
             InitSentryTower();
         }
+    }
+
+    protected override void TowerDespawned()
+    {
+        Debug.Log("Tower 디스폰됨");
     }
 
     public override void FixedUpdateNetwork()

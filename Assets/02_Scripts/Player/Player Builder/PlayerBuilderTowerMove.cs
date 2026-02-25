@@ -1,21 +1,18 @@
-using Fusion;
+﻿using Fusion;
+using Grid;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerBuilderTowerMove : NetworkBehaviour
 {
     private List<TowerGhost> _ghosts;
-    private Dictionary<TowerGhost, Tower> _ghostToTowerDic; // 타워 고스트로 타워 찾기
-    private Dictionary<Tower, Vector3> _towerToVecDic; // 타워로 위치 찾기
+    private Dictionary<TowerGhost, Tower> _ghostToTowerDic;
+    private Dictionary<Tower, Vector3> _towerToVecDic;
 
-    private PlayerBuilderTowerSystem _towerSystem; // 타워 시스템 참조
+    private PlayerBuilderTowerSystem _towerSystem;
 
     #region API
 
-    /// <summary>
-    /// 타워 이동 컴포넌트 초기화 함수
-    /// </summary>
-    /// <param name="towerSystem">타워 시스템 참조</param>
     public void InitTowerMove(PlayerBuilderTowerSystem towerSystem)
     {
         _towerSystem = towerSystem;
@@ -23,35 +20,27 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
 
     public void TowerMoveSet(HashSet<Tower> towers)
     {
-        // 각 타워의 타워 고스트 생성
         TowerGhostInstantiate(towers);
-
-        // 타워 그룹의 중심 찾기
         Vector3 pivot = GetPivot(towers);
-
-        // 각 타워가 피벗에서 떨어져있는 벡터 계산
         TowerDistanceVectorCalc(towers, pivot);
     }
 
-    public bool TowerGhostSnapShot(HexagonGrid grid, Vector3 mousePos)
+    public bool TowerGhostSnapShot(Vector3 mousePos)
     {
         bool canMove = true;
 
-        foreach(var ghost in _ghosts)
+        foreach (var ghost in _ghosts)
         {
-            // 타겟 위치 계산
             Tower targetTower = _ghostToTowerDic[ghost];
             Vector3 diff = _towerToVecDic[targetTower];
             Vector3 targetPos = mousePos + diff;
 
-            // 그리드에 스냅샷할 위치 계산
-            Vector2Int snapshotIndex = grid.GetNearIndex(targetPos);
-            Vector3 snapshotPos = grid.GetNearCellPositionFromIndex(snapshotIndex);
+            Vector2Int snapshotIndex = GridManager.Instance.GetNearestCellIndex(targetPos);
+            Vector3 snapshotPos = GridManager.Instance.GetCellCenterPositionFromIndex(snapshotIndex);
             ghost.transform.position = snapshotPos;
             ghost.EnableTower();
 
-            // 스탭샷 위치에 설치 가능한지 검사
-            bool canMoveThisTower = CanMoveThisPosition(grid, snapshotIndex);
+            bool canMoveThisTower = CanMoveThisPosition(targetTower, snapshotPos);
             if (!canMoveThisTower)
             {
                 canMove = false;
@@ -62,26 +51,17 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
         return canMove;
     }
 
-    /// <summary>
-    /// 타워의 이동 확정
-    /// </summary>
-    /// <param name="grid">그리드 컴포넌트의 참조</param>
-    public void TowerMove(HexagonGrid grid)
+    public void TowerMove()
     {
         int arrayCount = _ghostToTowerDic.Count;
         int currentCount = 0;
         NetworkId[] netId = new NetworkId[arrayCount];
         Vector3[] vec = new Vector3[arrayCount];
 
-        foreach(var g in _ghosts)
+        foreach (var g in _ghosts)
         {
             Tower tower = _ghostToTowerDic[g];
-
-            Vector2Int index = grid.GetNearIndex(tower.transform.position);
-            grid.ChangeCellState(index, CellState.None);
-
-            Vector2Int newIndex = grid.GetNearIndex(g.transform.position);
-            grid.ChangeCellState(newIndex, CellState.Tower);
+            tower.TryMoveOccupancyToWorldPosition(g.transform.position, requireTerritory: true);
 
             netId[currentCount] = tower.Object.Id;
             vec[currentCount++] = g.transform.position;
@@ -89,16 +69,16 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
             TowerMoveProcess(tower);
         }
 
-        // 타워 위치 이동 RPC 호출
         RPC_TowerMove(netId, vec);
     }
 
     public void TowerMoveClear()
     {
-        for(int i = 0; i < _ghosts.Count; i++)
+        for (int i = 0; i < _ghosts.Count; i++)
         {
             Destroy(_ghosts[i].gameObject);
         }
+
         _ghosts.Clear();
         _ghostToTowerDic.Clear();
         _towerToVecDic.Clear();
@@ -112,11 +92,10 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
     {
         _ghosts = new List<TowerGhost>();
         _ghostToTowerDic = new Dictionary<TowerGhost, Tower>();
-        foreach(var tower in towers)
+
+        foreach (var tower in towers)
         {
             var ghost = Instantiate(tower.Ghost);
-
-            // 버프가 있다면 고스트에 반영
             if (tower.HasBuffRange)
             {
                 ghost.SetGhostBuffRange(tower.BuffRange);
@@ -127,24 +106,24 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
         }
     }
 
-    // 타워 집합의 중심 피벗 찾기
     private Vector3 GetPivot(HashSet<Tower> towers)
     {
         if (towers == null || towers.Count == 0)
             return Vector3.zero;
 
         bool inited = false;
-        Vector3 min = Vector3.zero, max = Vector3.zero;
+        Vector3 min = Vector3.zero;
+        Vector3 max = Vector3.zero;
 
-        foreach(var t in towers)
+        foreach (var t in towers)
         {
             if (!t) continue;
 
             Vector3 p = t.transform.position;
-
             if (!inited)
             {
-                min = max = p;
+                min = p;
+                max = p;
                 inited = true;
             }
             else
@@ -154,15 +133,14 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
             }
         }
 
-        if (!inited) return Vector3.zero;
-        return (min + max) * 0.5f;
+        return inited ? (min + max) * 0.5f : Vector3.zero;
     }
 
     private void TowerDistanceVectorCalc(HashSet<Tower> towers, Vector3 pivot)
     {
         _towerToVecDic = new Dictionary<Tower, Vector3>();
 
-        foreach(var tower in towers)
+        foreach (var tower in towers)
         {
             Vector3 p = tower.transform.position;
             Vector3 diff = p - pivot;
@@ -170,13 +148,10 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
         }
     }
 
-    private bool CanMoveThisPosition(HexagonGrid grid, Vector2Int index)
+    private bool CanMoveThisPosition(Tower tower, Vector3 targetPosition)
     {
-        if (grid.IsEmptyCell(index) && grid.IsPointInTerritory(index))
-        {
-            return true;
-        }
-        return false;
+        if (tower == null) return false;
+        return tower.CanPlaceAtWorldPosition(targetPosition, requireTerritory: true, requireEmpty: true);
     }
 
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
@@ -186,30 +161,24 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
         {
             if (!Runner.TryFindObject(netId[i], out NetworkObject obj))
                 continue;
+
             obj.TryGetComponent(out NetworkTransform nt);
             nt.Teleport(pos[i]);
         }
     }
 
-    /// <summary>
-    /// 각 타워가 움직임 이후 처리되어야 하는 절차를 수행하는 함수
-    /// </summary>
-    /// <param name="tower">절차를 처리할 타워</param>
     private void TowerMoveProcess(Tower tower)
     {
         string towerId = tower.TowerID;
-
-        // 텔레포트 타워의 움직임 이후 절차
-        if(towerId == TowerIDContainer.TELEPORT_TOWER_ID)
+        if (towerId == TowerIDContainer.TELEPORT_TOWER_ID)
         {
             TeleportTowerMoveProcess(tower);
         }
     }
 
-    // 텔레포트 타워가 수행할 절차
     private void TeleportTowerMoveProcess(Tower tower)
     {
-        if(tower.TryGetComponent(out TeleportTower teleportTower))
+        if (tower.TryGetComponent(out TeleportTower teleportTower))
         {
             teleportTower.SetCoolDown();
         }

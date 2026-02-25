@@ -29,7 +29,6 @@ public class PlayerBuilder : Player
     [SerializeField] private PlayerBuilderUI _builderUI; // UI 참조
     [SerializeField] private DragSystem _dragSystem; // 드래그 시스템 참조
     [SerializeField] private PlayerBuilderMover _builderMover; // 빌더 무버 참조
-    [SerializeField] private HexagonGrid _hexagonGrid; // 그리드 참조
     [SerializeField] private Laboratory _laboratory; // 연구실 참조
 
     [Space(10)]
@@ -80,7 +79,6 @@ public class PlayerBuilder : Player
 
     public PlayerBuilderTowerBuild BuilderTowerBuild => _builderTowerBuild;
     public PlayerBuilderTowerMove BuilderTowerMove => _builderTowerMove;
-    public HexagonGrid Grid => _hexagonGrid;
     public PlayerBuilderUI BuilderUI => _builderUI;
 
     #endregion
@@ -146,11 +144,10 @@ public class PlayerBuilder : Player
     }
 
     // 외부에서 참조를 주입하는 함수
-    public void PlayerBuilderReferenceInjection(PlayerBuilderUI builderUI, HexagonGrid hexagonGrid, Laboratory laboratory)
+    public void PlayerBuilderReferenceInjection(PlayerBuilderUI builderUI, Laboratory laboratory)
     {
         _builderUI = builderUI;  
         _dragSystem = builderUI.DragSystem;
-        _hexagonGrid = hexagonGrid;
         _laboratory = laboratory;
 
         // 타워 시스템 컴포넌트 참조 받아오기
@@ -158,7 +155,8 @@ public class PlayerBuilder : Player
 
         // 연구소 관련 액션 연결
         _builderUI.OnClickLaboratoryButtonAction += IsOpenLaboratory;
-        _laboratory.OnClickLaboratoryObjectAction += IsOpenLaboratory;
+        if (_laboratory != null)
+            _laboratory.OnClickLaboratoryObjectAction += IsOpenLaboratory;
 
         // 타워 판매 액션 연결
         TryGetComponent(out _builderTowerSell);
@@ -339,7 +337,7 @@ public class PlayerBuilder : Player
     {
         ClickObject = null;
         DragObjectHash.Clear();
-        _builderTowerSell.SellTower(_hexagonGrid, SelectedTowers, this);
+        _builderTowerSell.SellTower(SelectedTowers, this);
     }
 
     // 공격 타워 선택 함수
@@ -385,9 +383,14 @@ public class PlayerBuilder : Player
         _zoomVel = 0f;
     }
 
+    private bool _isLock = false;
+
     // 자기 자신이 빌더라면 마우스로 화면 제어
     public void BuilderCamMove()
     {
+        if (Input.GetKeyDown(KeyCode.V)) _isLock = !_isLock;
+        if (_isLock) return;
+
         float border = _cameraBorderThickness;         // 화면 끝 감지 영역(픽셀)
         float moveSpeed = _cameraMoveSpeed;      // 카메라 이동 속도(유닛/초)
         Vector3 moveDir = Vector3.zero;

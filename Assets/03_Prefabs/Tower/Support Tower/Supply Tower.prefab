@@ -108,7 +108,7 @@ MonoBehaviour:
     Mineral: 0
     Gas: 0
   _ghost: {fileID: 6129584132952286905, guid: dbc8853dd08e47c4fb2e6d3d7e8d894c, type: 3}
-  _type: 0
+  _type: 2
   _towerId: Supply Tower
   _selectedChecker: {fileID: 1707401287513294514}
   _selectedImage: {fileID: 0}

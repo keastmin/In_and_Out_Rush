@@ -1,4 +1,5 @@
 using Fusion;
+using Grid;
 using System.Collections;
 using UnityEngine;
 
@@ -14,8 +15,8 @@ public class StageManager : NetworkBehaviour
     [Space(10)]
 
     [Header("Player")]
-    [SerializeField] private PlayerRunner playerRunnerPrefab; // 러너 플레이어 프리팹
-    [SerializeField] private PlayerBuilder playerBuilderPrefab; // 빌더 플레이어 프리팹
+    [SerializeField] private PlayerRunner playerRunnerPrefab;
+    [SerializeField] private PlayerBuilder playerBuilderPrefab;
 
     [Space(10)]
 
@@ -27,9 +28,8 @@ public class StageManager : NetworkBehaviour
     [Space(10)]
 
     [Header("Local Systems")]
-    [SerializeField] private CinemachineSystem cinemachineSystemPrefab; // 시네머신 시스템 프리팸
-    public StageUIController UIController; // 이 게임 스테이지의 UI 컨트롤러
-    public HexagonGrid Grid; // 헥사곤 그리드 컴포넌트
+    [SerializeField] private CinemachineSystem cinemachineSystemPrefab;
+    public StageUIController UIController;
 
     [Space(10)]
 
@@ -37,11 +37,17 @@ public class StageManager : NetworkBehaviour
     public TerritoryView TerritoryView;
     public TrackView TrackView;
 
-    bool _initialized = false;
+    // ------------------------------------------시작
+    //[Header("Gate")]
+    //public Gate Gate;
+    //[SerializeField] private StageResultView _stageResultView;
+    // ------------------------------------------끝
+
+    private bool _initialized = false;
 
     public override void Spawned()
     {
-        Debug.Log("스폰 작동");
+        Debug.Log("StageManager Spawned");
         Instance = this;
 
         if (!_initialized)
@@ -50,14 +56,12 @@ public class StageManager : NetworkBehaviour
         }
     }
 
-    // 네트워크 매니저의 스폰을 대기하는 코루틴
     private IEnumerator Co_InitAfterNetworkManagerReady()
     {
-        // NetworkManager/Registry 준비 대기
         while (NetworkManager.Instance == null || NetworkManager.Instance.Registry == null)
             yield return null;
 
-        Debug.Log("NetworkManager 인식 성공");
+        Debug.Log("NetworkManager ready");
 
         if (HasStateAuthority)
         {
@@ -66,100 +70,115 @@ public class StageManager : NetworkBehaviour
             SpawnLaboratory();
         }
 
+        while (PlayerRunner == null || PlayerBuilder == null || Laboratory == null)
+            yield return null;
+
         foreach (var system in systems)
         {
             system.SetUp();
         }
 
-        // 로컬 시스템 - 시네머신 초기화
         InitCinemachineSystem();
-
-        // 로컬 시스템 - UI 초기화
         InitUIController();
 
-        // 연구소 UI에 러너 참조 주입
+        // ------------------------------------------시작
+        // 스테이지 결과 뷰 연동
+        // TODO: 게이트 오브젝트 동적 생성 및 연동으로 변경 필요
+        //Gate.OnGateEntered += (targetSceneIndex) =>
+        //{
+        //    _stageResultView.ClearNextButtonListener();
+        //    _stageResultView.OnNextButtonClicked += () => EnterNextStage(targetSceneIndex);
+        //    _stageResultView.gameObject.SetActive(true);
+        //};
+        // ------------------------------------------끝
+
         LaboratoryUIInjectionPlayerRunner(UIController.BuilderUI, PlayerRunner);
+        BuilderReferenceBind(PlayerBuilder, UIController.BuilderUI, Laboratory);
 
-        // 마지막으로 빌더에게 필요한 참조들 바인드 해주기
-        BuilderReferenceBind(
-            PlayerBuilder,
-            UIController.BuilderUI,
-            Grid,
-            Laboratory);
-
-        Debug.Log("셋업 완료");
-
+        Debug.Log("StageManager init complete");
         _initialized = true;
     }
 
-    void SpawnPlayer()
+    private void SpawnPlayer()
     {
         var runnerPlayer = NetworkManager.Instance.Registry.GetPlayerRefFromPosition(PlayerPosition.Runner);
-        if(runnerPlayer == PlayerRef.None) PlayerRunner = Runner.Spawn(ResourceManager.Instance.PlayerRunnerPrefab, Vector3.zero - (Vector3.forward * 4f), Quaternion.identity);
-        else PlayerRunner = Runner.Spawn(ResourceManager.Instance.PlayerRunnerPrefab, Vector3.zero - (Vector3.forward * 4f), Quaternion.identity, runnerPlayer);
+        if (runnerPlayer == PlayerRef.None)
+            PlayerRunner = Runner.Spawn(ResourceManager.Instance.PlayerRunnerPrefab, Vector3.zero - (Vector3.forward * 4f), Quaternion.identity);
+        else
+            PlayerRunner = Runner.Spawn(ResourceManager.Instance.PlayerRunnerPrefab, Vector3.zero - (Vector3.forward * 4f), Quaternion.identity, runnerPlayer);
         PlayerRunner.name = $"{Runner.name} - Player Runner";
 
         var builderPlayer = NetworkManager.Instance.Registry.GetPlayerRefFromPosition(PlayerPosition.Builder);
-        if(builderPlayer == PlayerRef.None) PlayerBuilder = Runner.Spawn(ResourceManager.Instance.PlayerBuilderPrefab, Vector3.zero, Quaternion.identity);
-        else PlayerBuilder = Runner.Spawn(ResourceManager.Instance.PlayerBuilderPrefab, Vector3.zero, Quaternion.identity, builderPlayer);
+        if (builderPlayer == PlayerRef.None)
+            PlayerBuilder = Runner.Spawn(ResourceManager.Instance.PlayerBuilderPrefab, Vector3.zero, Quaternion.identity);
+        else
+            PlayerBuilder = Runner.Spawn(ResourceManager.Instance.PlayerBuilderPrefab, Vector3.zero, Quaternion.identity, builderPlayer);
         PlayerBuilder.name = $"{Runner.name} - Player Builder";
 
         Debug.Log($"{Runner.name} - Player spawned");
     }
 
-    void SpawnNetworkInputSystem()
+    private void SpawnNetworkInputSystem()
     {
         var instance = Runner.Spawn(networkInputSystemPrefab, Vector3.zero, Quaternion.identity);
         instance.name = $"{Runner.name} - NetworkInputSystem";
         Debug.Log($"{Runner.name} - NetworkInputSystem spawned");
     }
 
-    // 정해진 역할군에 따라 시네머신 카메라를 초기화
-    void InitCinemachineSystem()
+    private void SpawnLaboratory()
     {
-        var instance = Instantiate(cinemachineSystemPrefab); // 시네머신 시스템 인스턴스 생성
+        if (GridManager.Instance == null)
+        {
+            Debug.LogError("GridManager.Instance is null. Failed to spawn Laboratory.");
+            return;
+        }
+
+        Vector3 labPos = GridManager.Instance.GetCenterCellWorldPosition();
+        Laboratory = Runner.Spawn(ResourceManager.Instance.LaboratoryPrefab, labPos, Quaternion.identity);
+        Laboratory.name = $"{Runner.name} - Laboratory";
+    }
+
+    private void InitCinemachineSystem()
+    {
+        var instance = Instantiate(cinemachineSystemPrefab);
         instance.InitCinemachineCamera(NetworkManager.Instance.Registry.RefToPosition[Runner.LocalPlayer], PlayerRunner, PlayerBuilder);
         CinemachineSystem = instance;
     }
 
-    // 정해진 역할군에 따라 표현되는 UI를 초기화, 타워 슬롯 버튼을 설정
     private void InitUIController()
     {
-        var playerPosition = NetworkManager.Instance.Registry.RefToPosition[Runner.LocalPlayer]; // 현재 자신의 역할군을 가져옴
-        UIController.SetPlayerUI(playerPosition); // 자신의 역할군에 따라 UI를 설정
+        var playerPosition = NetworkManager.Instance.Registry.RefToPosition[Runner.LocalPlayer];
+        UIController.SetPlayerUI(playerPosition);
     }
 
-    // 연구소 스폰
-    private void SpawnLaboratory()
-    {
-        // 연구소 차지 셀 인덱스 범위: [x, y], [x - 1, y], [x, y - 1], [x + 1, y], [x - 1, y + 1], [x, y + 1], [x + 1, y + 1]
-        Vector2Int centerIndex = Grid.GetCenterIndex();
-
-        // 연구소 생성
-        Vector3 labPos = Grid.GetNearCellPositionFromIndex(centerIndex);
-        Laboratory = Runner.Spawn(ResourceManager.Instance.LaboratoryPrefab, labPos, Quaternion.identity);
-
-        // 연구소가 위치한 셀 상태 변경
-        Grid.TryOccupyArea(centerIndex, 1, CellState.Laborarytory);
-    }
-
-    #region 참조 주입
-
-    // 연구소 UI에 PlayerRunner 참조 주입
     private void LaboratoryUIInjectionPlayerRunner(PlayerBuilderUI builderUI, PlayerRunner runner)
     {
         builderUI.LaboratoryUIInjectionRunner(runner);
     }
 
-    // 빌더에게 필요한 참조 주입
-    private void BuilderReferenceBind(PlayerBuilder builder, PlayerBuilderUI builderUI, HexagonGrid hexagonGrid, Laboratory laboratory)
+    private void BuilderReferenceBind(PlayerBuilder builder, PlayerBuilderUI builderUI, Laboratory laboratory)
     {
-        // 플레이어 빌더에게 참조 주입
-        builder.PlayerBuilderReferenceInjection(
-            builderUI,
-            hexagonGrid,
-            laboratory);
+        builder.PlayerBuilderReferenceInjection(builderUI, laboratory);
     }
 
-    #endregion
+    // ------------------------------------------시작
+    //private void EnterNextStage(int targetSceneIndex)
+    //{
+    //    // if (Object.HasStateAuthority)
+    //    // {
+    //    //     Runner.LoadScene(SceneRef.FromIndex(targetSceneIndex));
+    //    // }
+    //    // else
+    //    // {
+    //    RPC_EnterNextStage(targetSceneIndex);
+    //    // }
+    //}
+
+    //[Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    //private void RPC_EnterNextStage(int targetSceneIndex)
+    //{
+    //    Debug.Log($"Loading scene {targetSceneIndex}");
+    //    Runner.LoadScene(SceneRef.FromIndex(targetSceneIndex));
+    //}
+    // ------------------------------------------끝
 }

@@ -10,6 +10,9 @@ public class PlayerRegistry : NetworkBehaviour
     [Networked, Capacity(2)]
     public NetworkDictionary<PlayerRef, PlayerPosition> RefToPosition { get; } // PlayerRef로 역할군 찾기
 
+    public bool IsPlayerBuilder(PlayerRef playerRef) => RefToPosition[playerRef] == PlayerPosition.Builder;
+    public bool IsPlayerRunneer(PlayerRef playerRef) => RefToPosition[playerRef] == PlayerPosition.Runner;
+
     // 플레이어 딕셔너리에 추가
     public void AddPlayer(PlayerRef player, PlayerPosition position)
     {

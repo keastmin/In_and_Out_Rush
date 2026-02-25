@@ -1,3 +1,4 @@
+using Dev;
 using Fusion;
 using Grid;
 using System.Collections;
@@ -37,11 +38,9 @@ public class StageManager : NetworkBehaviour
     public TerritoryView TerritoryView;
     public TrackView TrackView;
 
-    // ------------------------------------------시작
-    //[Header("Gate")]
-    //public Gate Gate;
-    //[SerializeField] private StageResultView _stageResultView;
-    // ------------------------------------------끝
+    [Header("Gate")]
+    public Gate Gate;
+    [SerializeField] private StageResultView _stageResultView;
 
     private bool _initialized = false;
 
@@ -81,16 +80,14 @@ public class StageManager : NetworkBehaviour
         InitCinemachineSystem();
         InitUIController();
 
-        // ------------------------------------------시작
         // 스테이지 결과 뷰 연동
         // TODO: 게이트 오브젝트 동적 생성 및 연동으로 변경 필요
-        //Gate.OnGateEntered += (targetSceneIndex) =>
-        //{
-        //    _stageResultView.ClearNextButtonListener();
-        //    _stageResultView.OnNextButtonClicked += () => EnterNextStage(targetSceneIndex);
-        //    _stageResultView.gameObject.SetActive(true);
-        //};
-        // ------------------------------------------끝
+        Gate.OnGateEntered += (targetSceneIndex) =>
+        {
+           _stageResultView.ClearNextButtonListener();
+           _stageResultView.OnNextButtonClicked += () => EnterNextStage(targetSceneIndex);
+           _stageResultView.gameObject.SetActive(true);
+        };
 
         LaboratoryUIInjectionPlayerRunner(UIController.BuilderUI, PlayerRunner);
         BuilderReferenceBind(PlayerBuilder, UIController.BuilderUI, Laboratory);
@@ -161,24 +158,22 @@ public class StageManager : NetworkBehaviour
         builder.PlayerBuilderReferenceInjection(builderUI, laboratory);
     }
 
-    // ------------------------------------------시작
-    //private void EnterNextStage(int targetSceneIndex)
-    //{
-    //    // if (Object.HasStateAuthority)
-    //    // {
-    //    //     Runner.LoadScene(SceneRef.FromIndex(targetSceneIndex));
-    //    // }
-    //    // else
-    //    // {
-    //    RPC_EnterNextStage(targetSceneIndex);
-    //    // }
-    //}
+    private void EnterNextStage(int targetSceneIndex)
+    {
+       // if (Object.HasStateAuthority)
+       // {
+       //     Runner.LoadScene(SceneRef.FromIndex(targetSceneIndex));
+       // }
+       // else
+       // {
+       RPC_EnterNextStage(targetSceneIndex);
+       // }
+    }
 
-    //[Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    //private void RPC_EnterNextStage(int targetSceneIndex)
-    //{
-    //    Debug.Log($"Loading scene {targetSceneIndex}");
-    //    Runner.LoadScene(SceneRef.FromIndex(targetSceneIndex));
-    //}
-    // ------------------------------------------끝
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    private void RPC_EnterNextStage(int targetSceneIndex)
+    {
+       Debug.Log($"Loading scene {targetSceneIndex}");
+       Runner.LoadScene(SceneRef.FromIndex(targetSceneIndex));
+    }
 }

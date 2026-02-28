@@ -1240,9 +1240,9 @@ MonoBehaviour:
   verticalRadius: 8
   noise: 0.1
   vertexCount: 30
-  iteration: 0
-  noiseVertexCount: 0
-  noiseIntensity: 0
+  iteration: 5
+  noiseVertexCount: 10
+  noiseIntensity: 2
 --- !u!1 &946308663
 GameObject:
   m_ObjectHideFlags: 0
@@ -1350,6 +1350,10 @@ PrefabInstance:
     - target: {fileID: 1449402962173481578, guid: b883eea035898d4468cc3083e7711e41, type: 3}
       propertyPath: m_Name
       value: Gate Canvas
+      objectReference: {fileID: 0}
+    - target: {fileID: 8135281985651564824, guid: b883eea035898d4468cc3083e7711e41, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8653684477101748158, guid: b883eea035898d4468cc3083e7711e41, type: 3}
       propertyPath: m_Pivot.x
@@ -2141,6 +2145,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 946308664}
     m_Modifications:
+    - target: {fileID: 2054033773519288605, guid: 8ee0ca47d4ca2f542a19a96fdec5cdec, type: 3}
+      propertyPath: Flags
+      value: 524289
+      objectReference: {fileID: 0}
     - target: {fileID: 2054033773519288605, guid: 8ee0ca47d4ca2f542a19a96fdec5cdec, type: 3}
       propertyPath: SortKey
       value: 3699714390

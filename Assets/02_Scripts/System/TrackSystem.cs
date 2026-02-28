@@ -8,6 +8,9 @@ public class TrackSystem : NetworkSystemBase
     [SerializeField] float verticalRadius;
     [SerializeField] float noise;
     [SerializeField] int vertexCount;
+    [SerializeField] int smoothingIteration;
+    [SerializeField] int noiseVertexCount;
+    [SerializeField] float noiseIntensity;
 
     public Track Track;
     TrackView trackView;
@@ -36,13 +39,14 @@ public class TrackSystem : NetworkSystemBase
 
     void GenerateTrack()
     {
-        CreateTrack();
+        expansionLevel++;
+        CreateTrack(vertexCount, horizontalRadius, verticalRadius, noise);
         trackView.name = $"{Runner.name} - Track";
         trackView.GenerateTrackVertices(Track.Vertices);
         trackView.GenerateTrackLine(Track.Vertices);
     }
 
-    void CreateTrack()
+    void CreateTrack(int vertexCount, float horizontalRadius, float verticalRadius, float noise)
     {
         var trackVertices = new Vector3[vertexCount];
 
@@ -122,5 +126,54 @@ public class TrackSystem : NetworkSystemBase
         trackView.GenerateTrackLine(vertices);
 
         temporaryVertices.Clear();
+    }
+
+    int expansionLevel;
+    public void ExpandTrack()
+    {
+        expansionLevel++;
+        CreateTrack(vertexCount * expansionLevel, horizontalRadius * expansionLevel, verticalRadius * expansionLevel, noise);
+        var noiseCount = Random.Range(2, noiseVertexCount);
+        for (int i = 0; i < noiseCount; i++)
+        {
+            var randomIndex = Random.Range(0, Track.Vertices.Length);
+            var intensity = Random.Range(1f / noiseIntensity, 1f * noiseIntensity);
+            Track.Vertices[randomIndex] *= intensity;
+        }
+
+        for (int itr = 0; itr < smoothingIteration; itr++)
+        {
+            var temporaryVertices = new List<Vector3>();
+            for (int i = 0; i < Track.Vertices.Length; i++)
+            {
+                var prevVertex = Track.Vertices[(i - 1 + Track.Vertices.Length) % Track.Vertices.Length];
+                var currentVertex = Track.Vertices[i];
+                var nextVertex = Track.Vertices[(i + 1) % Track.Vertices.Length];
+                var prevDistance = prevVertex.magnitude;
+                var currentDistance = currentVertex.magnitude;
+                var nextDistance = nextVertex.magnitude;
+                var averageDistance = (prevDistance + currentDistance + nextDistance) / 3f;
+                var direction = currentVertex.normalized;
+                var newVertex = direction * averageDistance;
+                temporaryVertices.Add(newVertex);
+            }
+            Track.Vertices = temporaryVertices.ToArray();
+        }
+
+        trackView.GenerateTrackVertices(Track.Vertices);
+        trackView.GenerateTrackLine(Track.Vertices);
+
+        if (!Object.HasStateAuthority)
+        {
+            RequestSyncTrack();
+        }
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.T))
+        {
+            ExpandTrack();
+        }
     }
 }

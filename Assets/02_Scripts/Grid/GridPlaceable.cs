@@ -138,6 +138,7 @@ public class GridPlaceable : NetworkBehaviour
         if (GridManager.Instance == null) return false;
         if (NetworkManager.Instance == null) return false;
         if (NetworkManager.Instance.Registry == null) return false;
+        if (NetworkManager.Instance.Registry.Runner == null) return false;
         if (!NetworkManager.Instance.Registry.RefToPosition.ContainsKey(Runner.LocalPlayer)) return false;
 
         return NetworkManager.Instance.Registry.IsPlayerBuilder(Runner.LocalPlayer);

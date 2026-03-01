@@ -17,6 +17,7 @@ public class LobbyUI : MonoBehaviour
     private void Update()
     {
         // PlayerRegistry가 아직 스폰되지 않으면 작동하지 않음
+        if (NetworkManager.Instance == null) return;
         var playerRegistry = NetworkManager.Instance.Registry;
         if (playerRegistry)
         {

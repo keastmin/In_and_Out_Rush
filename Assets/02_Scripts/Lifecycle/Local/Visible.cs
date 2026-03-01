@@ -1,8 +1,6 @@
-using UnityEngine;
-
 namespace Dev.Local
 {
-    public class Visible : MonoBehaviour, IVisible
+    public abstract class Visible : Entity, IVisible
     {
         public void SetVisibility(bool visible)
             => gameObject.SetActive(visible);

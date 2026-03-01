@@ -1,3 +1,4 @@
+using Dev;
 using Fusion;
 using Fusion.Sockets;
 using System;
@@ -12,6 +13,8 @@ public class NetworkManager : NetworkBehaviour, INetworkRunnerCallbacks
     // 플레이어 정보
     public PlayerRegistry Registry { get; private set; }
 
+    private HostMigration _hostMigration;
+
     // 현재 테스트 모드 여부
     private bool _isTestMode = false;
     private PlayerPosition _testPosition = PlayerPosition.Builder;
@@ -19,6 +22,7 @@ public class NetworkManager : NetworkBehaviour, INetworkRunnerCallbacks
     private void Awake()
     {
         Registry = GetComponent<PlayerRegistry>();
+        transform.Find("Host Migration").TryGetComponent(out _hostMigration);
     }
 
     public override void Spawned()
@@ -32,7 +36,14 @@ public class NetworkManager : NetworkBehaviour, INetworkRunnerCallbacks
         DontDestroyOnLoad(this.gameObject);
 
         if (HasStateAuthority)
+        {
             Runner.AddCallbacks(this);
+        }
+        else
+        {
+            Runner.AddCallbacks(_hostMigration);
+            Debug.Log($"콜백 등록 {_hostMigration}");
+        }
         Debug.Log("네트워크 매니저 스폰 완료");
     }
 

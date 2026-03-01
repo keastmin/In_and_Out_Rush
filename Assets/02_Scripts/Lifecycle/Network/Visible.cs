@@ -1,9 +1,8 @@
-using Fusion;
 using UnityEngine;
 
 namespace Dev.Network
 {
-    public class Visible : NetworkBehaviour, IVisible
+    public abstract class Visible : Entity, IVisible
     {
         protected Renderer[] renderers;
 

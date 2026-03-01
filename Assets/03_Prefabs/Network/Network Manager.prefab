@@ -1,5 +1,51 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2911020425391869701
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6751959054408280998}
+  - component: {fileID: 8522095006745685052}
+  m_Layer: 0
+  m_Name: Host Migration
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6751959054408280998
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2911020425391869701}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4545382581332746897}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8522095006745685052
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2911020425391869701}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60ca565be2ed9a94f8aae37c70643ea4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _runnerPrefab: {fileID: 6947161378665982860, guid: 0d7ca1b5494443141b511feaa35663f9, type: 3}
+  _stageManagerPrefab: {fileID: 6118610569785656979, guid: 8ee0ca47d4ca2f542a19a96fdec5cdec, type: 3}
 --- !u!1 &2990749792417339691
 GameObject:
   m_ObjectHideFlags: 0
@@ -31,7 +77,8 @@ Transform:
   m_LocalPosition: {x: 580.1136, y: 625.8083, z: 3.6070895}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 6751959054408280998}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &4969690113751759180
@@ -46,6 +93,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 16a32ed6130359d4998feae53564ec20, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _RefToPosition:
+    _items: []
 --- !u!114 &3714456403506439088
 MonoBehaviour:
   m_ObjectHideFlags: 0

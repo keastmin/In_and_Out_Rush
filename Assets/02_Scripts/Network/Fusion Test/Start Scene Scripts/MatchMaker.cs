@@ -155,7 +155,13 @@ public class MatchMaker : MonoBehaviour, INetworkRunnerCallbacks
     public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason)
     {
         Runner = null;
-        OnRoomLeaved?.Invoke();
+        if (shutdownReason == ShutdownReason.HostMigration)
+        {
+            Debug.Log("호스트 마이그레이션으로 인한 종료");
+            return;
+        }
+        else
+            OnRoomLeaved?.Invoke();
     }
 
     public void OnSceneLoadDone(NetworkRunner runner)

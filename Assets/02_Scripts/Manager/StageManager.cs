@@ -3,6 +3,7 @@ using Fusion;
 using Grid;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class StageManager : NetworkBehaviour
 {
@@ -44,6 +45,8 @@ public class StageManager : NetworkBehaviour
 
     private bool _initialized = false;
 
+    public bool IsInitialized => _initialized;
+
     public override void Spawned()
     {
         Debug.Log("StageManager Spawned");
@@ -82,18 +85,33 @@ public class StageManager : NetworkBehaviour
 
         // 스테이지 결과 뷰 연동
         // TODO: 게이트 오브젝트 동적 생성 및 연동으로 변경 필요
-        Gate.OnGateEntered += (targetSceneIndex) =>
-        {
-           _stageResultView.ClearNextButtonListener();
-           _stageResultView.OnNextButtonClicked += () => EnterNextStage(targetSceneIndex);
-           _stageResultView.gameObject.SetActive(true);
-        };
+        Gate.OnGateEntered += OnGateEnteredHandler;
 
         LaboratoryUIInjectionPlayerRunner(UIController.BuilderUI, PlayerRunner);
         BuilderReferenceBind(PlayerBuilder, UIController.BuilderUI, Laboratory);
 
         Debug.Log("StageManager init complete");
         _initialized = true;
+    }
+
+    private void OnGateEnteredHandler(int targetSceneIndex)
+    {
+        _stageResultView.ClearNextButtonListener();
+        _stageResultView.OnNextButtonClicked += () => ReturnToTitleScene();
+        _stageResultView.gameObject.SetActive(true);
+    }
+
+    public override void Despawned(NetworkRunner runner, bool hasState)
+    {
+        base.Despawned(runner, hasState);
+        if (Gate != null)
+        {
+            Gate.OnGateEntered -= OnGateEnteredHandler;
+        }
+        if (Instance == this)
+        {
+            Instance = null;
+        }
     }
 
     private void SpawnPlayer()
@@ -160,10 +178,11 @@ public class StageManager : NetworkBehaviour
 
     private void EnterNextStage(int targetSceneIndex)
     {
-       // if (Object.HasStateAuthority)
-       // {
-       //     Runner.LoadScene(SceneRef.FromIndex(targetSceneIndex));
-       // }
+       if (Object.HasStateAuthority)
+       {
+            Runner.Shutdown();
+            Runner.LoadScene(SceneRef.FromIndex(targetSceneIndex));
+       }
        // else
        // {
        RPC_EnterNextStage(targetSceneIndex);
@@ -175,5 +194,15 @@ public class StageManager : NetworkBehaviour
     {
        Debug.Log($"Loading scene {targetSceneIndex}");
        Runner.LoadScene(SceneRef.FromIndex(targetSceneIndex));
+    }
+
+    private void ReturnToTitleScene()
+    {
+        Debug.Log($"콜백 실행됨! ID: {this.GetInstanceID()}, GameObject: {gameObject.name}, Scene: {gameObject.scene.name}");
+        if (Object.HasStateAuthority)
+        {
+            Runner.Shutdown();
+        }
+        SceneManager.LoadScene(0);
     }
 }

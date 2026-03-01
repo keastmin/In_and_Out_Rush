@@ -6,6 +6,7 @@ namespace Dev
     [Serializable]
     public class ObjectSampleParam
     {
-        public GameObject[] Objects;
+        public GameObject[] Prefabs;
+        public float[] Weights;
     }
 }

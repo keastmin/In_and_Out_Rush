@@ -4,7 +4,7 @@ namespace Launcher
 {
     public class BuilderTest : LauncherBase
     {
-        [SerializeField] LocalTerritorySystem territorySystem;
+        [SerializeField] Dev.Local.TerritorySystem territorySystem;
         [SerializeField] HexaTileSnapSystem hexaTileSnapSystem;
         [SerializeField] LocalTrackGenerationSystem trackGenerationSystem;
         [SerializeField] LocalTrackMonsterSpawnSystem trackMonsterSpawnSystem;

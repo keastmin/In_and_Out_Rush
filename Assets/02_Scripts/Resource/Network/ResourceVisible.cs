@@ -2,7 +2,7 @@ using System;
 
 namespace Dev.Network
 {
-    public class ResourceVisible : Visible
+    public class ResourceVisible : Visible, IResourceVisible
     {
         public ResourceType Type;
         public int Amount = 5;

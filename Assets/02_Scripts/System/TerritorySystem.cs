@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Dev.Local;
 using Fusion;
 using UnityEngine;
 
@@ -17,7 +18,7 @@ public class TerritorySystem : NetworkSystemBase
     bool isIntersected = false;
 
     public Territory Territory;
-    public TerritoryView TerritoryView;
+    public TerritoryVisible TerritoryVisible;
 
     public event Action<Territory, TerritorySystem> OnTerritoryExpandedEvent;
 
@@ -27,7 +28,7 @@ public class TerritorySystem : NetworkSystemBase
         {
             Gizmos.color = Color.green;
             foreach (var point in Territory.Vertices)
-            { // vector2(x, y) -> vector3(x, y, 0)
+            { // vector2(x, y) -> vector3(x, 0, y)
                 Gizmos.DrawSphere(new Vector3(point.x, 0, point.y), 0.5f);
             }
         }
@@ -35,7 +36,7 @@ public class TerritorySystem : NetworkSystemBase
 
     public override void SetUp()
     {
-        TerritoryView = StageManager.Instance.TerritoryView;
+        TerritoryVisible = StageManager.Instance.TerritoryVisible;
 
         GenerateInitialTerritory();
 
@@ -47,8 +48,8 @@ public class TerritorySystem : NetworkSystemBase
         var vertices = GenerateCircleTerritory();
 
         CreateTerritory(vertices);
-        TerritoryView.name = $"{Runner.name} - Territory";
-        TerritoryView.SetTerritory(vertices);
+        TerritoryVisible.name = $"{Runner.name} - Territory";
+        TerritoryVisible.SetVertices(vertices);
     }
 
     void CreateTerritory(List<Vector2> vertices)
@@ -186,7 +187,7 @@ public class TerritorySystem : NetworkSystemBase
 
         var playerPathFromHost = new List<Vector2>(playerPathArray);
         Territory.Expand(playerPathFromHost);
-        TerritoryView.SetTerritory(Territory.Vertices);
+        TerritoryVisible.SetVertices(Territory.Vertices);
 
         if (Object.HasStateAuthority)
         {

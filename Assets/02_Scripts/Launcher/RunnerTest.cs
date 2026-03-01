@@ -4,9 +4,9 @@ namespace Launcher
 {
     public class RunnerTest : LauncherBase
     {
-        [SerializeField] LocalTerritorySystem territorySystem;
+        [SerializeField] Dev.Local.TerritorySystem territorySystem;
         [SerializeField] HexaTileSnapSystem hexaTileSnapSystem;
-        [SerializeField] LocalResourceSpawnSystem resourceSpawnSystem;
+        [SerializeField] Dev.Local.ResourceSystem resourceSpawnSystem;
         [SerializeField] LocalWorldMonsterSpawnSystem worldMonsterSpawnSystem;
 
         protected override void OnLauncherStarted()
@@ -18,7 +18,7 @@ namespace Launcher
             hexaTileSnapSystem.GenerateInitialHexaTileMap();
 
             // 자원 생성
-            resourceSpawnSystem.GenerateResources();
+            resourceSpawnSystem.SpawnResources();
 
             // 테스트용 몬스터 스폰
             worldMonsterSpawnSystem.SpawnMonsters();

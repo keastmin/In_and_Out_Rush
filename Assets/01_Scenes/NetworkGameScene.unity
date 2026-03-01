@@ -1502,7 +1502,7 @@ MonoBehaviour:
   isExpanding: 0
   previousPosition: {x: 0, y: 0}
   playerPath: []
-  TerritoryView: {fileID: 6219545451852062858}
+  TerritoryVisible: {fileID: 0}
 --- !u!114 &1028244187
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2179,17 +2179,15 @@ MonoBehaviour:
   _resourceSystem: {fileID: 1712230124}
   _territorySystem: {fileID: 1028244186}
   _circleSpawnParam:
-    Count: 2
     ObjectSampleParam:
-      Objects:
-      - {fileID: 2142689607256237635, guid: 8b86240da3c329f4fba94b55052fc461, type: 3}
-      - {fileID: 2142689607256237635, guid: d02a8295b7d9841418f05dd9ff95b627, type: 3}
+      Prefabs: []
+      Weights: []
     MaxRetryCount: 10
-    AllowSpawnFailure: 1
     SpawnPosition: {x: 0, y: 0, z: 0}
     SpawnRotation: {x: 0, y: 0, z: 0, w: 0}
     SpawnRadius: 20
   _resourceView: {fileID: 709947505}
+  _initialResourceCount: 10
 --- !u!114 &1712230124
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2330,6 +2328,10 @@ PrefabInstance:
       propertyPath: ResourceSystem
       value: 
       objectReference: {fileID: 1712230124}
+    - target: {fileID: 6118610569785656979, guid: 8ee0ca47d4ca2f542a19a96fdec5cdec, type: 3}
+      propertyPath: TerritoryVisible
+      value: 
+      objectReference: {fileID: 6219545451852062858}
     - target: {fileID: 6118610569785656979, guid: 8ee0ca47d4ca2f542a19a96fdec5cdec, type: 3}
       propertyPath: _stageResultView
       value: 
@@ -3134,6 +3136,18 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5620752961485987810, guid: d8f2b2da585de9846824ef4edbd0ff75, type: 3}
       propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5620752961485987810, guid: d8f2b2da585de9846824ef4edbd0ff75, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5620752961485987810, guid: d8f2b2da585de9846824ef4edbd0ff75, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5620752961485987810, guid: d8f2b2da585de9846824ef4edbd0ff75, type: 3}
+      propertyPath: m_LocalScale.z
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5620752961485987810, guid: d8f2b2da585de9846824ef4edbd0ff75, type: 3}

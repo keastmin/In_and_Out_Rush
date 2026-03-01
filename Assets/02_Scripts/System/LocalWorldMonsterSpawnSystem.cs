@@ -1,8 +1,9 @@
+using Dev.Local;
 using UnityEngine;
 
 public class LocalWorldMonsterSpawnSystem : MonoBehaviour
 {
-    [SerializeField] LocalTerritorySystem territorySystem;
+    [SerializeField] Dev.Local.TerritorySystem territorySystem;
     [SerializeField] Transform monsterParentTransform;
     [SerializeField] LocalWorldMonster monsterPrefab;
     [SerializeField] int spawnCount;
@@ -16,15 +17,15 @@ public class LocalWorldMonsterSpawnSystem : MonoBehaviour
             var randomSpawnPosition = monsterParentTransform.position + Random.insideUnitSphere * spawnRadius;
             randomSpawnPosition.y = 0; // y축 고정
 
-            if (territorySystem.Territory.IsPointInPolygon(randomSpawnPosition)) { i--; continue; }
+            if (StageInstance.Instance.Territory.IsPointInPolygon(randomSpawnPosition)) { i--; continue; }
 
             var monster = Instantiate(monsterPrefab, randomSpawnPosition, Quaternion.identity, monsterParentTransform);
             monster.name = $"Monster_{i}";
-            monster.SetTerritory(territorySystem.Territory);
+            monster.SetTerritory(StageInstance.Instance.Territory);
             monster.SetPlayerTransform(playerTransform);
             monster.SetPatrolPivotPosition(randomSpawnPosition);
             monster.Initialize();
-            territorySystem.OnTerritoryExpandedEvent += monster.OnTerritoryExpanded;
+            StageInstance.Instance.TerritoryExpansion.OnTerritoryExpanded += monster.OnTerritoryExpanded; // TODO: 밖에서 주입
         }
     }
 }

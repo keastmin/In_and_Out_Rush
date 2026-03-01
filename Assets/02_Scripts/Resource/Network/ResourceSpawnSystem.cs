@@ -1,4 +1,5 @@
 using System;
+using Fusion;
 using UnityEngine;
 
 namespace Dev.Network
@@ -9,8 +10,9 @@ namespace Dev.Network
         [SerializeField] private TerritorySystem _territorySystem;
         [SerializeField] private CircleSpawnParam _circleSpawnParam;
         [SerializeField] private Local.ResourceView _resourceView;
+        [SerializeField] private int _initialResourceCount = 10;
 
-        private CircleSpawner _circleSpawner;
+        private CircleSpawnPolicy<NetworkObject> _circleSpawnPolicy;
 
         protected override void OnSetUp()
         {
@@ -23,7 +25,7 @@ namespace Dev.Network
                     return !isInPolygon;
                 };
 
-                _circleSpawner = new CircleSpawner(this, new ObjectSampler());
+                _circleSpawnPolicy = new CircleSpawnPolicy<NetworkObject>();
 
                 GenerateResources();
             }
@@ -31,17 +33,16 @@ namespace Dev.Network
 
         public void GenerateResources()
         {
-            var isSpawned = _circleSpawner.Spawn(_circleSpawnParam, out var spawnedObjects);
-            if (!isSpawned)
-            {
-                Debug.LogError("Failed to spawn resources.");
-                return;
-            }
+            var spawner = new Spawner(this, new ObjectSampler(), _circleSpawnPolicy);
 
-            foreach (var obj in spawnedObjects)
+            for (int i = 0; i < _initialResourceCount; i++)
             {
-                if (obj == null) continue;
-                var resource = obj.GetComponent<ResourceVisible>();
+                var isSpawned = spawner.Spawn(_circleSpawnParam, out var spawnedObject);
+                if (!isSpawned)
+                    continue;
+
+                if (!spawnedObject.TryGetComponent<ResourceVisible>(out var resource))
+                    continue;
 
                 void HandleTerritoryExpanded(Territory territory, TerritorySystem territorySystem)
                 {

@@ -14,6 +14,7 @@ public class PlayerBuilderTowerMoveState : IPlayerState
     {
         // 그리드 오버레이 활성화
         GridManager.Instance.SetCellStateOverlayEnabled(true);
+        GridManager.Instance.ClearBuildRangePreview();
 
         _player.BuilderUI.ActivationTowerBuildUI(true, "Left Mouse: Complete, RightMouse: Cancel");
         _player.BuilderTowerMove.TowerMoveSet(_player.SelectedTowers);
@@ -42,6 +43,7 @@ public class PlayerBuilderTowerMoveState : IPlayerState
     public void Exit()
     {
         // 그리드 오버레이 비활성화
+        GridManager.Instance.ClearBuildRangePreview();
         GridManager.Instance.SetCellStateOverlayEnabled(false);
 
         _player.BuilderTowerMove.TowerMoveClear();

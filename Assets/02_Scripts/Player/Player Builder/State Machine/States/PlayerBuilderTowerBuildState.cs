@@ -33,6 +33,7 @@ public class PlayerBuilderTowerBuildState : IPlayerState
         }
 
         _canTowerBuild = false;
+        GridManager.Instance.ClearBuildRangePreview();
     }
 
     public void Update()
@@ -67,6 +68,7 @@ public class PlayerBuilderTowerBuildState : IPlayerState
     public void Exit()
     {
         // 셀 상태 오버레이 비활성화
+        GridManager.Instance.ClearBuildRangePreview();
         GridManager.Instance.SetCellStateOverlayEnabled(false);
 
         CancelTowerBuild();
@@ -116,6 +118,7 @@ public class PlayerBuilderTowerBuildState : IPlayerState
             _towerBuildIndex = GridManager.Instance.GetNearestCellIndex(mouseHitPoint);
             _towerBuildPosition = GridManager.Instance.GetCellCenterPositionFromIndex(_towerBuildIndex);
             _towerGhost.transform.position = _towerBuildPosition;
+            GridManager.Instance.SetBuildRangePreview(_towerBuildIndex, _player.BuilderTowerBuild.BuildRange);
 
             bool canPlaceByArea = GridManager.Instance.CanPlaceInRange(
                 _towerBuildIndex,
@@ -137,6 +140,10 @@ public class PlayerBuilderTowerBuildState : IPlayerState
             {
                 _towerGhost.DisableTower();
             }
+        }
+        else
+        {
+            GridManager.Instance.ClearBuildRangePreview();
         }
 
         return canTowerCraft;

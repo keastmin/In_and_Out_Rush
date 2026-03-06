@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace Grid
 {
@@ -16,6 +17,7 @@ namespace Grid
         [SerializeField] private Color _noneColor = new Color(0.2f, 0.45f, 1f, 0.28f);
         [SerializeField] private Color _buildColor = new Color(1f, 0.2f, 0.2f, 0.30f);
         [SerializeField] private Color _buffColor = new Color(1f, 0.85f, 0.15f, 0.35f);
+        [SerializeField] private Color _previewTintColor = new Color(0.1f, 1f, 0.2f, 0.45f);
         [SerializeField][Range(0f, 1f)] private float _cellFill = 0.2f;
         [SerializeField] private bool _showCellStateOverlay = false;
 
@@ -41,7 +43,12 @@ namespace Grid
 
         // 텍스쳐
         private Texture2D _stateTexture;
+        private Texture2D _previewTexture;
         //private Texture2D _buffTexture;
+        private bool _isTerritoryEventBound;
+        private bool _previewEnabled;
+        private readonly HashSet<Vector2Int> _previewCellIndices = new();
+        private Color32[] _previewPixelsCache;
 
         // 오버레이
         public bool ShowCellStateOverlay => _showCellStateOverlay;
@@ -71,6 +78,7 @@ namespace Grid
 
             _showCellStateOverlay = false;
             Instance = this;
+            BindTerritoryEventsIfNeeded();
         }
 
         // Flat-top 육각 타일링
@@ -130,6 +138,11 @@ namespace Grid
             {
                 _stateTexture = CreateGridTexture("GridCellStateTex");
             }
+            if (_previewTexture == null || _previewTexture.width != _gridRow || _previewTexture.height != _gridCol)
+            {
+                _previewTexture = CreateGridTexture("GridCellPreviewTex");
+                RebuildPreviewTexture();
+            }
 
             //if (_buffTexture == null || _buffTexture.width != _gridRow || _buffTexture.height != _gridCol)
             //{
@@ -144,7 +157,9 @@ namespace Grid
             {
                 for (int j = 0; j < _gridRow; j++)
                 {
-                    byte state = (byte)(_grid[i, j].IsBuild ? 255 : 0);
+                    bool inTerritory = IsCellInTerritory(i, j);
+                    bool canBuild = inTerritory && !_grid[i, j].IsBuild;
+                    byte state = (byte)(canBuild ? 0 : 255);
                     //byte buff = (byte)(_grid[i, j].IsBuffCell ? 255 : 0);
 
                     statePixels[idx] = new Color32(state, 0, 0, 255);
@@ -158,6 +173,62 @@ namespace Grid
 
             //_buffTexture.SetPixels32(buffPixels);
             //_buffTexture.Apply(false, false);
+        }
+
+        private void RebuildPreviewTexture()
+        {
+            if (_grid == null) return;
+
+            if (_previewTexture == null || _previewTexture.width != _gridRow || _previewTexture.height != _gridCol)
+            {
+                _previewTexture = CreateGridTexture("GridCellPreviewTex");
+            }
+
+            int pixelCount = _gridRow * _gridCol;
+            if (_previewPixelsCache == null || _previewPixelsCache.Length != pixelCount)
+            {
+                _previewPixelsCache = new Color32[pixelCount];
+            }
+
+            for (int i = 0; i < pixelCount; i++)
+            {
+                _previewPixelsCache[i] = new Color32(0, 0, 0, 255);
+            }
+
+            if (_previewEnabled)
+            {
+                foreach (var idx in _previewCellIndices)
+                {
+                    if (!IsValidCell(idx.x, idx.y)) continue;
+                    int flatIndex = (idx.x * _gridRow) + idx.y;
+                    _previewPixelsCache[flatIndex] = new Color32(255, 0, 0, 255);
+                }
+            }
+
+            _previewTexture.SetPixels32(_previewPixelsCache);
+            _previewTexture.Apply(false, false);
+        }
+
+        private void OnDestroy()
+        {
+            if (_isTerritoryEventBound && _territorySystem != null)
+            {
+                _territorySystem.OnTerritoryExpandedEvent -= OnTerritoryExpanded;
+            }
+        }
+
+        private void BindTerritoryEventsIfNeeded()
+        {
+            if (_isTerritoryEventBound || _territorySystem == null) return;
+
+            _territorySystem.OnTerritoryExpandedEvent += OnTerritoryExpanded;
+            _isTerritoryEventBound = true;
+        }
+
+        private void OnTerritoryExpanded(Territory territory, TerritorySystem territorySystem)
+        {
+            RebuildCellStateTextures();
+            PushShaderData();
         }
 
         private Texture2D CreateGridTexture(string texName)
@@ -183,9 +254,12 @@ namespace Grid
             _planePropertyBlock.SetColor("_NoneColor", _noneColor);
             _planePropertyBlock.SetColor("_BuildColor", _buildColor);
             _planePropertyBlock.SetColor("_BuffColor", _buffColor);
+            _planePropertyBlock.SetColor("_PreviewTintColor", _previewTintColor);
             _planePropertyBlock.SetFloat("_CellFill", _cellFill);
             _planePropertyBlock.SetFloat("_StateOverlayEnabled", _showCellStateOverlay ? 1f : 0f);
+            _planePropertyBlock.SetFloat("_PreviewEnabled", _previewEnabled ? 1f : 0f);
             _planePropertyBlock.SetTexture("_StateTex", _stateTexture);
+            _planePropertyBlock.SetTexture("_PreviewTex", _previewTexture);
             //_planePropertyBlock.SetTexture("_BuffTex", _buffTexture);
             _planeRenderer.SetPropertyBlock(_planePropertyBlock);
         }

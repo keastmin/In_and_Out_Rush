@@ -15,6 +15,61 @@ namespace Grid
         public void SetCellStateOverlayEnabled(bool enabled)
         {
             _showCellStateOverlay = enabled;
+            BindTerritoryEventsIfNeeded();
+            if (enabled)
+            {
+                RebuildCellStateTextures();
+            }
+            else
+            {
+                ClearBuildRangePreview();
+            }
+            PushShaderData();
+        }
+
+        /// <summary>
+        /// 지정한 중심 셀과 range를 기준으로 설치 범위 프리뷰를 표시.
+        /// </summary>
+        public void SetBuildRangePreview(Vector2Int centerIndex, int range)
+        {
+            _previewCellIndices.Clear();
+            AddCellIndicesInRangeToSet(centerIndex, range, _previewCellIndices, includeCenter: true);
+            _previewEnabled = _previewCellIndices.Count > 0;
+            RebuildPreviewTexture();
+            PushShaderData();
+        }
+
+        /// <summary>
+        /// 외부에서 계산한 셀 집합을 설치 범위 프리뷰로 표시.
+        /// </summary>
+        public void SetBuildRangePreview(IEnumerable<Vector2Int> indices)
+        {
+            _previewCellIndices.Clear();
+
+            if (indices != null)
+            {
+                foreach (var idx in indices)
+                {
+                    if (IsValidCell(idx.x, idx.y))
+                    {
+                        _previewCellIndices.Add(idx);
+                    }
+                }
+            }
+
+            _previewEnabled = _previewCellIndices.Count > 0;
+            RebuildPreviewTexture();
+            PushShaderData();
+        }
+
+        /// <summary>
+        /// 설치 범위 프리뷰를 제거.
+        /// </summary>
+        public void ClearBuildRangePreview()
+        {
+            _previewCellIndices.Clear();
+            _previewEnabled = false;
+            RebuildPreviewTexture();
             PushShaderData();
         }
 
@@ -199,6 +254,37 @@ namespace Grid
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// 중심 셀 기준 range 범위 셀을 targetSet에 추가.
+        /// </summary>
+        public void AddCellIndicesInRangeToSet(Vector2Int centerIndex, int range, HashSet<Vector2Int> targetSet, bool includeCenter = true)
+        {
+            if (targetSet == null) return;
+            if (!IsValidCell(centerIndex.x, centerIndex.y)) return;
+
+            int radius = Mathf.Max(0, range);
+            int q0 = centerIndex.y;
+            int r0 = centerIndex.x - (q0 >> 1);
+
+            for (int dq = -radius; dq <= radius; dq++)
+            {
+                int drMin = Mathf.Max(-radius, -dq - radius);
+                int drMax = Mathf.Min(radius, -dq + radius);
+
+                for (int dr = drMin; dr <= drMax; dr++)
+                {
+                    int q = q0 + dq;
+                    int r = r0 + dr;
+                    Vector2Int idx = AxialToOddQOffset(q, r);
+
+                    if (!IsValidCell(idx.x, idx.y)) continue;
+                    if (!includeCenter && idx == centerIndex) continue;
+
+                    targetSet.Add(idx);
+                }
+            }
         }
 
         /// <summary>

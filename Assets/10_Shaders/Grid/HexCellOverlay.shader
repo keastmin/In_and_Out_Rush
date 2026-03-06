@@ -11,13 +11,16 @@ Shader "GridVisualize/HexCellOverlay"
         _GridRows ("Grid Rows", Float) = 20
 
         _StateTex ("Cell State Tex", 2D) = "black" {}
+        _PreviewTex ("Preview Tex", 2D) = "black" {}
         _BuffTex ("Buff Tex", 2D) = "black" {}
 
         _NoneColor ("None Color", Color) = (0.2,0.45,1,0.28)
         _BuildColor ("Build Color", Color) = (1,0.2,0.2,0.30)
         _BuffColor ("Buff Color", Color) = (1,0.85,0.15,0.35)
+        _PreviewTintColor ("Preview Tint Color", Color) = (0.1,1,0.2,0.45)
         _CellFill ("Cell Fill", Range(0,1)) = 1
         _StateOverlayEnabled ("State Overlay Enabled", Float) = 1
+        _PreviewEnabled ("Preview Enabled", Float) = 0
     }
 
     SubShader
@@ -64,6 +67,8 @@ Shader "GridVisualize/HexCellOverlay"
 
             TEXTURE2D(_StateTex);
             SAMPLER(sampler_StateTex);
+            TEXTURE2D(_PreviewTex);
+            SAMPLER(sampler_PreviewTex);
             TEXTURE2D(_BuffTex);
             SAMPLER(sampler_BuffTex);
 
@@ -75,8 +80,10 @@ Shader "GridVisualize/HexCellOverlay"
             float4 _NoneColor;
             float4 _BuildColor;
             float4 _BuffColor;
+            float4 _PreviewTintColor;
             float _CellFill;
             float _StateOverlayEnabled;
+            float _PreviewEnabled;
 
             Varyings vert(Attributes IN)
             {
@@ -188,6 +195,7 @@ Shader "GridVisualize/HexCellOverlay"
 
                 float2 cellUV = float2((q + 0.5) / max(_GridRows, 1.0), (row + 0.5) / max(_GridCols, 1.0));
                 half stateValue = SAMPLE_TEXTURE2D(_StateTex, sampler_StateTex, cellUV).r;
+                half previewValue = SAMPLE_TEXTURE2D(_PreviewTex, sampler_PreviewTex, cellUV).r;
                 half buffValue = SAMPLE_TEXTURE2D(_BuffTex, sampler_BuffTex, cellUV).r;
 
                 // 1) Buff fill: whole cell interior.
@@ -199,6 +207,11 @@ Shader "GridVisualize/HexCellOverlay"
                 half4 stateColor = lerp(_NoneColor, _BuildColor, step(0.5h, stateValue));
                 half3 stateLayer = lerp(baseColor.rgb, stateColor.rgb, stateColor.a);
                 half3 mixedAlbedo = lerp(afterBuff, stateLayer, (half)(inside * saturate(_StateOverlayEnabled)));
+
+                // 3) Build range preview: tint current cell-state color toward green.
+                half previewMask = (half)(inside * saturate(_StateOverlayEnabled) * saturate(_PreviewEnabled)) * step(0.5h, previewValue);
+                half3 previewLayer = lerp(mixedAlbedo, _PreviewTintColor.rgb, _PreviewTintColor.a);
+                mixedAlbedo = lerp(mixedAlbedo, previewLayer, previewMask);
 
                 half3 litColor = EvaluateLighting(IN.positionWS, IN.normalWS, mixedAlbedo);
 

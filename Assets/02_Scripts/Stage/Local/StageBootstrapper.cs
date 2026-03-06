@@ -10,12 +10,18 @@ namespace Dev.Local
         // [Header("Regacy")]
         // [SerializeField] private StageManager _stageManager;
 
+        [Header("Timer")]
+        [SerializeField] private TimeSystem _timerSystem;
+
         [Header("HexaGrid")]
         [SerializeField] private HexaTileSnapSystem _hexaTileSnapSystem;
 
         [Header("Territory")]
         [SerializeField] private TerritorySystem _territorySystem;
         [SerializeField] private LineRenderer _territoryExpansionLineRenderer;
+
+        [Header("Track")]
+        [SerializeField] private TrackSystem _trackSystem;
 
         [Header("Player")]
         [SerializeField] private PlayerRunner _playerRunner;
@@ -51,14 +57,26 @@ namespace Dev.Local
 
         private void InitializeSystems()
         {
+            // Timer
+            _timerSystem.Initialize();
+
+            // Territory
             _territorySystem.Initialize();
             _territorySystem.CreateInitialCircleTerritory(out var territory, out var territoryVisible);
             StageInstance.Instance.Territory = territory;
             StageInstance.Instance.TerritoryVisible = territoryVisible;
             StageInstance.Instance.InitializeTerritoryExpansion();
 
+            // Track
+            _trackSystem.Initialize();
+            _trackSystem.CreateInitialTrack(out var track, out var trackVisible);
+            StageInstance.Instance.Track = track;
+            StageInstance.Instance.TrackVisible = trackVisible;
+
+            // Player
             StageInstance.Instance.MovementSpeed = _playerMovementSpeed;
 
+            // Resource
             _resourceSystem.Initialize();
             _resourceSystem.SetSpawnValidator(args =>
             {
@@ -76,11 +94,24 @@ namespace Dev.Local
 
         private void BindObjects()
         {
+            _timerSystem.OnTimeChanged += _trackSystem.HandleTimeChanged;
+            _trackSystem.OnTrackChanged += HandleTrackChanged;
             StageInstance.Instance.TerritoryExpansion.OnPathCleared += HandleTerritoryExpansionPathCleared;
             StageInstance.Instance.TerritoryExpansion.OnPathUpdated += HandleTerritoryExpansionPathUpdated;
             StageInstance.Instance.TerritoryExpansion.OnTerritoryExpanded += HandleTerritoryExpansionPathUpdated;
             _playerRunner.OnMoved += StageInstance.Instance.TerritoryExpansion.HandlePlayerRunnerPositionChanged;
             _resourceSystem.OnResourceSpawned += HandleResourceSpawned;
+        }
+
+        private void HandleTrackChanged(int level, List<Vector2> vertices, TrackSystem trackSystem, object sender)
+        {
+            if (vertices.Count < 3) return;
+
+            StageInstance.Instance.Track.Level = level;
+
+            var vertices3d = vertices.ConvertAll(v => new Vector3(v.x, 0, v.y)).ToArray();
+            StageInstance.Instance.TrackVisible.GenerateTrackVertices(vertices3d);
+            StageInstance.Instance.TrackVisible.GenerateTrackLine(vertices3d);
         }
 
         private void HandleTerritoryExpansionPathCleared(object sender)
@@ -135,6 +166,7 @@ namespace Dev.Local
         private void SetUpObjects()
         {
             _resourceSystem.SetUp();
+            _trackSystem.SpawnMonsters();
             // _worldMonsterSpawnSystem.SpawnMonsters();
         }
     }

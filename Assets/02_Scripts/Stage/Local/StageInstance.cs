@@ -14,6 +14,8 @@ namespace Dev.Local
         public Territory Territory;
         public TerritoryVisible TerritoryVisible;
         public TerritoryExpansion TerritoryExpansion;
+        public Track Track;
+        public TrackVisible TrackVisible;
 
         public int Mineral
         {
@@ -39,9 +41,7 @@ namespace Dev.Local
         public event Action<int> OnGasChanged;
 
         public void InitializeTerritoryExpansion()
-        {
-            TerritoryExpansion = new(Territory);
-        }
+            => TerritoryExpansion = new(Territory);
 
         public static void Create()
         {

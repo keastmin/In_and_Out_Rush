@@ -6,7 +6,7 @@ namespace Launcher
     {
         [SerializeField] Dev.Local.TerritorySystem territorySystem;
         [SerializeField] HexaTileSnapSystem hexaTileSnapSystem;
-        [SerializeField] LocalTrackGenerationSystem trackGenerationSystem;
+        // [SerializeField] LocalTrackGenerationSystem trackGenerationSystem;
         [SerializeField] LocalTrackMonsterSpawnSystem trackMonsterSpawnSystem;
 
         protected override void OnLauncherStarted()
@@ -18,10 +18,10 @@ namespace Launcher
             hexaTileSnapSystem.GenerateInitialHexaTileMap();
 
             // 트랙 생성
-            trackGenerationSystem.GenerateTrack();
+            // trackGenerationSystem.GenerateTrack();
 
             // 몬스터 생성
-            trackMonsterSpawnSystem.SpawnMonsters(trackGenerationSystem.Track);
+            // trackMonsterSpawnSystem.SpawnMonsters(trackGenerationSystem.Track);
         }
     }
 }

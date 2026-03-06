@@ -1,6 +1,12 @@
+using System.Collections.Generic;
 using UnityEngine;
 
-public class Track
+namespace Dev
 {
-    public Vector3[] Vertices;
+    public class Track
+    {
+        public int Level = 1;
+        public List<Vector2> Vertices2d;
+        public Vector3[] Vertices;
+    }
 }

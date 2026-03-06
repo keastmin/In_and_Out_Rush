@@ -38,7 +38,7 @@ public class StageManager : NetworkBehaviour
 
     [Header("Territory")]
     public TerritoryVisible TerritoryVisible;
-    public TrackView TrackView;
+    public TrackVisible TrackVisible;
 
     [Header("Gate")]
     public Gate Gate;

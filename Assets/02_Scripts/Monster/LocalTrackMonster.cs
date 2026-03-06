@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
+using Dev;
 using UnityEngine;
 
 public class LocalTrackMonster : LocalMonster
@@ -27,16 +28,16 @@ public class LocalTrackMonster : LocalMonster
 
     protected virtual void FollowTrack()
     {
-        if (track.Vertices == null || track.Vertices.Length == 0) { return; }
-
-        Vector3 target = track.Vertices[currentPointIndex];
+        if (track == null || track.Vertices2d == null || track.Vertices2d.Count == 0) { return; }
+        var targetVertex = track.Vertices2d[currentPointIndex];
+        var target = new Vector3(targetVertex.x, 0, targetVertex.y);
         Vector3 moveDir = target - transform.position;
         moveDir.y = 0; // y축 고정(필요시)
         float distance = moveDir.magnitude;
 
         if (distance < arrivalThreshold)
         {
-            currentPointIndex = (currentPointIndex + 1) % track.Vertices.Length;
+            currentPointIndex = (currentPointIndex + 1) % track.Vertices2d.Count;
             return;
         }
 

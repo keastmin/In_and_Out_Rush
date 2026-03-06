@@ -1250,7 +1250,7 @@ MonoBehaviour:
   verticalRadius: 8
   noise: 0.1
   vertexCount: 30
-  smoothingIteration: 0
+  smoothingIteration: 4
   noiseVertexCount: 10
   noiseIntensity: 2
 --- !u!1 &946308663

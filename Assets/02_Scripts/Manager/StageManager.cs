@@ -1,4 +1,5 @@
 using Dev;
+using Dev.Local;
 using Fusion;
 using Grid;
 using System.Collections;
@@ -36,8 +37,8 @@ public class StageManager : NetworkBehaviour
     [Space(10)]
 
     [Header("Territory")]
-    public TerritoryView TerritoryView;
-    public TrackView TrackView;
+    public TerritoryVisible TerritoryVisible;
+    public TrackVisible TrackVisible;
 
     [Header("Gate")]
     public Gate Gate;

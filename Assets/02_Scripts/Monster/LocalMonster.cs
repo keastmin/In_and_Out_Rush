@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using Dev.Local;
 using UnityEngine;
 
 public class LocalMonster : MonoBehaviour, IMonster, IDamageable
@@ -30,12 +32,12 @@ public class LocalMonster : MonoBehaviour, IMonster, IDamageable
     protected virtual void Update() => UpdateMonster();
     public virtual void UpdateMonster() =>  throw new System.NotImplementedException();
 
-    public void OnTerritoryExpanded(Territory territory, LocalTerritorySystem territorySystem)
+    public void OnTerritoryExpanded(List<Vector2> vertices, Territory territory, object sender)
     {
-        var xzPosition = new Vector3(transform.position.x, transform.position.z);
+        var xzPosition = new Vector2(transform.position.x, transform.position.z);
         if (territory.IsPointInPolygon(xzPosition))
         {
-            territorySystem.OnTerritoryExpandedEvent -= OnTerritoryExpanded;
+            StageInstance.Instance.TerritoryExpansion.OnTerritoryExpanded -= OnTerritoryExpanded;
             DestroyMonster();
         }
     }

@@ -33,7 +33,7 @@ public class LocalSandTomb : LocalWorldMonster
         attackElapsedTime += Time.deltaTime * attackSpeed;
         if (attackElapsedTime >= 1f)
         {
-            playerTransform.GetComponent<LocalRunner>().Health -= 1;
+            // playerTransform.GetComponent<LocalRunner>().Health -= 1;
             Debug.Log($"{name} attacks {playerTransform.name}");
             attackElapsedTime = 0f;
         }

@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using Dev;
+using Dev.Local;
 using Fusion;
 using UnityEngine;
 
@@ -13,7 +15,7 @@ public class TrackSystem : NetworkSystemBase
     [SerializeField] float noiseIntensity;
 
     public Track Track;
-    TrackView trackView;
+    TrackVisible trackVisible;
 
     void OnDrawGizmosSelected()
     {
@@ -28,7 +30,7 @@ public class TrackSystem : NetworkSystemBase
 
     public override void SetUp()
     {
-        trackView = StageManager.Instance.TrackView;
+        trackVisible = StageManager.Instance.TrackVisible;
 
         GenerateTrack();
         if (!Object.HasStateAuthority)
@@ -41,9 +43,9 @@ public class TrackSystem : NetworkSystemBase
     {
         expansionLevel++;
         CreateTrack(vertexCount, horizontalRadius, verticalRadius, noise);
-        trackView.name = $"{Runner.name} - Track";
-        trackView.GenerateTrackVertices(Track.Vertices);
-        trackView.GenerateTrackLine(Track.Vertices);
+        trackVisible.name = $"{Runner.name} - Track";
+        trackVisible.GenerateTrackVertices(Track.Vertices);
+        trackVisible.GenerateTrackLine(Track.Vertices);
     }
 
     void CreateTrack(int vertexCount, float horizontalRadius, float verticalRadius, float noise)
@@ -122,8 +124,8 @@ public class TrackSystem : NetworkSystemBase
         var vertices = temporaryVertices.ToArray();
 
         Track.Vertices = vertices;
-        trackView.GenerateTrackVertices(vertices);
-        trackView.GenerateTrackLine(vertices);
+        trackVisible.GenerateTrackVertices(vertices);
+        trackVisible.GenerateTrackLine(vertices);
 
         temporaryVertices.Clear();
     }
@@ -160,8 +162,8 @@ public class TrackSystem : NetworkSystemBase
             Track.Vertices = temporaryVertices.ToArray();
         }
 
-        trackView.GenerateTrackVertices(Track.Vertices);
-        trackView.GenerateTrackLine(Track.Vertices);
+        trackVisible.GenerateTrackVertices(Track.Vertices);
+        trackVisible.GenerateTrackLine(Track.Vertices);
 
         if (!Object.HasStateAuthority)
         {

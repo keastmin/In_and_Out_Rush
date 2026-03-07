@@ -2115,6 +2115,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _stageManager: {fileID: 1934234198}
   _resourceSpawnSystem: {fileID: 1712230123}
+  Gate: {fileID: 289030124}
+  _stageResultView: {fileID: 1759260139}
 --- !u!1 &1712230120
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,10 +1,8 @@
-using Dev;
 using Dev.Local;
 using Fusion;
 using Grid;
 using System.Collections;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class StageManager : NetworkBehaviour
 {
@@ -39,10 +37,6 @@ public class StageManager : NetworkBehaviour
     [Header("Territory")]
     public TerritoryVisible TerritoryVisible;
     public TrackVisible TrackVisible;
-
-    [Header("Gate")]
-    public Gate Gate;
-    [SerializeField] private StageResultView _stageResultView;
 
     private bool _initialized = false;
 
@@ -84,10 +78,6 @@ public class StageManager : NetworkBehaviour
         InitCinemachineSystem();
         InitUIController();
 
-        // 스테이지 결과 뷰 연동
-        // TODO: 게이트 오브젝트 동적 생성 및 연동으로 변경 필요
-        Gate.OnGateEntered += OnGateEnteredHandler;
-
         LaboratoryUIInjectionPlayerRunner(UIController.BuilderUI, PlayerRunner);
         BuilderReferenceBind(PlayerBuilder, UIController.BuilderUI, Laboratory);
 
@@ -95,20 +85,9 @@ public class StageManager : NetworkBehaviour
         _initialized = true;
     }
 
-    private void OnGateEnteredHandler(int targetSceneIndex)
-    {
-        _stageResultView.ClearNextButtonListener();
-        _stageResultView.OnNextButtonClicked += () => ReturnToTitleScene();
-        _stageResultView.gameObject.SetActive(true);
-    }
-
     public override void Despawned(NetworkRunner runner, bool hasState)
     {
         base.Despawned(runner, hasState);
-        if (Gate != null)
-        {
-            Gate.OnGateEntered -= OnGateEnteredHandler;
-        }
         if (Instance == this)
         {
             Instance = null;
@@ -175,35 +154,5 @@ public class StageManager : NetworkBehaviour
     private void BuilderReferenceBind(PlayerBuilder builder, PlayerBuilderUI builderUI, Laboratory laboratory)
     {
         builder.PlayerBuilderReferenceInjection(builderUI, laboratory);
-    }
-
-    private void EnterNextStage(int targetSceneIndex)
-    {
-       if (Object.HasStateAuthority)
-       {
-            Runner.Shutdown();
-            Runner.LoadScene(SceneRef.FromIndex(targetSceneIndex));
-       }
-       // else
-       // {
-       RPC_EnterNextStage(targetSceneIndex);
-       // }
-    }
-
-    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    private void RPC_EnterNextStage(int targetSceneIndex)
-    {
-       Debug.Log($"Loading scene {targetSceneIndex}");
-       Runner.LoadScene(SceneRef.FromIndex(targetSceneIndex));
-    }
-
-    private void ReturnToTitleScene()
-    {
-        Debug.Log($"콜백 실행됨! ID: {this.GetInstanceID()}, GameObject: {gameObject.name}, Scene: {gameObject.scene.name}");
-        if (Object.HasStateAuthority)
-        {
-            Runner.Shutdown();
-        }
-        SceneManager.LoadScene(0);
     }
 }

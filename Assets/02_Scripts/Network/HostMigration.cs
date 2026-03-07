@@ -24,27 +24,27 @@ namespace Dev
         public async void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken)
         {
             Debug.Log("Host Migration started, shutting down the old Runner...");
-            await runner.Shutdown(shutdownReason: ShutdownReason.HostMigration);
+            // await runner.Shutdown(shutdownReason: ShutdownReason.HostMigration);
 
-            var newRunner = Instantiate(_runnerPrefab);
-            newRunner.AddCallbacks(this);
+            // var newRunner = Instantiate(_runnerPrefab);
+            // newRunner.AddCallbacks(this);
 
-            StartGameResult result = await newRunner.StartGame(new StartGameArgs()
-            {
-                // SessionName = SessionName,              // ignored, peer never disconnects from the Photon Cloud
-                GameMode = GameMode.Host,                    // ignored, Game Mode comes with the HostMigrationToken
-                HostMigrationToken = hostMigrationToken,   // contains all necessary info to restart the Runner
-                HostMigrationResume = HostMigrationResume, // this will be invoked to resume the simulation
-                SceneManager = newRunner.GetComponent<NetworkSceneManagerDefault>() // 기본 씬 매니저 사용
-                // other args
-            });
+            // StartGameResult result = await newRunner.StartGame(new StartGameArgs()
+            // {
+            //     // SessionName = SessionName,              // ignored, peer never disconnects from the Photon Cloud
+            //     GameMode = GameMode.Host,                    // ignored, Game Mode comes with the HostMigrationToken
+            //     HostMigrationToken = hostMigrationToken,   // contains all necessary info to restart the Runner
+            //     HostMigrationResume = HostMigrationResume, // this will be invoked to resume the simulation
+            //     SceneManager = newRunner.GetComponent<NetworkSceneManagerDefault>() // 기본 씬 매니저 사용
+            //     // other args
+            // });
 
-            // Check StartGameResult as usual
-            if (result.Ok == false) {
-                Debug.LogWarning(result.ShutdownReason);
-            } else {
-                Debug.Log("Done");
-            }
+            // // Check StartGameResult as usual
+            // if (result.Ok == false) {
+            //     Debug.LogWarning(result.ShutdownReason);
+            // } else {
+            //     Debug.Log("Done");
+            // }
         }
 
         void HostMigrationResume(NetworkRunner runner)
@@ -83,10 +83,11 @@ namespace Dev
         {
             // Can check if the Runner is being shutdown because of the Host Migration
             if (shutdownReason == ShutdownReason.HostMigration) {
-            // ...
+                // ...
                 Debug.Log("Host Migration in progress...");
             } else {
-            // Or a normal Shutdown
+                // Or a normal Shutdown
+                Debug.Log("Runner shutdown. Reason: " + shutdownReason);
             }
         }
 

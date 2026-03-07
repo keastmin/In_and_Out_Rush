@@ -125,7 +125,6 @@ public class MatchMaker : MonoBehaviour, INetworkRunnerCallbacks
         {
             Debug.Log("LeaveRoom Shutdown 진행");
             await Runner.Shutdown();
-            OnRoomLeaved?.Invoke();
         }
     }
 
@@ -161,7 +160,10 @@ public class MatchMaker : MonoBehaviour, INetworkRunnerCallbacks
             return;
         }
         else
+        {
+            Debug.Log("네트워크 러너가 종료되었습니다. 이유: " + shutdownReason);
             OnRoomLeaved?.Invoke();
+        }
     }
 
     public void OnSceneLoadDone(NetworkRunner runner)

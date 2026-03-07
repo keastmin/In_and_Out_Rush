@@ -2,22 +2,22 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Dev
+namespace Dev.Local
 {
-    public class StageResultView : MonoBehaviour
+    public class StageResultView : View
     {
         [SerializeField] private Button _nextButton;
 
         public event Action OnNextButtonClicked;
 
-        private void Awake()
+        protected override void OnInitialize()
         {
             _nextButton.onClick.AddListener(() => OnNextButtonClicked?.Invoke());
         }
 
         public void ClearNextButtonListener()
         {
-            _nextButton.onClick.RemoveAllListeners();
+            OnNextButtonClicked = null;
         }
     }
 }

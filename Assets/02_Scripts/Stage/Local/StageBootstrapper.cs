@@ -10,7 +10,7 @@ namespace Dev.Local
         // [Header("Regacy")]
         // [SerializeField] private StageManager _stageManager;
 
-        [Header("Timer")]
+        [Header("Time")]
         [SerializeField] private TimeSystem _timerSystem;
 
         [Header("HexaGrid")]
@@ -23,6 +23,9 @@ namespace Dev.Local
         [Header("Track")]
         [SerializeField] private TrackSystem _trackSystem;
 
+        [Header("Field")]
+        [SerializeField] private FieldSystem _fieldSystem;
+
         [Header("Player")]
         [SerializeField] private PlayerRunner _playerRunner;
         [SerializeField] private float _playerMovementSpeed = 5f;
@@ -30,8 +33,6 @@ namespace Dev.Local
         [Header("Resource")]
         [SerializeField] private ResourceSystem _resourceSystem;
         [SerializeField] private ResourceView _resourceView;
-
-        [SerializeField] private LocalWorldMonsterSpawnSystem _worldMonsterSpawnSystem;
 
         protected override void OnInitialize()
         {
@@ -84,7 +85,7 @@ namespace Dev.Local
                 return !StageInstance.Instance.Territory.IsPointInPolygon(new Vector2(position.x, position.z));
             });
 
-            // _hexaTileSnapSystem.Initialize();
+            _hexaTileSnapSystem.Initialize();
             _hexaTileSnapSystem.GenerateInitialHexaTileMap();
         }
 
@@ -167,7 +168,9 @@ namespace Dev.Local
         {
             _resourceSystem.SetUp();
             _trackSystem.SpawnMonsters();
-            // _worldMonsterSpawnSystem.SpawnMonsters();
+            _fieldSystem.SpawnMonsters(out var spawnedMonsters);
+            foreach (var monster in spawnedMonsters)
+                StageInstance.Instance.TerritoryExpansion.OnTerritoryExpanded += monster.OnTerritoryExpanded;
         }
     }
 }

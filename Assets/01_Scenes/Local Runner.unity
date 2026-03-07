@@ -722,56 +722,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
---- !u!1 &558637375
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 558637376}
-  - component: {fileID: 558637377}
-  m_Layer: 0
-  m_Name: Monster
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &558637376
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 558637375}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1430192786}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &558637377
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 558637375}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2ecb1376cc20ed54c9f797de092b53c7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  territorySystem: {fileID: 340944554}
-  monsterParentTransform: {fileID: 778461259}
-  monsterPrefab: {fileID: 4169187445798827108, guid: 43f1149ba0230af4ca5390c151b63e08, type: 3}
-  spawnCount: 1
-  spawnRadius: 40
-  playerTransform: {fileID: 648084792}
 --- !u!1 &606355800
 GameObject:
   m_ObjectHideFlags: 0
@@ -919,11 +869,12 @@ MonoBehaviour:
   _territorySystem: {fileID: 340944554}
   _territoryExpansionLineRenderer: {fileID: 6940662796453831204}
   _trackSystem: {fileID: 478002983}
+  _fieldSystem: {fileID: 1131208691}
   _playerRunner: {fileID: 6940662796453831205}
   _playerMovementSpeed: 5
   _resourceSystem: {fileID: 1113964558}
   _resourceView: {fileID: 1593962228}
-  _worldMonsterSpawnSystem: {fileID: 558637377}
+  _worldMonsterSpawnSystem: {fileID: 0}
 --- !u!1 &1113964556
 GameObject:
   m_ObjectHideFlags: 0
@@ -981,6 +932,58 @@ MonoBehaviour:
     SpawnRotation: {x: 0, y: 0, z: 0, w: 0}
     SpawnRadius: 30
   _initialResourceCount: 10
+--- !u!1 &1131208689
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1131208690}
+  - component: {fileID: 1131208691}
+  m_Layer: 0
+  m_Name: Field
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1131208690
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1131208689}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1430192786}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1131208691
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1131208689}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0be49a0fba06a374d85b24c5dee91286, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _monsterPrefabs:
+  - {fileID: 4169187445798827108, guid: 43f1149ba0230af4ca5390c151b63e08, type: 3}
+  - {fileID: 349410779146119278, guid: a6a8da9451254f34d88cde73f7214296, type: 3}
+  - {fileID: 9116243252029777895, guid: ca60374e9989ab44db21af9613b47d3b, type: 3}
+  _spawnPoint: {fileID: 778461259}
+  _spawnCount: 5
+  _spawnRadius: 40
+  _playerTransform: {fileID: 648084792}
 --- !u!1 &1257529624
 GameObject:
   m_ObjectHideFlags: 0
@@ -1091,7 +1094,7 @@ Transform:
   - {fileID: 340944553}
   - {fileID: 478002982}
   - {fileID: 1113964557}
-  - {fileID: 558637376}
+  - {fileID: 1131208690}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1593962226

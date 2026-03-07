@@ -46,6 +46,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
     private float _elapsedTime = 0f; // 경과 시간
 
     public event Action<PlayerRunner> OnPositionChanged; // 영역 관련 이벤트
+    public event Action<PlayerRunner, object> OnDied;
 
     public void OnHealthChanged()
     {
@@ -82,7 +83,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
             if (slideUsing)
             {
                 _ = StartSlide();
-                RPC_DecreaseHealthTest(2f);
+                RPC_DecreaseHealthTest(50f);
             }
                 
             // 러너 아이템 사용
@@ -142,11 +143,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
     {
         if (HasStateAuthority)
         {
-            Health -= amount; // 체력 감소
-            // StageManager.Instance.UIController.RunnerUI.Display.Player.SetHealthBarRatio(Health / MAX_HEALTH); // UI 체력바 갱신
-
-            if (Health <= 0f) // 체력이 0 이하라면
-                IsDead = true; // 죽음 처리
+            TakeDamage(amount);
         }
     }
 
@@ -319,8 +316,11 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
         Health -= damage; // 체력 감소
         StageManager.Instance.UIController.RunnerUI.Display.Player.SetHealthBarRatio(Health / MAX_HEALTH); // UI 체력바 갱신
 
-        if (Health <= 0f) // 체력이 0 이하라면
-            IsDead = true; // 죽음 처리
+        if (Health <= 0f)
+        {
+            IsDead = true;
+            OnDied?.Invoke(this, this);
+        }
     }
 
     #region Runner Upgrade Methods

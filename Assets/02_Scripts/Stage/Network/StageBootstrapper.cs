@@ -11,6 +11,7 @@ namespace Dev.Network
     public class StageBootstrapper : Entity
     {
         [SerializeField] private StageManager _stageManager;
+        [SerializeField] private PlayerRunner _playerRunner;
         [SerializeField] private ResourceSpawnSystem _resourceSpawnSystem;
 
         [Header("Gate")]
@@ -48,6 +49,7 @@ namespace Dev.Network
             yield return new WaitUntil(() => _stageManager.IsInitialized);
 
             // Debug.Log("StageBootstrapper: initialize host complete");
+            _playerRunner = _stageManager.PlayerRunner;
         }
 
         private bool IsHostInitialized()
@@ -61,68 +63,21 @@ namespace Dev.Network
             _stageResultView.Hide();
         }
 
+        [SerializeField] private StageSystem _stageSystem;
         private void BindObjects()
         {
+            _playerRunner.OnDied += HandlePlayerDied;
             Gate.OnGateEntered += HandleGateEntered;
+        }
+
+        private void HandlePlayerDied(PlayerRunner runner, object sender)
+        {
+            _stageSystem.Defeat();
         }
 
         private void HandleGateEntered(Collider other, Gate gate, object sender)
         {
-            if (Object.HasStateAuthority)
-                RPC_ShowStageResult();
-        }
-
-        [Rpc(RpcSources.StateAuthority, RpcTargets.All, Channel = RpcChannel.Reliable)]
-        private void RPC_ShowStageResult()
-        {
-            if (_isGameOverPresented)
-                return;
-
-            _isGameOverPresented = true;
-            _stageResultView.ClearNextButtonListener();
-            _stageResultView.OnNextButtonClicked += HandleNextButtonClicked;
-            _stageResultView.Show();
-        }
-
-        private void HandleNextButtonClicked()
-        {
-            if (_isReturningToTitle)
-                return;
-
-            _ = ShutdownAndReturnToTitleSceneAsync();
-        }
-
-        private async Task ShutdownAndReturnToTitleSceneAsync()
-        {
-            _isReturningToTitle = true;
-
-            _stageResultView.OnNextButtonClicked -= HandleNextButtonClicked;
-            _stageResultView.Hide();
-
-            var runner = Runner;
-            if (runner != null && runner.IsRunning)
-            {
-                try
-                {
-                    var shutdownTask = runner.Shutdown();
-                    var completedTask = await Task.WhenAny(shutdownTask, Task.Delay(TimeSpan.FromSeconds(10)));
-
-                    if (completedTask == shutdownTask)
-                    {
-                        await shutdownTask;
-                    }
-                    else
-                    {
-                        Debug.LogWarning("Runner shutdown 대기 시간이 초과되었습니다. 타이틀 씬으로 이동합니다.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogError($"Runner shutdown failed: {ex}");
-                }
-            }
-
-            SceneManager.LoadScene(0);
+            _stageSystem.Victory();
         }
 
         private void SetUpObjects()

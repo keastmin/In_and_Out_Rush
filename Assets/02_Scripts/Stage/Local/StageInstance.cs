@@ -11,6 +11,7 @@ namespace Dev.Local
         public float Health;
         public float Stamina;
         public float MovementSpeed;
+        public HexaTileMap HexaTileMap;
         public Territory Territory;
         public TerritoryVisible TerritoryVisible;
         public TerritoryExpansion TerritoryExpansion;

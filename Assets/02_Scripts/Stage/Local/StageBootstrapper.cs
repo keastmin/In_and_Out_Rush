@@ -61,6 +61,11 @@ namespace Dev.Local
             // Timer
             _timerSystem.Initialize();
 
+            // HexaGrid
+            _hexaTileSnapSystem.Initialize();
+            _hexaTileSnapSystem.CreateHexaGrid(out var hexaTileMap);
+            StageInstance.Instance.HexaTileMap = hexaTileMap;
+
             // Territory
             _territorySystem.Initialize();
             _territorySystem.CreateInitialCircleTerritory(out var territory, out var territoryVisible);
@@ -84,9 +89,6 @@ namespace Dev.Local
                 var (_, position, _) = (ValueTuple<GameObject, Vector3, Quaternion>)args;
                 return !StageInstance.Instance.Territory.IsPointInPolygon(new Vector2(position.x, position.z));
             });
-
-            _hexaTileSnapSystem.Initialize();
-            _hexaTileSnapSystem.GenerateInitialHexaTileMap();
         }
 
         private void CreateObjects() { }

@@ -172,7 +172,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e431f6ec8b9fec4c9913b7b01fd9161, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _additionalInfo: []
+  _buildRange: 0
+  _requireTerritory: 1
   _cost:
     Mineral: 0
     Gas: 0
@@ -183,12 +184,11 @@ MonoBehaviour:
   _selectedImage: {fileID: 0}
   _buffRange: 25
   _buffRangeTransform: {fileID: 9126191178235750144}
+  _buffCellRange: 3
+  _showLegacyBuffRangeCircle: 0
   _armor: 100
   _maxHeal: 100
   _healPerSec: 5
-  _detectLayer:
-    serializedVersion: 2
-    m_Bits: 1024
 --- !u!4 &8063868089351703451 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7346283071106774194, guid: 3302635113343d046a4921212bd4e79a, type: 3}

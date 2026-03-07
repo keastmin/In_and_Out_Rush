@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 
 namespace Grid
@@ -71,6 +71,119 @@ namespace Grid
             _previewEnabled = false;
             RebuildPreviewTexture();
             PushShaderData();
+        }
+
+        /// <summary>
+        /// 버프를 발생시키는 소스(예: 버프 타워)의 셀 범위를 등록/갱신.
+        /// 같은 sourceId로 재등록하면 이전 범위를 제거하고 새 범위로 교체한다.
+        /// </summary>
+        public void RegisterOrUpdateBuffSource(int sourceId, Vector2Int centerIndex, int range)
+        {
+            if (sourceId == 0) return;
+            if (!IsValidCell(centerIndex.x, centerIndex.y)) return;
+
+            int normalizedRange = Mathf.Max(0, range);
+            if (_buffSources.TryGetValue(sourceId, out var oldState))
+            {
+                if (oldState.CenterIndex == centerIndex && oldState.Range == normalizedRange)
+                {
+                    return;
+                }
+
+                foreach (var idx in oldState.Cells)
+                {
+                    if (_buffCellRefCount.TryGetValue(idx, out int count))
+                    {
+                        if (count <= 1) _buffCellRefCount.Remove(idx);
+                        else _buffCellRefCount[idx] = count - 1;
+                    }
+                }
+            }
+
+            var newCells = new HashSet<Vector2Int>();
+            AddCellIndicesInRangeToSet(centerIndex, normalizedRange, newCells, includeCenter: true);
+            foreach (var idx in newCells)
+            {
+                if (_buffCellRefCount.TryGetValue(idx, out int count))
+                {
+                    _buffCellRefCount[idx] = count + 1;
+                }
+                else
+                {
+                    _buffCellRefCount[idx] = 1;
+                }
+            }
+
+            _buffSources[sourceId] = new BuffSourceState
+            {
+                CenterIndex = centerIndex,
+                Range = normalizedRange,
+                Cells = newCells
+            };
+
+            RebuildBuffTexture();
+            PushShaderData();
+        }
+
+        /// <summary>
+        /// 버프 소스를 해제하고 해당 소스가 점유하던 버프 셀을 제거.
+        /// </summary>
+        public void RemoveBuffSource(int sourceId)
+        {
+            if (sourceId == 0) return;
+            if (!_buffSources.TryGetValue(sourceId, out var state)) return;
+
+            foreach (var idx in state.Cells)
+            {
+                if (_buffCellRefCount.TryGetValue(idx, out int count))
+                {
+                    if (count <= 1) _buffCellRefCount.Remove(idx);
+                    else _buffCellRefCount[idx] = count - 1;
+                }
+            }
+
+            _buffSources.Remove(sourceId);
+            RebuildBuffTexture();
+            PushShaderData();
+        }
+
+        /// <summary>
+        /// 해당 셀이 현재 버프 활성 셀인지 반환.
+        /// </summary>
+        public bool IsBuffCell(Vector2Int index)
+        {
+            if (!IsValidCell(index.x, index.y)) return false;
+            return _buffCellRefCount.TryGetValue(index, out int count) && count > 0;
+        }
+
+        /// <summary>
+        /// 월드 위치가 버프 활성 셀에 포함되는지 반환.
+        /// </summary>
+        public bool IsWorldPositionInBuffCell(Vector3 worldPosition)
+        {
+            Vector2Int index = GetNearestCellIndex(worldPosition);
+            return IsBuffCell(index);
+        }
+
+        /// <summary>
+        /// 특정 버프 소스가 활성화한 셀인지 반환.
+        /// </summary>
+        public bool IsCellInBuffSource(int sourceId, Vector2Int index)
+        {
+            if (sourceId == 0) return false;
+            if (!IsValidCell(index.x, index.y)) return false;
+            if (!_buffSources.TryGetValue(sourceId, out var sourceState)) return false;
+
+            return sourceState.Cells != null && sourceState.Cells.Contains(index);
+        }
+
+        /// <summary>
+        /// 월드 위치가 특정 버프 소스 셀 범위에 포함되는지 반환.
+        /// </summary>
+        public bool IsWorldPositionInBuffSource(int sourceId, Vector3 worldPosition)
+        {
+            Vector2Int index = GetNearestCellIndex(worldPosition);
+            return IsCellInBuffSource(sourceId, index);
         }
 
         /// <summary>

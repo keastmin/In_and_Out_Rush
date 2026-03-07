@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 
 namespace Grid
@@ -44,11 +44,22 @@ namespace Grid
         // 텍스쳐
         private Texture2D _stateTexture;
         private Texture2D _previewTexture;
-        //private Texture2D _buffTexture;
+        private Texture2D _buffTexture;
         private bool _isTerritoryEventBound;
         private bool _previewEnabled;
         private readonly HashSet<Vector2Int> _previewCellIndices = new();
         private Color32[] _previewPixelsCache;
+        private Color32[] _buffPixelsCache;
+
+        private struct BuffSourceState
+        {
+            public Vector2Int CenterIndex;
+            public int Range;
+            public HashSet<Vector2Int> Cells;
+        }
+
+        private readonly Dictionary<int, BuffSourceState> _buffSources = new();
+        private readonly Dictionary<Vector2Int, int> _buffCellRefCount = new();
 
         // 오버레이
         public bool ShowCellStateOverlay => _showCellStateOverlay;
@@ -143,14 +154,13 @@ namespace Grid
                 _previewTexture = CreateGridTexture("GridCellPreviewTex");
                 RebuildPreviewTexture();
             }
-
-            //if (_buffTexture == null || _buffTexture.width != _gridRow || _buffTexture.height != _gridCol)
-            //{
-            //    _buffTexture = CreateGridTexture("GridCellBuffTex");
-            //}
+            if (_buffTexture == null || _buffTexture.width != _gridRow || _buffTexture.height != _gridCol)
+            {
+                _buffTexture = CreateGridTexture("GridCellBuffTex");
+                RebuildBuffTexture();
+            }
 
             Color32[] statePixels = new Color32[_gridRow * _gridCol];
-            //Color32[] buffPixels = new Color32[_gridRow * _gridCol];
 
             int idx = 0;
             for (int i = 0; i < _gridCol; i++)
@@ -160,19 +170,14 @@ namespace Grid
                     bool inTerritory = IsCellInTerritory(i, j);
                     bool canBuild = inTerritory && !_grid[i, j].IsBuild;
                     byte state = (byte)(canBuild ? 0 : 255);
-                    //byte buff = (byte)(_grid[i, j].IsBuffCell ? 255 : 0);
 
                     statePixels[idx] = new Color32(state, 0, 0, 255);
-                    //buffPixels[idx] = new Color32(buff, 0, 0, 255);
                     idx++;
                 }
             }
 
             _stateTexture.SetPixels32(statePixels);
             _stateTexture.Apply(false, false);
-
-            //_buffTexture.SetPixels32(buffPixels);
-            //_buffTexture.Apply(false, false);
         }
 
         private void RebuildPreviewTexture()
@@ -207,6 +212,40 @@ namespace Grid
 
             _previewTexture.SetPixels32(_previewPixelsCache);
             _previewTexture.Apply(false, false);
+        }
+
+        private void RebuildBuffTexture()
+        {
+            if (_grid == null) return;
+
+            if (_buffTexture == null || _buffTexture.width != _gridRow || _buffTexture.height != _gridCol)
+            {
+                _buffTexture = CreateGridTexture("GridCellBuffTex");
+            }
+
+            int pixelCount = _gridRow * _gridCol;
+            if (_buffPixelsCache == null || _buffPixelsCache.Length != pixelCount)
+            {
+                _buffPixelsCache = new Color32[pixelCount];
+            }
+
+            for (int i = 0; i < pixelCount; i++)
+            {
+                _buffPixelsCache[i] = new Color32(0, 0, 0, 255);
+            }
+
+            foreach (var pair in _buffCellRefCount)
+            {
+                if (pair.Value <= 0) continue;
+                Vector2Int idx = pair.Key;
+                if (!IsValidCell(idx.x, idx.y)) continue;
+
+                int flatIndex = (idx.x * _gridRow) + idx.y;
+                _buffPixelsCache[flatIndex] = new Color32(255, 0, 0, 255);
+            }
+
+            _buffTexture.SetPixels32(_buffPixelsCache);
+            _buffTexture.Apply(false, false);
         }
 
         private void OnDestroy()
@@ -260,7 +299,7 @@ namespace Grid
             _planePropertyBlock.SetFloat("_PreviewEnabled", _previewEnabled ? 1f : 0f);
             _planePropertyBlock.SetTexture("_StateTex", _stateTexture);
             _planePropertyBlock.SetTexture("_PreviewTex", _previewTexture);
-            //_planePropertyBlock.SetTexture("_BuffTex", _buffTexture);
+            _planePropertyBlock.SetTexture("_BuffTex", _buffTexture);
             _planeRenderer.SetPropertyBlock(_planePropertyBlock);
         }
 

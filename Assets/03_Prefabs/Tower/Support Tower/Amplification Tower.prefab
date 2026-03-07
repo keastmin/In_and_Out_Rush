@@ -185,7 +185,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a449a4c33e3eb25459d9ed42dfb908d6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _additionalInfo: []
+  _buildRange: 0
+  _requireTerritory: 1
   _cost:
     Mineral: 0
     Gas: 0
@@ -196,10 +197,11 @@ MonoBehaviour:
   _selectedImage: {fileID: 0}
   _buffRange: 25
   _buffRangeTransform: {fileID: 6981587791884122296}
+  _buffCellRange: 3
+  _showLegacyBuffRangeCircle: 0
   _buffParam:
     TowerAttackSpeedBonus: 20
     AttackBonus: 10
     SpeedBonus: 10
-  _detectLayers:
-    serializedVersion: 2
-    m_Bits: 1280
+  _targetTypes: 1
+  _affectSelf: 0

@@ -5,7 +5,7 @@ public class WorldMonsterSpawnSystem : NetworkSystemBase
 {
     [SerializeField] TerritorySystem territorySystem;
     [SerializeField] Transform monsterParentTransform;
-    [SerializeField] WorldMonster monsterPrefab;
+    [SerializeField] WorldMonster[] monsterPrefabs;
     [SerializeField] int spawnCount;
     [SerializeField] int spawnRadius;
     [SerializeField] Transform playerTransform;
@@ -26,6 +26,7 @@ public class WorldMonsterSpawnSystem : NetworkSystemBase
 
             if (territorySystem.Territory.IsPointInPolygon(randomSpawnPosition)) { i--; continue; }
 
+            var monsterPrefab = monsterPrefabs[Random.Range(0, monsterPrefabs.Length)];
             var monster = Runner.Spawn(monsterPrefab, randomSpawnPosition, Quaternion.identity, PlayerRef.None, (runner, obj) =>
             {
                 obj.name = $"Monster_{i}";

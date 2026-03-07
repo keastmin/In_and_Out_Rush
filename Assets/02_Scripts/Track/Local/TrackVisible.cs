@@ -4,20 +4,20 @@ namespace Dev.Local
 {
     public class TrackVisible : Visible
     {
-        [SerializeField] Transform vertexContainer;
-        [SerializeField] LineRenderer lineRenderer;
+        [SerializeField] private Transform _vertexContainer;
+        [SerializeField] private LineRenderer _lineRenderer;
 
-        GameObject[] vertexObjects;
+        private GameObject[] _vertexObjects;
 
         public void GenerateTrackVertices(Vector3[] vertices)
         {
-            if (vertexObjects != null)
-                foreach (var vertexObject in vertexObjects)
+            if (_vertexObjects != null)
+                foreach (var vertexObject in _vertexObjects)
                     Destroy(vertexObject);
 
             var vertexCount = vertices.Length;
 
-            vertexObjects = new GameObject[vertexCount];
+            _vertexObjects = new GameObject[vertexCount];
 
             for (int i = 0; i < vertexCount; i++)
             {
@@ -27,17 +27,17 @@ namespace Dev.Local
                 vertexObject.name = $"Vertex {i}";
                 vertexObject.transform.position = vertex;
                 vertexObject.transform.localScale = Vector3.one * 0.1f;
-                vertexObject.transform.SetParent(vertexContainer, false);
+                vertexObject.transform.SetParent(_vertexContainer, false);
 
-                vertexObjects[i] = vertexObject;
+                _vertexObjects[i] = vertexObject;
             }
         }
 
         public void GenerateTrackLine(Vector3[] vertices)
         {
-            lineRenderer.positionCount = vertices.Length;
-            lineRenderer.SetPositions(vertices);
-            lineRenderer.loop = true; // 선을 닫아 원형 트랙을 만듭니다.
+            _lineRenderer.positionCount = vertices.Length;
+            _lineRenderer.SetPositions(vertices);
+            _lineRenderer.loop = true; // 선을 닫아 원형 트랙을 만듭니다.
         }
     }
 }

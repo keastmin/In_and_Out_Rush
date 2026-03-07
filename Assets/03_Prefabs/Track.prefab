@@ -150,5 +150,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 72a0978f5d8e01645a8d39c1c5010d6d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  vertexParentTransform: {fileID: 2401097821337771158}
-  lineRenderer: {fileID: 2741724836835905933}
+  _vertexContainer: {fileID: 2401097821337771158}
+  _lineRenderer: {fileID: 2741724836835905933}

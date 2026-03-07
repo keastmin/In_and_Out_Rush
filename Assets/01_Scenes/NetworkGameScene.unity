@@ -214,6 +214,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -801,7 +802,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   territorySystem: {fileID: 1028244186}
   monsterParentTransform: {fileID: 1314383435}
-  monsterPrefab: {fileID: -7740008079418054329, guid: 016c82c53b2d0094ea2d7832ca2e11b1, type: 3}
+  monsterPrefabs:
+  - {fileID: -1371715635768697079, guid: 3febb430baa3e5a42834c9c276f5ce3e, type: 3}
+  - {fileID: -7740008079418054329, guid: 016c82c53b2d0094ea2d7832ca2e11b1, type: 3}
+  - {fileID: -5550781050059216141, guid: ad46d8f98d96fd94196ef19d385fdd25, type: 3}
   spawnCount: 10
   spawnRadius: 30
   playerTransform: {fileID: 0}
@@ -1037,6 +1041,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -2314,6 +2319,10 @@ PrefabInstance:
       objectReference: {fileID: 289030124}
     - target: {fileID: 6118610569785656979, guid: 8ee0ca47d4ca2f542a19a96fdec5cdec, type: 3}
       propertyPath: TrackView
+      value: 
+      objectReference: {fileID: 654670098}
+    - target: {fileID: 6118610569785656979, guid: 8ee0ca47d4ca2f542a19a96fdec5cdec, type: 3}
+      propertyPath: TrackVisible
       value: 
       objectReference: {fileID: 654670098}
     - target: {fileID: 6118610569785656979, guid: 8ee0ca47d4ca2f542a19a96fdec5cdec, type: 3}

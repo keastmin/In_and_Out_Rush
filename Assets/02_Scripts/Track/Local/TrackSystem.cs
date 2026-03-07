@@ -5,6 +5,9 @@ using UnityEngine;
 
 namespace Dev.Local
 {
+    // * TrackSystem 역할
+    // 1. 트랙 생성 및 확장 관리
+    // 2. 트랙 관련 이벤트 관리 (예: 트랙 변경, 몬스터 스폰 등)
     public class TrackSystem : System
     {
         [Header("Track")]

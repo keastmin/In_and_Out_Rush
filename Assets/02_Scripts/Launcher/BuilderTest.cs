@@ -7,7 +7,7 @@ namespace Launcher
         [SerializeField] Dev.Local.TerritorySystem territorySystem;
         [SerializeField] HexaTileSnapSystem hexaTileSnapSystem;
         // [SerializeField] LocalTrackGenerationSystem trackGenerationSystem;
-        [SerializeField] LocalTrackMonsterSpawnSystem trackMonsterSpawnSystem;
+        // [SerializeField] LocalTrackMonsterSpawnSystem trackMonsterSpawnSystem;
 
         protected override void OnLauncherStarted()
         {

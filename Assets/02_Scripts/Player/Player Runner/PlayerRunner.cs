@@ -63,6 +63,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
     public override void Spawned()
     {
         InitializePlayerRunner();
+        BuffReceiverRegistry.Register(this, transform, BuffTargetType.Runner);
     }
 
     public override void FixedUpdateNetwork()
@@ -151,6 +152,12 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
     {
         base.Render(); // vfx, 비주얼적인 요소
         OnPositionChanged?.Invoke(this);
+    }
+
+    public override void Despawned(NetworkRunner runner, bool hasState)
+    {
+        base.Despawned(runner, hasState);
+        BuffReceiverRegistry.Unregister(this);
     }
 
     private void Update()

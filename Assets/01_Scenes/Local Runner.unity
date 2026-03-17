@@ -874,7 +874,6 @@ MonoBehaviour:
   _playerMovementSpeed: 5
   _resourceSystem: {fileID: 1113964558}
   _resourceView: {fileID: 1593962228}
-  _worldMonsterSpawnSystem: {fileID: 0}
 --- !u!1 &1113964556
 GameObject:
   m_ObjectHideFlags: 0

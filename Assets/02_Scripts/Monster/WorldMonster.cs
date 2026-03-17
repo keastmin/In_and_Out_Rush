@@ -5,6 +5,7 @@ using UnityEngine;
 
 public class WorldMonster : Monster
 {
+    [Header("World Monster Settings")]
     [SerializeField] protected float patrolMinimumRadius = 5f;
     [SerializeField] protected float patrolMaximumRadius = 10f;
 
@@ -45,11 +46,11 @@ public class WorldMonster : Monster
     {
         if (isPatrolling == false)
         {
-            var randomTargetPosition = patrolPivotPosition + Random.insideUnitSphere * patrolRadius;
+            var patrolPivotPosition2d = new Vector2(patrolPivotPosition.x, patrolPivotPosition.z);
+            var randomTargetPosition = patrolPivotPosition2d + Random.insideUnitCircle * patrolRadius;
             if (!territory.IsPointInPolygon(randomTargetPosition))
             {
-                patrolTargetPosition = randomTargetPosition;
-                patrolTargetPosition.y = transform.position.y;
+                patrolTargetPosition = new Vector3(randomTargetPosition.x, transform.position.y, randomTargetPosition.y);
                 isPatrolling = true;
             }
         }

@@ -2,19 +2,20 @@ using UnityEngine;
 
 public class Stalker : WorldMonster
 {
-    [SerializeField] protected float sensingRange = 5f;
-    [SerializeField] protected float attackRange = 2f;
-    [SerializeField] protected float attackSpeed = 1f;
+    [Header("Stalker Settings")]
+    [SerializeField] private float _sensingRange = 5f;
+    [SerializeField] private float _attackRange = 2f;
+    [SerializeField] private float _attackSpeed = 1f;
 
-    protected bool isChasing;
-    float attackElapsedTime = 0f;
+    private bool _isChasing;
+    private float _attackElapsedTime = 0f;
 
     public override void UpdateMonster()
     {
-        if (isChasing)
+        if (_isChasing)
         {
             Chase();
-            if (Vector3.Distance(transform.position, attackTargetTransform.position) < attackRange)
+            if (Vector3.Distance(transform.position, attackTargetTransform.position) < _attackRange)
             {
                 Attack();
             }
@@ -24,7 +25,7 @@ public class Stalker : WorldMonster
             base.UpdateMonster();
 
             if (playerTransform == null) { return; }
-            if (Vector3.Distance(transform.position, playerTransform.position) < sensingRange)
+            if (Vector3.Distance(transform.position, playerTransform.position) < _sensingRange)
             {
                 StartChasing(playerTransform);
             }
@@ -33,25 +34,32 @@ public class Stalker : WorldMonster
 
     void Attack()
     {
-        attackElapsedTime += Time.deltaTime * attackSpeed;
-        if (attackElapsedTime >= 1f)
+        _attackElapsedTime += Time.deltaTime * _attackSpeed;
+        if (_attackElapsedTime >= 1f)
         {
             playerTransform.GetComponent<IDamageable>()?.TakeDamage(1f);
             Debug.Log($"{name} attacks {playerTransform.name}");
-            attackElapsedTime = 0f;
+            _attackElapsedTime = 0f;
         }
     }
 
     public void StartChasing(Transform target)
     {
         attackTargetTransform = target;
-        isChasing = true;
+        _isChasing = true;
     }
 
     protected virtual void Chase()
     {
         if (attackTargetTransform != null)
         {
+            var attackTargetPosition = attackTargetTransform.position;
+            var attackTargetPosition2d = new Vector2(attackTargetPosition.x, attackTargetPosition.z);
+            if (territory.IsPointInPolygon(attackTargetPosition2d))
+            {
+                _isChasing = false;
+                return;
+            }
             Vector3 direction = (attackTargetTransform.position - transform.position).normalized;
             transform.position += movementSpeed * Time.deltaTime * direction;
             transform.LookAt(attackTargetTransform);

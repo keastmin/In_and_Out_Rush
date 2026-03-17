@@ -1,10 +1,6 @@
-using System;
 using System.Collections;
-using System.Threading.Tasks;
 using Dev.Local;
-using Fusion;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace Dev.Network
 {
@@ -15,8 +11,9 @@ namespace Dev.Network
         [SerializeField] private ResourceSpawnSystem _resourceSpawnSystem;
 
         [Header("Gate")]
-        public Gate Gate;
+        [SerializeField] private Gate _gatePrefab;
         [SerializeField] private StageResultView _stageResultView;
+        [SerializeField] private float _worldBoundaryRadius = 1000f;
 
         private bool _isGameOverPresented = false;
         private bool _isReturningToTitle = false;
@@ -67,7 +64,7 @@ namespace Dev.Network
         private void BindObjects()
         {
             _playerRunner.OnDied += HandlePlayerDied;
-            Gate.OnGateEntered += HandleGateEntered;
+            // Gate.OnGateEntered += HandleGateEntered;
         }
 
         private void HandlePlayerDied(PlayerRunner runner, object sender)
@@ -83,6 +80,15 @@ namespace Dev.Network
         private void SetUpObjects()
         {
             // TODO: Field Object 생성
+            var randomAngle = Random.value * 360f;
+            var randomDistance = _worldBoundaryRadius;
+            var gatePosition = new Vector3(
+                Mathf.Cos(randomAngle * Mathf.Deg2Rad) * randomDistance,
+                0f,
+                Mathf.Sin(randomAngle * Mathf.Deg2Rad) * randomDistance
+            );
+            var gate = Runner.Spawn(_gatePrefab, gatePosition, Quaternion.identity);
+            gate.OnGateEntered += HandleGateEntered;
         }
     }
 }

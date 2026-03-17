@@ -3,6 +3,7 @@ using UnityEngine;
 
 public class Centipede : WorldMonster
 {
+    [Header("Centipede Settings")]
     public Transform head;
     public GameObject segmentPrefab;
     [SerializeField] protected int segmentCount = 5;

@@ -128,6 +128,7 @@ public class PlayerBuilder : Player
 
     private void Update()
     {
+        CleanupInvalidTowerReferences();
         StateMachine.Update();
     }
 
@@ -343,6 +344,9 @@ public class PlayerBuilder : Player
     // 공격 타워 선택 함수
     public void TowerSelected(Tower tower)
     {
+        if (tower == null)
+            return;
+
         _selectedTowers.Add(tower);
     }
 
@@ -350,6 +354,34 @@ public class PlayerBuilder : Player
     public void ResetTowerHashSet()
     {
         _selectedTowers.Clear();
+    }
+
+    public void OnTowerDespawned(Tower tower)
+    {
+        if (tower == null)
+            return;
+
+        _selectedTowers.Remove(tower);
+
+        if (ReferenceEquals(ClickObject, tower))
+        {
+            ClickObject = null;
+        }
+
+        RemoveDragReference(tower);
+        _builderTowerMove?.RemoveTower(tower);
+
+        if (StateMachine == null)
+            return;
+
+        if (SelectedTowersCount > 0)
+            return;
+
+        if (ReferenceEquals(StateMachine.CurrentState, StateMachine.TowerSelectState) ||
+            ReferenceEquals(StateMachine.CurrentState, StateMachine.TowerMoveState))
+        {
+            StateMachine.TransitionToState(StateMachine.OriginState);
+        }
     }
 
     // 센터 타워 개수를 설정
@@ -369,6 +401,47 @@ public class PlayerBuilder : Player
     #region 상태
 
     private void ActiveTowerMoveState() => StateMachine.TransitionToState(StateMachine.TowerMoveState);
+
+    private void CleanupInvalidTowerReferences()
+    {
+        if (_selectedTowers.RemoveWhere(tower => tower == null) > 0 && StateMachine != null)
+        {
+            if (SelectedTowersCount <= 0 &&
+                (ReferenceEquals(StateMachine.CurrentState, StateMachine.TowerSelectState) ||
+                 ReferenceEquals(StateMachine.CurrentState, StateMachine.TowerMoveState)))
+            {
+                StateMachine.TransitionToState(StateMachine.OriginState);
+                return;
+            }
+        }
+
+        if (ClickObject is UnityEngine.Object clickObject && clickObject == null)
+        {
+            ClickObject = null;
+        }
+
+        RemoveInvalidDragReferences();
+        _builderTowerMove?.PruneInvalidTowers();
+    }
+
+    private void RemoveInvalidDragReferences()
+    {
+        DragObjectHash.RemoveWhere(IsMissingUnityReference);
+        CurrentFrameDetectDragObjectHash.RemoveWhere(IsMissingUnityReference);
+        CurrentFrameRemoveDragObjectList.RemoveAll(IsMissingUnityReference);
+    }
+
+    private void RemoveDragReference(Tower tower)
+    {
+        DragObjectHash.RemoveWhere(obj => ReferenceEquals(obj, tower));
+        CurrentFrameDetectDragObjectHash.RemoveWhere(obj => ReferenceEquals(obj, tower));
+        CurrentFrameRemoveDragObjectList.RemoveAll(obj => ReferenceEquals(obj, tower));
+    }
+
+    private static bool IsMissingUnityReference(ICanDragObject dragObject)
+    {
+        return dragObject is UnityEngine.Object unityObject && unityObject == null;
+    }
 
     #endregion
 

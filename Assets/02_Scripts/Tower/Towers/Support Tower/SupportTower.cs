@@ -6,6 +6,7 @@ public class SupportTower : Tower
     [Header("Grid Buff Cells")]
     [SerializeField][Min(0)] protected int _buffCellRange = 1;
     [SerializeField] private bool _showLegacyBuffRangeCircle = false;
+    [SerializeField] private Color _buffCellColor = new Color(1f, 0.85f, 0.15f, 0.35f);
 
     private int _buffSourceId;
     private bool _isBuffSourceRegistered;
@@ -14,6 +15,7 @@ public class SupportTower : Tower
 
     protected virtual bool EmitBuffCells => false;
     protected int BuffSourceId => _buffSourceId;
+    protected virtual Color BuffCellColor => _buffCellColor;
 
     protected override void TowerSpawned()
     {
@@ -58,7 +60,7 @@ public class SupportTower : Tower
             return;
         }
 
-        gm.RegisterOrUpdateBuffSource(_buffSourceId, centerIndex, range);
+        gm.RegisterOrUpdateBuffSource(_buffSourceId, centerIndex, range, BuffCellColor);
         _isBuffSourceRegistered = true;
         _lastBuffCenterIndex = centerIndex;
         _lastBuffCellRange = range;

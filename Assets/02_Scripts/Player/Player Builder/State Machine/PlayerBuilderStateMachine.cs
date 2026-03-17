@@ -3,6 +3,7 @@ using UnityEngine;
 public class PlayerBuilderStateMachine
 {
     private IPlayerState _currentState;
+    public IPlayerState CurrentState => _currentState;
 
     public PlayerBuilderOriginState OriginState;
     public PlayerBuilderDragState DragState;
@@ -39,6 +40,9 @@ public class PlayerBuilderStateMachine
 
     public void TransitionToState(IPlayerState next)
     {
+        if (next == null || ReferenceEquals(_currentState, next))
+            return;
+
         _currentState.Exit();
         _currentState = next;
         _currentState.Enter();

@@ -12,7 +12,6 @@ public class PlayerBuilderTowerMoveState : IPlayerState
 
     public void Enter()
     {
-        // 그리드 오버레이 활성화
         GridManager.Instance.SetCellStateOverlayEnabled(true);
         GridManager.Instance.ClearBuildRangePreview();
 
@@ -22,11 +21,17 @@ public class PlayerBuilderTowerMoveState : IPlayerState
 
     public void Update()
     {
+        if (_player.SelectedTowersCount <= 0 || !_player.BuilderTowerMove.HasMoveTargets)
+        {
+            _player.StateMachine.TransitionToState(_player.StateMachine.OriginState);
+            return;
+        }
+
         Vector3 mouseWorldPos = GetMouseWorldPos();
         bool canMove = _player.BuilderTowerMove.TowerGhostSnapShot(mouseWorldPos);
         bool moveComplete = false;
-        
-        if(canMove && Input.GetMouseButtonDown(0))
+
+        if (canMove && Input.GetMouseButtonDown(0))
         {
             moveComplete = true;
             _player.BuilderTowerMove.TowerMove();
@@ -37,12 +42,10 @@ public class PlayerBuilderTowerMoveState : IPlayerState
 
     public void LateUpdate()
     {
-        
     }
 
     public void Exit()
     {
-        // 그리드 오버레이 비활성화
         GridManager.Instance.ClearBuildRangePreview();
         GridManager.Instance.SetCellStateOverlayEnabled(false);
 
@@ -56,7 +59,7 @@ public class PlayerBuilderTowerMoveState : IPlayerState
         {
             _player.StateMachine.TransitionToState(_player.StateMachine.TowerSelectState);
         }
-        else if(Input.GetMouseButtonDown(0) && moveComplete)
+        else if (Input.GetMouseButtonDown(0) && moveComplete)
         {
             _player.StateMachine.TransitionToState(_player.StateMachine.TowerSelectState);
         }
@@ -73,6 +76,7 @@ public class PlayerBuilderTowerMoveState : IPlayerState
         {
             pos = ray.GetPoint(enter);
         }
+
         return pos;
     }
 }

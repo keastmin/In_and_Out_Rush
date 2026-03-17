@@ -16,7 +16,6 @@ namespace Grid
         [Header("Overlay Colors")]
         [SerializeField] private Color _noneColor = new Color(0.2f, 0.45f, 1f, 0.28f);
         [SerializeField] private Color _buildColor = new Color(1f, 0.2f, 0.2f, 0.30f);
-        [SerializeField] private Color _buffColor = new Color(1f, 0.85f, 0.15f, 0.35f);
         [SerializeField] private Color _previewTintColor = new Color(0.1f, 1f, 0.2f, 0.45f);
         [SerializeField][Range(0f, 1f)] private float _cellFill = 0.2f;
         [SerializeField] private bool _showCellStateOverlay = false;
@@ -55,11 +54,13 @@ namespace Grid
         {
             public Vector2Int CenterIndex;
             public int Range;
+            public Color Color;
             public HashSet<Vector2Int> Cells;
         }
 
         private readonly Dictionary<int, BuffSourceState> _buffSources = new();
         private readonly Dictionary<Vector2Int, int> _buffCellRefCount = new();
+        private readonly Dictionary<Vector2Int, Color> _buffCellColorSum = new();
 
         // 오버레이
         public bool ShowCellStateOverlay => _showCellStateOverlay;
@@ -231,7 +232,7 @@ namespace Grid
 
             for (int i = 0; i < pixelCount; i++)
             {
-                _buffPixelsCache[i] = new Color32(0, 0, 0, 255);
+                _buffPixelsCache[i] = new Color32(0, 0, 0, 0);
             }
 
             foreach (var pair in _buffCellRefCount)
@@ -241,7 +242,10 @@ namespace Grid
                 if (!IsValidCell(idx.x, idx.y)) continue;
 
                 int flatIndex = (idx.x * _gridRow) + idx.y;
-                _buffPixelsCache[flatIndex] = new Color32(255, 0, 0, 255);
+                Color sumColor = _buffCellColorSum.TryGetValue(idx, out var cachedColor) ? cachedColor : Color.clear;
+                float divisor = Mathf.Max(1, pair.Value);
+                Color mixedColor = sumColor / divisor;
+                _buffPixelsCache[flatIndex] = (Color32)mixedColor;
             }
 
             _buffTexture.SetPixels32(_buffPixelsCache);
@@ -292,7 +296,6 @@ namespace Grid
             _planePropertyBlock.SetFloat("_GridRows", _gridRow);
             _planePropertyBlock.SetColor("_NoneColor", _noneColor);
             _planePropertyBlock.SetColor("_BuildColor", _buildColor);
-            _planePropertyBlock.SetColor("_BuffColor", _buffColor);
             _planePropertyBlock.SetColor("_PreviewTintColor", _previewTintColor);
             _planePropertyBlock.SetFloat("_CellFill", _cellFill);
             _planePropertyBlock.SetFloat("_StateOverlayEnabled", _showCellStateOverlay ? 1f : 0f);

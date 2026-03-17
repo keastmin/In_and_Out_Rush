@@ -5,11 +5,14 @@ using UnityEngine;
 
 public sealed class AmplificationTower : SupportTower, ICanDragObject
 {
+    private static readonly Color AmplificationBuffCellColor = new Color(1f, 0.85f, 0.15f, 0.35f);
+
     [SerializeField] private AmplificationTowerBuffParam _buffParam = new();
     [SerializeField] private BuffTargetType _targetTypes = BuffTargetType.Runner;
     [SerializeField] private bool _affectSelf = false;
 
     protected override bool EmitBuffCells => true;
+    protected override Color BuffCellColor => AmplificationBuffCellColor;
 
     private HashSet<IBuffReceiver> _receivers;
     private readonly List<IBuffReceiver> _detectedReceivers = new();

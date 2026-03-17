@@ -4,11 +4,14 @@ using UnityEngine;
 
 public class RegenerationTower : SupportTower
 {
+    private static readonly Color RegenerationBuffCellColor = new Color(0.2f, 1f, 0.35f, 0.35f);
+
     [SerializeField] private float _armor = 100f;
     [SerializeField] private float _maxHeal = 100f;
     [SerializeField] private float _healPerSec = 5f;
 
     protected override bool EmitBuffCells => true;
+    protected override Color BuffCellColor => RegenerationBuffCellColor;
 
     private bool _receiveArmor = false;
     private IHeal _detectedRunner;

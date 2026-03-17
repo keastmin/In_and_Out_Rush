@@ -77,7 +77,7 @@ namespace Grid
         /// 버프를 발생시키는 소스(예: 버프 타워)의 셀 범위를 등록/갱신.
         /// 같은 sourceId로 재등록하면 이전 범위를 제거하고 새 범위로 교체한다.
         /// </summary>
-        public void RegisterOrUpdateBuffSource(int sourceId, Vector2Int centerIndex, int range)
+        public void RegisterOrUpdateBuffSource(int sourceId, Vector2Int centerIndex, int range, Color color)
         {
             if (sourceId == 0) return;
             if (!IsValidCell(centerIndex.x, centerIndex.y)) return;
@@ -85,39 +85,25 @@ namespace Grid
             int normalizedRange = Mathf.Max(0, range);
             if (_buffSources.TryGetValue(sourceId, out var oldState))
             {
-                if (oldState.CenterIndex == centerIndex && oldState.Range == normalizedRange)
+                if (oldState.CenterIndex == centerIndex &&
+                    oldState.Range == normalizedRange &&
+                    oldState.Color == color)
                 {
                     return;
                 }
 
-                foreach (var idx in oldState.Cells)
-                {
-                    if (_buffCellRefCount.TryGetValue(idx, out int count))
-                    {
-                        if (count <= 1) _buffCellRefCount.Remove(idx);
-                        else _buffCellRefCount[idx] = count - 1;
-                    }
-                }
+                RemoveBuffCells(oldState.Cells, oldState.Color);
             }
 
             var newCells = new HashSet<Vector2Int>();
             AddCellIndicesInRangeToSet(centerIndex, normalizedRange, newCells, includeCenter: true);
-            foreach (var idx in newCells)
-            {
-                if (_buffCellRefCount.TryGetValue(idx, out int count))
-                {
-                    _buffCellRefCount[idx] = count + 1;
-                }
-                else
-                {
-                    _buffCellRefCount[idx] = 1;
-                }
-            }
+            AddBuffCells(newCells, color);
 
             _buffSources[sourceId] = new BuffSourceState
             {
                 CenterIndex = centerIndex,
                 Range = normalizedRange,
+                Color = color,
                 Cells = newCells
             };
 
@@ -133,18 +119,64 @@ namespace Grid
             if (sourceId == 0) return;
             if (!_buffSources.TryGetValue(sourceId, out var state)) return;
 
-            foreach (var idx in state.Cells)
+            RemoveBuffCells(state.Cells, state.Color);
+
+            _buffSources.Remove(sourceId);
+            RebuildBuffTexture();
+            PushShaderData();
+        }
+
+        private void AddBuffCells(IEnumerable<Vector2Int> indices, Color color)
+        {
+            if (indices == null) return;
+
+            foreach (var idx in indices)
+            {
+                if (_buffCellRefCount.TryGetValue(idx, out int count))
+                {
+                    _buffCellRefCount[idx] = count + 1;
+                }
+                else
+                {
+                    _buffCellRefCount[idx] = 1;
+                }
+
+                if (_buffCellColorSum.TryGetValue(idx, out Color sumColor))
+                {
+                    _buffCellColorSum[idx] = sumColor + color;
+                }
+                else
+                {
+                    _buffCellColorSum[idx] = color;
+                }
+            }
+        }
+
+        private void RemoveBuffCells(IEnumerable<Vector2Int> indices, Color color)
+        {
+            if (indices == null) return;
+
+            foreach (var idx in indices)
             {
                 if (_buffCellRefCount.TryGetValue(idx, out int count))
                 {
                     if (count <= 1) _buffCellRefCount.Remove(idx);
                     else _buffCellRefCount[idx] = count - 1;
                 }
-            }
 
-            _buffSources.Remove(sourceId);
-            RebuildBuffTexture();
-            PushShaderData();
+                if (_buffCellColorSum.TryGetValue(idx, out Color sumColor))
+                {
+                    Color nextColor = sumColor - color;
+                    if (_buffCellRefCount.ContainsKey(idx))
+                    {
+                        _buffCellColorSum[idx] = nextColor;
+                    }
+                    else
+                    {
+                        _buffCellColorSum.Remove(idx);
+                    }
+                }
+            }
         }
 
         /// <summary>

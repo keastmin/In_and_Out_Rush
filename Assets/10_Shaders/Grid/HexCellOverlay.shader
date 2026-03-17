@@ -16,7 +16,6 @@ Shader "GridVisualize/HexCellOverlay"
 
         _NoneColor ("None Color", Color) = (0.2,0.45,1,0.28)
         _BuildColor ("Build Color", Color) = (1,0.2,0.2,0.30)
-        _BuffColor ("Buff Color", Color) = (1,0.85,0.15,0.35)
         _PreviewTintColor ("Preview Tint Color", Color) = (0.1,1,0.2,0.45)
         _CellFill ("Cell Fill", Range(0,1)) = 1
         _StateOverlayEnabled ("State Overlay Enabled", Float) = 1
@@ -79,7 +78,6 @@ Shader "GridVisualize/HexCellOverlay"
 
             float4 _NoneColor;
             float4 _BuildColor;
-            float4 _BuffColor;
             float4 _PreviewTintColor;
             float _CellFill;
             float _StateOverlayEnabled;
@@ -196,11 +194,11 @@ Shader "GridVisualize/HexCellOverlay"
                 float2 cellUV = float2((q + 0.5) / max(_GridRows, 1.0), (row + 0.5) / max(_GridCols, 1.0));
                 half stateValue = SAMPLE_TEXTURE2D(_StateTex, sampler_StateTex, cellUV).r;
                 half previewValue = SAMPLE_TEXTURE2D(_PreviewTex, sampler_PreviewTex, cellUV).r;
-                half buffValue = SAMPLE_TEXTURE2D(_BuffTex, sampler_BuffTex, cellUV).r;
+                half4 buffValue = SAMPLE_TEXTURE2D(_BuffTex, sampler_BuffTex, cellUV);
 
                 // 1) Buff fill: whole cell interior.
-                half buffMask = (half)insideOuter * step(0.5h, buffValue);
-                half3 buffLayer = lerp(baseColor.rgb, _BuffColor.rgb, _BuffColor.a);
+                half buffMask = (half)insideOuter * step(0.001h, buffValue.a);
+                half3 buffLayer = lerp(baseColor.rgb, buffValue.rgb, buffValue.a);
                 half3 afterBuff = lerp(baseColor.rgb, buffLayer, buffMask);
 
                 // 2) CellState overlay: ring only, always composited from base texture color.

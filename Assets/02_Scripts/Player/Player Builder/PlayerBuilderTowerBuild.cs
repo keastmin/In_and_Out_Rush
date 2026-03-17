@@ -21,8 +21,6 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
 
     private PlayerBuilderTowerSystem _towerSystem;
 
-    #region API
-
     /// <summary>
     /// 외부에서 호출하는 초기화 함수
     /// </summary>
@@ -42,10 +40,16 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
     public bool TowerBuildConditionChecker(string towerId)
     {
         bool canBuild = true;
+
         if (towerId == TowerIDContainer.TELEPORT_TOWER_ID)
         {
             canBuild = TeleportTowerBuildConditionChecker();
         }
+        else if (towerId == TowerIDContainer.SUPPLY_TOWER_ID)
+        {
+            canBuild = SupplyTowerBuildConditionChecker();
+        }
+
         return canBuild;
     }
 
@@ -72,13 +76,6 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
         _isStandByBuild = false;
     }
 
-    #endregion
-
-    #region Core
-
-    /// <summary>
-    /// 빌더 UI의 타워 건설 버튼 액션 연결
-    /// </summary>
     private void LinkBuildTowerAction(PlayerBuilderUI builderUI)
     {
         if (builderUI != null)
@@ -90,32 +87,38 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
     // 설치할 타워 데이터 주입
     private void InjectionTowerData(TowerData data)
     {
-        if (data != null)
+        if (data == null)
+            return;
+
+        _tower = data.Tower;
+        _towerGhost = data.TowerGhost;
+        _towerRef = data.TowerPrefabRef;
+
+        if (_tower != null)
         {
-            _tower = data.Tower;
-            _towerGhost = data.TowerGhost;
-            _towerRef = data.TowerPrefabRef;
-
-            if (_tower != null)
-            {
-                _buildCost = _tower.Cost;
-            }
-
-            // 설치 대기 상태 진입
-            if (_tower != null && _towerGhost != null && _towerRef != null)
-                _isStandByBuild = true;
+            _buildCost = _tower.Cost;
         }
+
+        _isStandByBuild = false;
+
+        if (_tower == null || _towerGhost == null || _towerRef == default)
+            return;
+
+        if (!TowerBuildConditionChecker(_tower.TowerID))
+            return;
+
+        _isStandByBuild = true;
     }
 
-    // Host에게 자원 차감 + 타워 스폰 요청
+    // Host에게 자원 차감과 타워 스폰 요청
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
     private void RPC_BuildTower(NetworkPrefabRef towerRef, Cost cost, Vector3 position)
     {
         if (HasStateAuthority)
         {
-            ResourceSystem.Instance.Mineral -= cost.Mineral; // 미네랄 차감
-            ResourceSystem.Instance.Gas -= cost.Gas; // 가스 차감
-            Runner.Spawn(towerRef, position, Quaternion.identity); // 타워 스폰
+            ResourceSystem.Instance.Mineral -= cost.Mineral;
+            ResourceSystem.Instance.Gas -= cost.Gas;
+            Runner.Spawn(towerRef, position, Quaternion.identity);
         }
     }
 
@@ -124,8 +127,16 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
     {
         if (TowerManager.Instance.GetTowerCount(TowerIDContainer.TELEPORT_TOWER_ID) >= 2)
             return false;
+
         return true;
     }
 
-    #endregion
+    // 보급품이 하나 이상 구매된 상태에서만 Supply Tower 설치 가능
+    private bool SupplyTowerBuildConditionChecker()
+    {
+        if (SupplyTowerManager.Instance == null)
+            return false;
+
+        return SupplyTowerManager.Instance.HasPendingSupplies;
+    }
 }

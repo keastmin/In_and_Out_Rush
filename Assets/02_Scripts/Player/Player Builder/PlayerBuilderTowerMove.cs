@@ -1,4 +1,4 @@
-﻿using Fusion;
+using Fusion;
 using Grid;
 using System.Collections.Generic;
 using UnityEngine;
@@ -22,7 +22,7 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
 
     private PlayerBuilderTowerSystem _towerSystem;
 
-    #region API
+    public bool HasMoveTargets => _ghostToTowerDic != null && _ghostToTowerDic.Count > 0;
 
     public void InitTowerMove(PlayerBuilderTowerSystem towerSystem)
     {
@@ -34,10 +34,18 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
         TowerGhostInstantiate(towers);
         Vector3 pivot = GetPivot(towers);
         TowerDistanceVectorCalc(towers, pivot);
+        PruneInvalidTowers();
     }
 
     public bool TowerGhostSnapShot(Vector3 mousePos)
     {
+        PruneInvalidTowers();
+        if (!HasMoveTargets)
+        {
+            GridManager.Instance?.ClearBuildRangePreview();
+            return false;
+        }
+
         bool canMoveAll = true;
         _previewIndices.Clear();
         var gridManager = GridManager.Instance;
@@ -48,8 +56,12 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
 
         foreach (var ghost in _ghosts)
         {
-            Tower targetTower = _ghostToTowerDic[ghost];
-            Vector3 diff = _towerToVecDic[targetTower];
+            if (ghost == null || !_ghostToTowerDic.TryGetValue(ghost, out Tower targetTower) || targetTower == null)
+                continue;
+
+            if (!_towerToVecDic.TryGetValue(targetTower, out Vector3 diff))
+                continue;
+
             Vector3 targetPos = mousePos + diff;
 
             Vector2Int snapshotIndex = gridManager.GetNearestCellIndex(targetPos);
@@ -72,7 +84,6 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
             });
         }
 
-        // 이동 대상들끼리 도착 범위가 겹치면 불가.
         for (int i = 0; i < plannedMoves.Count; i++)
         {
             var move = plannedMoves[i];
@@ -124,6 +135,10 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
 
     public void TowerMove()
     {
+        PruneInvalidTowers();
+        if (!HasMoveTargets)
+            return;
+
         var gridManager = GridManager.Instance;
         if (gridManager == null) return;
 
@@ -134,7 +149,9 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
 
         foreach (var ghost in _ghosts)
         {
-            Tower tower = _ghostToTowerDic[ghost];
+            if (ghost == null || !_ghostToTowerDic.TryGetValue(ghost, out Tower tower) || tower == null)
+                continue;
+
             Vector2Int currentIndex = gridManager.GetNearestCellIndex(tower.transform.position);
             Vector2Int targetIndex = gridManager.GetNearestCellIndex(ghost.transform.position);
             List<Vector2Int> targetIndices = gridManager.GetCellIndicesInRange(targetIndex, tower.BuildRange, includeCenter: true);
@@ -188,7 +205,6 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
             }
         }
 
-        // 순차 적용 시 서로를 막지 않도록 먼저 전부 점유 해제한 뒤 새 위치 점유.
         for (int i = 0; i < plannedMoves.Count; i++)
         {
             plannedMoves[i].Tower.ReleaseGridOccupation();
@@ -200,21 +216,22 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
             bool occupied = move.Tower.TryOccupyAtIndex(move.TargetCenter, requireTerritory: true, requireEmpty: true);
             if (!occupied)
             {
-                // 실패 시 기존 위치로 복구.
                 for (int j = 0; j < plannedMoves.Count; j++)
                 {
                     plannedMoves[j].Tower.ReleaseGridOccupation();
                 }
+
                 for (int j = 0; j < plannedMoves.Count; j++)
                 {
                     var rollback = plannedMoves[j];
                     rollback.Tower.TryOccupyAtIndex(rollback.CurrentCenter, requireTerritory: true, requireEmpty: true);
                 }
+
                 return;
             }
         }
 
-        int arrayCount = _ghostToTowerDic.Count;
+        int arrayCount = plannedMoves.Count;
         int currentCount = 0;
         NetworkId[] netId = new NetworkId[arrayCount];
         Vector3[] vec = new Vector3[arrayCount];
@@ -235,21 +252,96 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
 
     public void TowerMoveClear()
     {
-        GridManager.Instance.ClearBuildRangePreview();
+        GridManager.Instance?.ClearBuildRangePreview();
 
-        for (int i = 0; i < _ghosts.Count; i++)
+        if (_ghosts != null)
         {
-            Destroy(_ghosts[i].gameObject);
+            for (int i = 0; i < _ghosts.Count; i++)
+            {
+                if (_ghosts[i] != null)
+                {
+                    Destroy(_ghosts[i].gameObject);
+                }
+            }
+
+            _ghosts.Clear();
         }
 
-        _ghosts.Clear();
-        _ghostToTowerDic.Clear();
-        _towerToVecDic.Clear();
+        _ghostToTowerDic?.Clear();
+        _towerToVecDic?.Clear();
+        _previewIndices.Clear();
     }
 
-    #endregion
+    public void RemoveTower(Tower tower)
+    {
+        if (tower == null)
+            return;
 
-    #region Core
+        if (_towerToVecDic != null)
+        {
+            _towerToVecDic.Remove(tower);
+        }
+
+        if (_ghostToTowerDic == null || _ghostToTowerDic.Count == 0)
+            return;
+
+        TowerGhost removeGhost = null;
+        foreach (var pair in _ghostToTowerDic)
+        {
+            if (pair.Value == tower)
+            {
+                removeGhost = pair.Key;
+                break;
+            }
+        }
+
+        if (removeGhost is null)
+            return;
+
+        _ghostToTowerDic.Remove(removeGhost);
+        _ghosts?.Remove(removeGhost);
+
+        if (removeGhost is not null)
+        {
+            Destroy(removeGhost.gameObject);
+        }
+
+        if (!HasMoveTargets)
+        {
+            GridManager.Instance?.ClearBuildRangePreview();
+        }
+    }
+
+    public void PruneInvalidTowers()
+    {
+        if (_ghostToTowerDic == null || _ghostToTowerDic.Count == 0)
+            return;
+
+        var removeGhosts = new List<TowerGhost>();
+        foreach (var pair in _ghostToTowerDic)
+        {
+            if (pair.Key == null || pair.Value == null)
+            {
+                removeGhosts.Add(pair.Key);
+            }
+        }
+
+        for (int i = 0; i < removeGhosts.Count; i++)
+        {
+            TowerGhost ghost = removeGhosts[i];
+            if (ghost is not null && _ghostToTowerDic.TryGetValue(ghost, out Tower tower) && tower != null)
+            {
+                _towerToVecDic?.Remove(tower);
+            }
+
+            if (ghost is not null)
+            {
+                _ghostToTowerDic.Remove(ghost);
+                _ghosts?.Remove(ghost);
+                Destroy(ghost.gameObject);
+            }
+        }
+    }
 
     private void TowerGhostInstantiate(HashSet<Tower> towers)
     {
@@ -258,6 +350,9 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
 
         foreach (var tower in towers)
         {
+            if (tower == null)
+                continue;
+
             var ghost = Instantiate(tower.Ghost);
             if (tower.HasBuffRange)
             {
@@ -305,6 +400,9 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
 
         foreach (var tower in towers)
         {
+            if (tower == null)
+                continue;
+
             Vector3 p = tower.transform.position;
             Vector3 diff = p - pivot;
             _towerToVecDic.Add(tower, diff);
@@ -314,6 +412,9 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
     private HashSet<Vector2Int> CollectSelectedOccupiedIndices()
     {
         var occupied = new HashSet<Vector2Int>();
+        if (_ghostToTowerDic == null)
+            return occupied;
+
         foreach (var pair in _ghostToTowerDic)
         {
             Tower tower = pair.Value;
@@ -367,6 +468,4 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
             teleportTower.SetCoolDown();
         }
     }
-
-    #endregion
 }

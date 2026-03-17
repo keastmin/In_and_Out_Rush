@@ -1,5 +1,4 @@
 using Fusion;
-using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -42,8 +41,6 @@ public class Tower : GridPlaceable, ICanClickObject
             NetBuffRange = _buffRange;
 
         OnChangeBuffScale();
-
-        // SetBuffRange(_buffRange);
         TowerSpawned();
     }
 
@@ -54,6 +51,7 @@ public class Tower : GridPlaceable, ICanClickObject
 
     public override void Despawned(NetworkRunner runner, bool hasState)
     {
+        NotifyBuilderTowerDespawned();
         base.Despawned(runner, hasState);
         TowerDespawned();
     }
@@ -68,17 +66,14 @@ public class Tower : GridPlaceable, ICanClickObject
 
     protected virtual void TowerSpawned()
     {
-        
     }
 
     protected virtual void TowerFixedUpdateNetwork()
     {
-
     }
 
     protected virtual void TowerDespawned()
     {
-
     }
 
     protected void SetId(string id)
@@ -100,7 +95,6 @@ public class Tower : GridPlaceable, ICanClickObject
         }
     }
 
-    #region ICanClickObject 구현
     public void OnLeftMouseDownThisObject()
     {
         _selectedChecker.SetActive(true);
@@ -119,18 +113,25 @@ public class Tower : GridPlaceable, ICanClickObject
     {
         _selectedChecker.SetActive(false);
     }
-    #endregion
-
-    #region Helper
 
     private void OnChangeBuffScale()
     {
-        if(_buffRangeTransform != null)
+        if (_buffRangeTransform != null)
         {
             Vector3 scale = new Vector3(NetBuffRange, NetBuffRange, NetBuffRange);
             _buffRangeTransform.localScale = scale;
         }
     }
 
-    #endregion
+    private void NotifyBuilderTowerDespawned()
+    {
+        if (StageManager.Instance == null)
+            return;
+
+        var builder = StageManager.Instance.PlayerBuilder;
+        if (builder == null)
+            return;
+
+        builder.OnTowerDespawned(this);
+    }
 }

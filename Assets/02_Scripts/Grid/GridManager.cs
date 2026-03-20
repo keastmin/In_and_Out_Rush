@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 
 namespace Grid
@@ -6,12 +6,11 @@ namespace Grid
     public partial class GridManager : MonoBehaviour
     {
         [Header("Grid")]
-        [SerializeField] private GameObject _plane; // 지면 오브젝트
+        [SerializeField] private PlaneBasedGround _ground; // 지면 오브젝트
         [SerializeField][Min(1)] private int _gridRow = 20; // 그리드 행
         [SerializeField][Min(1)] private int _gridCol = 20; // 그리드 열
-        [SerializeField][Min(0.001f)] private float _hexSize = 1.6f; // 정육각형 크기
+        [SerializeField][Min(0.001f)] private float _hexSize = 1.6f; // 육각형 크기
         [SerializeField] private Vector3 _gridOffset = Vector3.zero; // 그리드 위치 오프셋
-        [SerializeField] private bool _gridDebug = true; // 기즈모 디버그 여부
 
         [Header("Overlay Colors")]
         [SerializeField] private Color _noneColor = new Color(0.2f, 0.45f, 1f, 0.28f);
@@ -31,9 +30,6 @@ namespace Grid
         // 그리드 캐시
         private Vector3 _gridOriginPosition;
         private const float SQRT3 = 1.7320508075688772f;
-        private float _hexHeight;
-        private float _gridTilingHeightOffset;
-        private float _gridTilingWidthOffset;
         public float GridHeight => _gridOriginPosition.y;
 
         private MeshCollider _planeCollider;
@@ -65,12 +61,14 @@ namespace Grid
         // 오버레이
         public bool ShowCellStateOverlay => _showCellStateOverlay;
 
+        private GridGuide _gridGuide; // 그리드 가이드를 표시
+
         private void OnValidate()
         {
-            if (_plane != null)
+            if (_ground != null)
             {
-                _plane.TryGetComponent(out _planeCollider);
-                _plane.TryGetComponent(out _planeRenderer);
+                _ground.TryGetComponent(out _planeCollider);
+                _ground.TryGetComponent(out _planeRenderer);
                 if (_planePropertyBlock == null)
                 {
                     _planePropertyBlock = new MaterialPropertyBlock();
@@ -96,50 +94,15 @@ namespace Grid
         // Flat-top 육각 타일링
         private void InitGrid(int col, int row)
         {
-            _grid = new HexaCell[col, row];
-            InitGridVariable();
-            FindGridOriginPosition();
-            InitEachCellCenter();
-            RebuildCellStateTextures();
-        }
-
-        // 그리드 계산에 사용할 변수들 초기화
-        private void InitGridVariable()
-        {
-            _hexHeight = _hexSize * (SQRT3 / 2f);
-            _gridTilingHeightOffset = SQRT3 * _hexSize;
-            _gridTilingWidthOffset = 1.5f * _hexSize;
-        }
-
-        // 그리드를 시작할 오리진 포지션 계산
-        private void FindGridOriginPosition()
-        {
-            Vector3 planeBoundMin = _planeCollider.bounds.min;
-            _gridOriginPosition = planeBoundMin + new Vector3(_hexSize, 0f, _hexHeight) + _gridOffset;
-        }
-
-        // 각 셀의 중심점 계산 후 셀 객체 생성
-        private void InitEachCellCenter()
-        {
-            for (int i = 0; i < _gridCol; i++)
+            if (!GridInitializeUtil.TryInitializeGrid(col, row, _hexSize, _gridOffset, _planeCollider.bounds, out GridInitializationResult result))
             {
-                float height = i * _gridTilingHeightOffset;
-                for (int j = 0; j < _gridRow; j++)
-                {
-                    float rowHeightOffset = (j % 2 == 0) ? 0f : _hexHeight;
-                    float width = j * _gridTilingWidthOffset;
-
-                    Vector3 center = _gridOriginPosition + new Vector3(width, 0f, height + rowHeightOffset);
-                    Vector3[] vertices = new Vector3[6];
-                    for (int k = 0; k < 6; k++)
-                    {
-                        float rad = (60f * (k % 6)) * Mathf.Deg2Rad;
-                        vertices[k] = center + new Vector3(Mathf.Cos(rad) * _hexSize, 0f, Mathf.Sin(rad) * _hexSize);
-                    }
-
-                    _grid[i, j] = new HexaCell(center, vertices);
-                }
+                _grid = null;
+                return;
             }
+            _grid = result.Grid;
+            _gridOriginPosition = result.GridOriginPosition;
+
+            RebuildCellStateTextures();
         }
 
         private void RebuildCellStateTextures()
@@ -372,27 +335,5 @@ namespace Grid
         }
 
         #endregion
-
-        private void OnDrawGizmos()
-        {
-            if (_planeCollider == null || !_gridDebug || _grid == null) return;
-
-            foreach (var cell in _grid)
-            {
-                Vector3 c = cell.CenterPosition;
-
-                Gizmos.color = Color.yellow;
-                Gizmos.DrawSphere(c, 0.05f);
-
-                Gizmos.color = new Color(0.0f, 0.85f, 1f, 1f);
-                int l = cell.Vertices.Length;
-                for (int i = 0; i < l; i++)
-                {
-                    Vector3 pos1 = cell.Vertices[i];
-                    Vector3 pos2 = cell.Vertices[(i + 1) % l];
-                    Gizmos.DrawLine(pos1, pos2);
-                }
-            }
-        }
     }
 }

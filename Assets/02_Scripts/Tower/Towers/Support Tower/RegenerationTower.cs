@@ -1,4 +1,4 @@
-﻿using Fusion;
+using Fusion;
 using Grid;
 using UnityEngine;
 

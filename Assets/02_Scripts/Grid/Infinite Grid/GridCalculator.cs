@@ -5,7 +5,6 @@ public class GridCalculator
 {
     private const float SQRT3 = 1.7320508075688772f;
 
-    // offset index 기준 청크 크기
     private readonly int _chunkColSize;
     private readonly int _chunkRowSize;
 
@@ -15,9 +14,6 @@ public class GridCalculator
         _chunkRowSize = Mathf.Max(1, chunkRowSize);
     }
 
-    /// <summary>
-    /// 입력한 월드 위치에서 가장 가까운 셀의 중심점을 구합니다
-    /// </summary>
     public Vector3 GetCellCenterPositionFromWorldPosition(Vector3 origin, Vector3 worldPos, float cellSize)
     {
         if (cellSize <= 0f)
@@ -27,9 +23,6 @@ public class GridCalculator
         return GetCellCenterPositionFromCellIndex(origin, nearestCellIndex.x, nearestCellIndex.y, cellSize);
     }
 
-    /// <summary>
-    /// 입력한 월드 위치의 청크 키를 구합니다
-    /// </summary>
     public GridChunkKey GetChunkKeyFromWorldPosition(Vector3 origin, Vector3 worldPos, float cellSize)
     {
         Vector2Int nearestCellIndex = GetNearestCellIndexFromWorldPosition(origin, worldPos, cellSize);
@@ -40,10 +33,6 @@ public class GridCalculator
         return new GridChunkKey(chunkCol, chunkRow);
     }
 
-    /// <summary>
-    /// 월드 위치에서 가장 가까운 셀의 offset 인덱스(col, row)를 구합니다.
-    /// x = col(Z축), y = row(X축)
-    /// </summary>
     public Vector2Int GetNearestCellIndexFromWorldPosition(Vector3 origin, Vector3 worldPos, float cellSize)
     {
         if (cellSize <= 0f)
@@ -51,7 +40,6 @@ public class GridCalculator
 
         Vector3 local = worldPos - origin;
 
-        // Flat-top axial 연속좌표
         float qf = ((2f / 3f) * local.x) / cellSize;
         float rf = ((-1f / 3f) * local.x + (SQRT3 / 3f) * local.z) / cellSize;
 
@@ -59,9 +47,6 @@ public class GridCalculator
         return AxialToOddQOffset(roundedAxial.x, roundedAxial.y);
     }
 
-    /// <summary>
-    /// offset 인덱스(col, row)의 중심점을 구합니다.
-    /// </summary>
     public Vector3 GetCellCenterPositionFromCellIndex(Vector3 origin, int col, int row, float cellSize)
     {
         float xOffset = cellSize * 1.5f;
@@ -74,20 +59,39 @@ public class GridCalculator
         return new Vector3(x, origin.y, z);
     }
 
-    /// <summary>
-    /// 해당 인덱스로부터 주어진 범위만큼의 주변 인덱스들을 구함
-    /// </summary>
-    /// <param name="index">기준 인덱스</param>
-    /// <param name="range">범위</param>
-    /// <returns>기준 인덱스로부터 주어진 범위만큼 포함되는 인덱스들의 리스트</returns>
     public List<Vector2Int> GetInRangeIndices(Vector2Int index, int range)
     {
-        return new();
+        var result = new List<Vector2Int>();
+        int radius = Mathf.Max(0, range);
+        int q0 = index.y;
+        int r0 = index.x - (q0 >> 1);
+
+        int estimatedCount = radius == 0 ? 1 : 1 + (3 * radius * (radius + 1));
+        result.Capacity = estimatedCount;
+
+        for (int dq = -radius; dq <= radius; dq++)
+        {
+            int drMin = Mathf.Max(-radius, -dq - radius);
+            int drMax = Mathf.Min(radius, -dq + radius);
+
+            for (int dr = drMin; dr <= drMax; dr++)
+            {
+                int q = q0 + dq;
+                int r = r0 + dr;
+                result.Add(AxialToOddQOffset(q, r));
+            }
+        }
+
+        return result;
     }
 
-    /// <summary>
-    /// axial(q, r)를 odd-q offset(col, row)로 변환합니다.
-    /// </summary>
+    public Vector2Int GetAxialFromOffsetIndex(Vector2Int index)
+    {
+        int q = index.y;
+        int r = index.x - (q >> 1);
+        return new Vector2Int(q, r);
+    }
+
     private Vector2Int AxialToOddQOffset(int q, int r)
     {
         int row = q;
@@ -95,9 +99,6 @@ public class GridCalculator
         return new Vector2Int(col, row);
     }
 
-    /// <summary>
-    /// 연속 axial 좌표를 가장 가까운 정수 axial 좌표로 반올림합니다.
-    /// </summary>
     private Vector2Int RoundAxial(float qf, float rf)
     {
         float xf = qf;
@@ -125,13 +126,9 @@ public class GridCalculator
             rz = -rx - ry;
         }
 
-        // axial(q, r) = (cube.x, cube.z)
         return new Vector2Int(rx, rz);
     }
 
-    /// <summary>
-    /// 음수 좌표에서도 올바르게 동작하는 floor division
-    /// </summary>
     private int FloorDiv(int value, int divisor)
     {
         int quotient = value / divisor;

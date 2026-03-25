@@ -39,10 +39,14 @@ namespace Dev.Network
 
         }
 
+        // ?곌뎄???앹꽦
         private void SpawnLaboratory()
         {
-            Vector3 labSpawnPos = Grid.GetCellCenterPosition(Vector3.zero);
-            NetworkLaboratory = Runner.Spawn(_laboratoryPrefab, labSpawnPos, Quaternion.identity);
+            if (HasStateAuthority)
+            {
+                Vector3 labSpawnPos = Grid.GetCellCenterPosition(Vector3.zero);
+                NetworkLaboratory = Runner.Spawn(_laboratoryPrefab, labSpawnPos, Quaternion.identity);
+            }
         }
     }
 }

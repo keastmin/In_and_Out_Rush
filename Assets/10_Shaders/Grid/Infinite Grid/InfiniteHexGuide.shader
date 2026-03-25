@@ -71,6 +71,7 @@ Shader "GridVisualize/InfiniteHexGuide"
             SAMPLER(sampler_MetallicGlossMap);
             TEXTURE2D(_OcclusionMap);
             SAMPLER(sampler_OcclusionMap);
+            #define MAX_OCCUPIED_CELLS 512
 
             CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
@@ -87,7 +88,9 @@ Shader "GridVisualize/InfiniteHexGuide"
             float _HexSize;
             float _CellFill;
             float _StateOverlayEnabled;
+            float _OccupiedCellCount;
             CBUFFER_END
+            float4 _OccupiedCells[MAX_OCCUPIED_CELLS];
 
             Varyings vert(Attributes input)
             {
@@ -138,6 +141,28 @@ Shader "GridVisualize/InfiniteHexGuide"
                 float inBounds = step(localAbs.x, hexSize + 1e-4) * step(localAbs.y, halfHeight + 1e-4);
                 float inDiagonal = step(localAbs.y + SQRT3 * localAbs.x, SQRT3 * hexSize + 1e-4);
                 return inBounds * inDiagonal;
+            }
+
+            float IsOccupiedCell(float2 axial)
+            {
+                int occupiedCount = (int)_OccupiedCellCount;
+
+                [loop]
+                for (int i = 0; i < MAX_OCCUPIED_CELLS; i++)
+                {
+                    if (i >= occupiedCount)
+                    {
+                        break;
+                    }
+
+                    float2 occupiedAxial = _OccupiedCells[i].xy;
+                    if (all(abs(occupiedAxial - axial) < 0.01))
+                    {
+                        return 1.0;
+                    }
+                }
+
+                return 0.0;
             }
 
             half3 SampleNormalTS(float2 uv)
@@ -228,8 +253,8 @@ Shader "GridVisualize/InfiniteHexGuide"
                 float innerMask = IsInsideFlatTopHex(localPosition, innerSize) * innerEnabled;
                 float guideMask = outerMask * (1.0 - innerMask) * saturate(_StateOverlayEnabled);
 
-                float guideSelector = fmod(abs(qr.x + qr.y), 2.0);
-                half4 guideColor = lerp(_PrimaryGuideColor, _SecondaryGuideColor, guideSelector);
+                float occupiedMask = IsOccupiedCell(qr);
+                half4 guideColor = lerp(_PrimaryGuideColor, _SecondaryGuideColor, occupiedMask);
                 half3 mixedAlbedo = lerp(baseColor.rgb, guideColor.rgb, guideColor.a * guideMask);
 
                 SurfaceData surfaceData;

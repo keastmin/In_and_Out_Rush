@@ -307,6 +307,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _buildRange: 1
   _requireTerritory: 1
+  _BuiltIndex: {x: 0, y: 0}
   _defaultRange: 1
   _ignoreTerritoryOnSpawn: 1
 --- !u!114 &-994325378248675283

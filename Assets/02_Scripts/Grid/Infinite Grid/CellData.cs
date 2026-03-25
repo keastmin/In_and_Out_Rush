@@ -1,7 +1,8 @@
+using Fusion;
 using System.Collections.Generic;
 using UnityEngine;
 
-public struct CellData
+public struct CellData : INetworkStruct
 {
     public int ActiveRange;
     public BuffData BuffData;

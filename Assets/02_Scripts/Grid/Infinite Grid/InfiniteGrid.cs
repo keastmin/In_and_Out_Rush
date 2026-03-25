@@ -1,7 +1,8 @@
+using Fusion;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class InfiniteGrid : MonoBehaviour
+public class InfiniteGrid : NetworkBehaviour
 {
     public static InfiniteGrid Instance;
 
@@ -9,7 +10,9 @@ public class InfiniteGrid : MonoBehaviour
     [SerializeField] private InfiniteGridGuideSettings _guide = new();
     [SerializeField] private InfiniteGridRenderingSettings _rendering = new();
 
-    public Dictionary<Vector2Int, CellData> Grid { get; private set; }
+    [Networked, Capacity(512), OnChangedRender(nameof(RefreshVisuals))]
+    public NetworkDictionary<Vector2Int, CellData> NetworkGrid => default;
+
     public bool ShowCellStateOverlay => _layout.ShowCellStateOverlay;
     public Vector3 GridOrigin => _layout.ResolveOrigin(transform);
 
@@ -24,27 +27,18 @@ public class InfiniteGrid : MonoBehaviour
 
     private void Awake()
     {
-        Debug.Log("무한 그리드 Awake 실행");
         Instance = this;
-        Debug.Log("인스턴스 이름: "+ Instance.name);
 
         Initialize();
         RefreshVisuals();
+
+        // 시작시 그리드 가이드 끄기
+        SetCellStateOverlayEnabled(false);
     }
 
     private void OnEnable()
     {
         Initialize();
-        RefreshVisuals();
-    }
-
-    private void LateUpdate()
-    {
-        if (!isActiveAndEnabled)
-        {
-            return;
-        }
-
         RefreshVisuals();
     }
 
@@ -91,36 +85,23 @@ public class InfiniteGrid : MonoBehaviour
     /// <summary>
     /// 사용중인 셀 등록
     /// </summary>
-    /// <param name="worldPos">등록할 셀을 찾을 위치</param>
+    /// <param name="index">등록할 셀의 인덱스</param>
     /// <param name="range">사용 등록 범위</param>
     /// <returns>등록 성공 여부</returns>
-    public bool AddActiveCell(Vector3 worldPos, int range)
+    public bool AddActiveCell(Vector2Int index, int range)
     {
-        return AddActiveCell(worldPos, range, BuffData.Empty);
-    }
-
-    /// <summary>
-    /// 사용중인 셀 등록
-    /// </summary>
-    /// <param name="worldPos">등록할 셀을 찾을 위치</param>
-    /// <param name="range">사용 등록 범위</param>
-    /// <param name="buffData">버프 데이터</param>
-    /// <returns>등록 성공 여부</returns>
-    public bool AddActiveCell(Vector3 worldPos, int range, BuffData buffData)
-    {
-        Vector2Int index = GetCellIndexFromWorldPosition(worldPos);
-        if (Grid.ContainsKey(index))
+        if (!HasStateAuthority || NetworkGrid.ContainsKey(index))
             return false;
-        Grid.Add(index, new CellData(range, buffData));
+        NetworkGrid.Add(index, new CellData(range, BuffData.Empty));
         return true;
     }
 
     /// <summary>
     /// 사용중인 셀 삭제
     /// </summary>
-    /// <param name="worldPos">삭제할 위치</param>
+    /// <param name="index">삭제할 인덱스</param>
     /// <returns>삭제 성공 여부</returns>
-    public bool RemoveActiveCell(Vector3 worldPos)
+    public bool RemoveActiveCell(Vector2Int index)
     {
         return true;
     }
@@ -129,11 +110,11 @@ public class InfiniteGrid : MonoBehaviour
     {
         _gridCalculator ??= new GridCalculator(32, 32);
         _visualController ??= new InfiniteGridVisualController();
-        Grid ??= new Dictionary<Vector2Int, CellData>();
+        
     }
 
     private void RefreshVisuals()
     {
-        _visualController.Apply(gameObject, transform, _layout, _guide, _rendering);
+        _visualController.Apply(gameObject, transform, _layout, _guide, _rendering, _gridCalculator);
     }
 }

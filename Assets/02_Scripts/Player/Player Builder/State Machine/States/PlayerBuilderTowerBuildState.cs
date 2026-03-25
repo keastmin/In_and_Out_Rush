@@ -19,19 +19,19 @@ public class PlayerBuilderTowerBuildState : IPlayerState
 
     public void Enter()
     {
-        // 건설 UI 활성화
+        // 嫄댁꽕 UI ?쒖꽦??
         _player.BuilderUI.ActivationTowerBuildUI(true, "Left Mouse: Build, RightMouse: Cancel");
 
         if(InfiniteGrid.Instance == null)
         {
-            Debug.Log("인스턴스가 없습니다.");
+            Debug.Log("?몄뒪?댁뒪媛 ?놁뒿?덈떎.");
         }
         InfiniteGrid.Instance.SetCellStateOverlayEnabled(true);
 
-        //// 셀 상태 오버레이 표시
+        //// ? ?곹깭 ?ㅻ쾭?덉씠 ?쒖떆
         //GridManager.Instance.SetCellStateOverlayEnabled(true);
 
-        //// 고스트 생성
+        //// 怨좎뒪???앹꽦
         //_towerGhost = Object.Instantiate(_player.BuilderTowerBuild.TowerGhost);
         //if (_player.BuilderTowerBuild.HasBuffRange)
         //{
@@ -46,12 +46,12 @@ public class PlayerBuilderTowerBuildState : IPlayerState
     {
         //bool isCenter = _player.BuilderTowerBuild.IsCenterTower;
 
-        //// 마우스 위치를 기반으로 고스트 스냅샷
+        //// 留덉슦???꾩튂瑜?湲곕컲?쇰줈 怨좎뒪???ㅻ깄??
         //_canTowerBuild = SnapshotTowerGhost(isCenter);
 
         //if (Input.GetMouseButtonDown(0) && _canTowerBuild && !EventSystem.current.IsPointerOverGameObject())
         //{
-        //    // 좌클릭 설치
+        //    // 醫뚰겢由??ㅼ튂
         //    if (isCenter)
         //        _player.SetCenterTowerCount(_player.CenterTowerCount + 1);
 
@@ -75,7 +75,7 @@ public class PlayerBuilderTowerBuildState : IPlayerState
     {
         InfiniteGrid.Instance.SetCellStateOverlayEnabled(false);
 
-        //// 셀 상태 오버레이 비활성화
+        //// ? ?곹깭 ?ㅻ쾭?덉씠 鍮꾪솢?깊솕
         //GridManager.Instance.ClearBuildRangePreview();
         //GridManager.Instance.SetCellStateOverlayEnabled(false);
 
@@ -90,7 +90,7 @@ public class PlayerBuilderTowerBuildState : IPlayerState
         }
     }
 
-    // 건설 상태 종료
+    // 嫄댁꽕 ?곹깭 醫낅즺
     private void CancelTowerBuild()
     {
         //Object.Destroy(_towerGhost.gameObject);
@@ -99,7 +99,7 @@ public class PlayerBuilderTowerBuildState : IPlayerState
         _player.BuilderUI.ActivationTowerBuildUI(false);
     }
 
-    // 마우스 레이가 유효한 환경 레이어를 맞췄는지 검사
+    // 留덉슦???덉씠媛 ?좏슚???섍꼍 ?덉씠?대? 留욎톬?붿? 寃??
     private bool IsValidMouseRay(out Vector3 mousePosition)
     {
         mousePosition = default;
@@ -116,7 +116,7 @@ public class PlayerBuilderTowerBuildState : IPlayerState
         return isValid;
     }
 
-    // 고스트 위치 및 설치 가능 여부 갱신
+    // 怨좎뒪???꾩튂 諛??ㅼ튂 媛???щ? 媛깆떊
     private bool SnapshotTowerGhost(bool isCenter)
     {
         bool canTowerCraft = false;

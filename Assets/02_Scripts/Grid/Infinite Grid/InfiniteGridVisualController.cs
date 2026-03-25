@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class InfiniteGridVisualController
@@ -10,9 +11,10 @@ public class InfiniteGridVisualController
         Transform ownerTransform,
         InfiniteGridLayoutSettings layout,
         InfiniteGridGuideSettings guide,
-        InfiniteGridRenderingSettings rendering)
+        InfiniteGridRenderingSettings rendering,
+        GridCalculator gridCalculator)
     {
-        if (layout == null || guide == null || rendering == null)
+        if (layout == null || guide == null || rendering == null || gridCalculator == null)
         {
             return;
         }

@@ -21,10 +21,6 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
 
     private PlayerBuilderTowerSystem _towerSystem;
 
-    /// <summary>
-    /// 외부에서 호출하는 초기화 함수
-    /// </summary>
-    /// <param name="builderUI">빌더 UI 컴포넌트</param>
     public void Init(PlayerBuilderUI builderUI, PlayerBuilderTowerSystem towerSystem)
     {
         _isStandByBuild = false;
@@ -32,11 +28,6 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
         LinkBuildTowerAction(builderUI);
     }
 
-    /// <summary>
-    /// 해당 타워가 설치 가능한지 검사
-    /// </summary>
-    /// <param name="towerId">설치할 타워 ID</param>
-    /// <returns>설치 가능 여부</returns>
     public bool TowerBuildConditionChecker(string towerId)
     {
         bool canBuild = true;
@@ -53,9 +44,6 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
         return canBuild;
     }
 
-    /// <summary>
-    /// 선택된 셀 인덱스에 타워 설치 요청
-    /// </summary>
     public void BuildTower(Vector2Int index)
     {
         if (_towerRef != default && _tower != null)
@@ -65,9 +53,6 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
         }
     }
 
-    /// <summary>
-    /// 설치 대기 상태 해제
-    /// </summary>
     public void RevertStandBy()
     {
         _tower = null;
@@ -84,7 +69,6 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
         }
     }
 
-    // 설치할 타워 데이터 주입
     private void InjectionTowerData(TowerData data)
     {
         if (data == null)
@@ -110,7 +94,6 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
         _isStandByBuild = true;
     }
 
-    // Host에게 자원 차감과 타워 스폰 요청
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
     private void RPC_BuildTower(NetworkPrefabRef towerRef, Cost cost, Vector3 position)
     {
@@ -122,7 +105,6 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
         }
     }
 
-    // 텔레포트 타워 설치 조건 검사
     private bool TeleportTowerBuildConditionChecker()
     {
         if (TowerManager.Instance.GetTowerCount(TowerIDContainer.TELEPORT_TOWER_ID) >= 2)
@@ -131,7 +113,6 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
         return true;
     }
 
-    // 보급품이 하나 이상 구매된 상태에서만 Supply Tower 설치 가능
     private bool SupplyTowerBuildConditionChecker()
     {
         if (SupplyTowerManager.Instance == null)

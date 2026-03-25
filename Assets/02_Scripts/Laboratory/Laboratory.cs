@@ -24,11 +24,6 @@ public class Laboratory : GridPlaceable, ICanClickObject
     public override void Spawned()
     {
         base.Spawned();
-
-        if (_ignoreTerritoryOnSpawn && !IsGridOccupied)
-        {
-            TryOccupyAtWorldPosition(transform.position, requireTerritory: false, requireEmpty: true);
-        }
     }
 
     public void OnLeftMouseDownThisObject()

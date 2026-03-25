@@ -20,18 +20,18 @@ public class GridPlaceable : NetworkBehaviour
 
     public override void Spawned()
     {
-        if (ShouldSyncGridState())
-        {
-            TryOccupyAtWorldPosition(transform.position, _requireTerritory, requireEmpty: true);
-        }
+        //if (ShouldSyncGridState())
+        //{
+        //    TryOccupyAtWorldPosition(transform.position, _requireTerritory, requireEmpty: true);
+        //}
     }
 
     public override void Despawned(NetworkRunner runner, bool hasState)
     {
-        if (ShouldSyncGridState())
-        {
-            ReleaseGridOccupation();
-        }
+        //if (ShouldSyncGridState())
+        //{
+        //    ReleaseGridOccupation();
+        //}
     }
 
     public bool CanPlaceAtWorldPosition(Vector3 worldPosition, bool requireTerritory = true, bool requireEmpty = true)

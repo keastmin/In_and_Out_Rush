@@ -6,7 +6,7 @@ namespace Grid
     public partial class GridManager : MonoBehaviour
     {
         [Header("Grid")]
-        [SerializeField] private PlaneBasedGround _ground; // 지면 오브젝트
+        [SerializeField] private GameObject _ground; // 지면 오브젝트
         [SerializeField][Min(1)] private int _gridRow = 20; // 그리드 행
         [SerializeField][Min(1)] private int _gridCol = 20; // 그리드 열
         [SerializeField][Min(0.001f)] private float _hexSize = 1.6f; // 육각형 크기

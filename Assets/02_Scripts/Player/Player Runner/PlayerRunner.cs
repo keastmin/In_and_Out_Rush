@@ -117,12 +117,12 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
             {
                 if (laboratoryUsing)
                 {
-                    var lab = StageManager.Instance.Laboratory;
-                    if (lab != null)
-                    {
-                        StageManager.Instance.CinemachineSystem.SetTrackingTarget(lab.transform);
-                        Debug.Log("연구소 보기");
-                    }
+                    //var lab = StageManager.Instance.Laboratory;
+                    //if (lab != null)
+                    //{
+                    //    StageManager.Instance.CinemachineSystem.SetTrackingTarget(lab.transform);
+                    //    Debug.Log("연구소 보기");
+                    //}
                 }
                 else
                 {

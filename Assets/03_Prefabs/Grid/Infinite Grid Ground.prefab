@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &6715385626077012109
+--- !u!1 &5379209773506943472
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,25 +8,25 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 7639482975571658701}
-  - component: {fileID: 4391302911533006301}
-  - component: {fileID: 3587320262279854009}
-  - component: {fileID: 7287942807247319960}
-  - component: {fileID: 5596983573337518420}
+  - component: {fileID: 8385694607101590629}
+  - component: {fileID: 2863890552933132054}
+  - component: {fileID: 4665693873021043325}
+  - component: {fileID: 6873920629067909897}
+  - component: {fileID: 4876767757150376269}
   m_Layer: 7
-  m_Name: Ground
+  m_Name: Infinite Grid Ground
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &7639482975571658701
+--- !u!4 &8385694607101590629
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6715385626077012109}
+  m_GameObject: {fileID: 5379209773506943472}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: -0.03, z: 0}
@@ -35,33 +35,45 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &4391302911533006301
+--- !u!114 &2863890552933132054
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6715385626077012109}
+  m_GameObject: {fileID: 5379209773506943472}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 99f5284bed011a846b699fe70d0c1e2d, type: 3}
+  m_Script: {fileID: 11500000, guid: 5794c4a2e496bc945a709ab0797511f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!33 &3587320262279854009
+  _layout:
+    _useTransformAsOrigin: 1
+    _gridOrigin: {x: 0, y: 0}
+    _cellSize: 1.6
+    _cellFill: 0.2
+    _showCellStateOverlay: 0
+  _guide:
+    _primaryGuideColor: {r: 0.2, g: 0.45, b: 1, a: 0.78431374}
+    _secondaryGuideColor: {r: 1, g: 0.2, b: 0.2, a: 0.78431374}
+  _rendering:
+    _applyInfiniteGridMaterial: 1
+    _infiniteGridMaterial: {fileID: 2100000, guid: 0e91d6bcc51a4e72a2ea4aa10b24facd, type: 2}
+--- !u!33 &4665693873021043325
 MeshFilter:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6715385626077012109}
+  m_GameObject: {fileID: 5379209773506943472}
   m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
---- !u!23 &7287942807247319960
+--- !u!23 &6873920629067909897
 MeshRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6715385626077012109}
+  m_GameObject: {fileID: 5379209773506943472}
   m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
@@ -100,13 +112,13 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &5596983573337518420
+--- !u!64 &4876767757150376269
 MeshCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6715385626077012109}
+  m_GameObject: {fileID: 5379209773506943472}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2

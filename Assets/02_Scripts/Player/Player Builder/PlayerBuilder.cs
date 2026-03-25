@@ -145,19 +145,19 @@ public class PlayerBuilder : Player
     }
 
     // 외부에서 참조를 주입하는 함수
-    public void PlayerBuilderReferenceInjection(PlayerBuilderUI builderUI, Laboratory laboratory)
+    public void PlayerBuilderReferenceInjection(PlayerBuilderUI builderUI)
     {
         _builderUI = builderUI;  
         _dragSystem = builderUI.DragSystem;
-        _laboratory = laboratory;
+        //_laboratory = laboratory;
 
         // 타워 시스템 컴포넌트 참조 받아오기
         TryGetComponent(out _builderTowerSystem);
 
         // 연구소 관련 액션 연결
         _builderUI.OnClickLaboratoryButtonAction += IsOpenLaboratory;
-        if (_laboratory != null)
-            _laboratory.OnClickLaboratoryObjectAction += IsOpenLaboratory;
+        //if (_laboratory != null)
+            //_laboratory.OnClickLaboratoryObjectAction += IsOpenLaboratory;
 
         // 타워 판매 액션 연결
         TryGetComponent(out _builderTowerSell);

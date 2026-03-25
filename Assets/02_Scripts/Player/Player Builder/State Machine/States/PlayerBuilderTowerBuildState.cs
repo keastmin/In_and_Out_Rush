@@ -22,37 +22,43 @@ public class PlayerBuilderTowerBuildState : IPlayerState
         // 건설 UI 활성화
         _player.BuilderUI.ActivationTowerBuildUI(true, "Left Mouse: Build, RightMouse: Cancel");
 
-        // 셀 상태 오버레이 표시
-        GridManager.Instance.SetCellStateOverlayEnabled(true);
-
-        // 고스트 생성
-        _towerGhost = Object.Instantiate(_player.BuilderTowerBuild.TowerGhost);
-        if (_player.BuilderTowerBuild.HasBuffRange)
+        if(InfiniteGrid.Instance == null)
         {
-            _towerGhost.SetGhostBuffRange(_player.BuilderTowerBuild.BuffRange);
+            Debug.Log("인스턴스가 없습니다.");
         }
+        InfiniteGrid.Instance.SetCellStateOverlayEnabled(true);
 
-        _canTowerBuild = false;
-        GridManager.Instance.ClearBuildRangePreview();
+        //// 셀 상태 오버레이 표시
+        //GridManager.Instance.SetCellStateOverlayEnabled(true);
+
+        //// 고스트 생성
+        //_towerGhost = Object.Instantiate(_player.BuilderTowerBuild.TowerGhost);
+        //if (_player.BuilderTowerBuild.HasBuffRange)
+        //{
+        //    _towerGhost.SetGhostBuffRange(_player.BuilderTowerBuild.BuffRange);
+        //}
+
+        //_canTowerBuild = false;
+        //GridManager.Instance.ClearBuildRangePreview();
     }
 
     public void Update()
     {
-        bool isCenter = _player.BuilderTowerBuild.IsCenterTower;
+        //bool isCenter = _player.BuilderTowerBuild.IsCenterTower;
 
-        // 마우스 위치를 기반으로 고스트 스냅샷
-        _canTowerBuild = SnapshotTowerGhost(isCenter);
+        //// 마우스 위치를 기반으로 고스트 스냅샷
+        //_canTowerBuild = SnapshotTowerGhost(isCenter);
 
-        if (Input.GetMouseButtonDown(0) && _canTowerBuild && !EventSystem.current.IsPointerOverGameObject())
-        {
-            // 좌클릭 설치
-            if (isCenter)
-                _player.SetCenterTowerCount(_player.CenterTowerCount + 1);
+        //if (Input.GetMouseButtonDown(0) && _canTowerBuild && !EventSystem.current.IsPointerOverGameObject())
+        //{
+        //    // 좌클릭 설치
+        //    if (isCenter)
+        //        _player.SetCenterTowerCount(_player.CenterTowerCount + 1);
 
-            _player.BuilderTowerBuild.BuildTower(_towerBuildIndex);
-            _player.BuilderTowerBuild.RevertStandBy();
-        }
-        else if (Input.GetMouseButtonDown(1))
+        //    _player.BuilderTowerBuild.BuildTower(_towerBuildIndex);
+        //    _player.BuilderTowerBuild.RevertStandBy();
+        //}
+        if (Input.GetMouseButtonDown(1))
         {
             _player.BuilderTowerBuild.RevertStandBy();
         }
@@ -67,9 +73,11 @@ public class PlayerBuilderTowerBuildState : IPlayerState
 
     public void Exit()
     {
-        // 셀 상태 오버레이 비활성화
-        GridManager.Instance.ClearBuildRangePreview();
-        GridManager.Instance.SetCellStateOverlayEnabled(false);
+        InfiniteGrid.Instance.SetCellStateOverlayEnabled(false);
+
+        //// 셀 상태 오버레이 비활성화
+        //GridManager.Instance.ClearBuildRangePreview();
+        //GridManager.Instance.SetCellStateOverlayEnabled(false);
 
         CancelTowerBuild();
     }
@@ -85,7 +93,7 @@ public class PlayerBuilderTowerBuildState : IPlayerState
     // 건설 상태 종료
     private void CancelTowerBuild()
     {
-        Object.Destroy(_towerGhost.gameObject);
+        //Object.Destroy(_towerGhost.gameObject);
         _canTowerBuild = false;
 
         _player.BuilderUI.ActivationTowerBuildUI(false);

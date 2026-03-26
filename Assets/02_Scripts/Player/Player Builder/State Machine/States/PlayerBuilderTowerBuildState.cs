@@ -19,45 +19,13 @@ public class PlayerBuilderTowerBuildState : IPlayerState
 
     public void Enter()
     {
-        // 嫄댁꽕 UI ?쒖꽦??
         _player.BuilderUI.ActivationTowerBuildUI(true, "Left Mouse: Build, RightMouse: Cancel");
 
-        if(InfiniteGrid.Instance == null)
-        {
-            Debug.Log("?몄뒪?댁뒪媛 ?놁뒿?덈떎.");
-        }
         InfiniteGrid.Instance.SetCellStateOverlayEnabled(true);
-
-        //// ? ?곹깭 ?ㅻ쾭?덉씠 ?쒖떆
-        //GridManager.Instance.SetCellStateOverlayEnabled(true);
-
-        //// 怨좎뒪???앹꽦
-        //_towerGhost = Object.Instantiate(_player.BuilderTowerBuild.TowerGhost);
-        //if (_player.BuilderTowerBuild.HasBuffRange)
-        //{
-        //    _towerGhost.SetGhostBuffRange(_player.BuilderTowerBuild.BuffRange);
-        //}
-
-        //_canTowerBuild = false;
-        //GridManager.Instance.ClearBuildRangePreview();
     }
 
     public void Update()
     {
-        //bool isCenter = _player.BuilderTowerBuild.IsCenterTower;
-
-        //// 留덉슦???꾩튂瑜?湲곕컲?쇰줈 怨좎뒪???ㅻ깄??
-        //_canTowerBuild = SnapshotTowerGhost(isCenter);
-
-        //if (Input.GetMouseButtonDown(0) && _canTowerBuild && !EventSystem.current.IsPointerOverGameObject())
-        //{
-        //    // 醫뚰겢由??ㅼ튂
-        //    if (isCenter)
-        //        _player.SetCenterTowerCount(_player.CenterTowerCount + 1);
-
-        //    _player.BuilderTowerBuild.BuildTower(_towerBuildIndex);
-        //    _player.BuilderTowerBuild.RevertStandBy();
-        //}
         if (Input.GetMouseButtonDown(1))
         {
             _player.BuilderTowerBuild.RevertStandBy();
@@ -75,10 +43,6 @@ public class PlayerBuilderTowerBuildState : IPlayerState
     {
         InfiniteGrid.Instance.SetCellStateOverlayEnabled(false);
 
-        //// ? ?곹깭 ?ㅻ쾭?덉씠 鍮꾪솢?깊솕
-        //GridManager.Instance.ClearBuildRangePreview();
-        //GridManager.Instance.SetCellStateOverlayEnabled(false);
-
         CancelTowerBuild();
     }
 
@@ -90,7 +54,6 @@ public class PlayerBuilderTowerBuildState : IPlayerState
         }
     }
 
-    // 嫄댁꽕 ?곹깭 醫낅즺
     private void CancelTowerBuild()
     {
         //Object.Destroy(_towerGhost.gameObject);
@@ -99,7 +62,6 @@ public class PlayerBuilderTowerBuildState : IPlayerState
         _player.BuilderUI.ActivationTowerBuildUI(false);
     }
 
-    // 留덉슦???덉씠媛 ?좏슚???섍꼍 ?덉씠?대? 留욎톬?붿? 寃??
     private bool IsValidMouseRay(out Vector3 mousePosition)
     {
         mousePosition = default;
@@ -116,7 +78,6 @@ public class PlayerBuilderTowerBuildState : IPlayerState
         return isValid;
     }
 
-    // 怨좎뒪???꾩튂 諛??ㅼ튂 媛???щ? 媛깆떊
     private bool SnapshotTowerGhost(bool isCenter)
     {
         bool canTowerCraft = false;

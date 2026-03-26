@@ -92,6 +92,10 @@ Shader "GridVisualize/InfiniteHexGuide"
             CBUFFER_END
             float4 _OccupiedCells[MAX_OCCUPIED_CELLS];
 
+            // 오브젝트 좌표를 월드 좌표화 화면 좌표로 바꿈
+            // 노멀과 탄젠트를 준비함
+            // UV를 계산해서 다음 단계로 넘김
+            // 요약: 픽셀 단계에서 계산하기 좋게 기본 재료를 미리 챙겨 놓는 함수
             Varyings vert(Attributes input)
             {
                 Varyings output;
@@ -106,6 +110,8 @@ Shader "GridVisualize/InfiniteHexGuide"
                 return output;
             }
 
+            // 육각형 좌표를 반올림해서 가장 가까운 칸을 찾음
+            // 월드 위치를 육각 좌표로 바꾸면 소수점이 나오지만 실제 칸 번호는 정수여야 하므로 가장 가까운 육각형 칸으로 반올림
             float2 CubeRoundAxial(float2 qr)
             {
                 float q = qr.x;

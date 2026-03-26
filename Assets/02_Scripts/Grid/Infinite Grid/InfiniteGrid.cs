@@ -40,6 +40,15 @@ public class InfiniteGrid : NetworkBehaviour
     {
         Initialize();
         RefreshVisuals();
+
+        // 시작시 그리드 가이드 끄기
+        SetCellStateOverlayEnabled(false);
+    }
+
+    public override void Spawned()
+    {
+        base.Spawned();
+        RefreshVisuals();
     }
 
     public void SetCellStateOverlayEnabled(bool enabled)
@@ -92,7 +101,9 @@ public class InfiniteGrid : NetworkBehaviour
     {
         if (!HasStateAuthority || NetworkGrid.ContainsKey(index))
             return false;
+
         NetworkGrid.Add(index, new CellData(range, BuffData.Empty));
+        RefreshVisuals();
         return true;
     }
 
@@ -103,18 +114,34 @@ public class InfiniteGrid : NetworkBehaviour
     /// <returns>삭제 성공 여부</returns>
     public bool RemoveActiveCell(Vector2Int index)
     {
+        if (!HasStateAuthority || !NetworkGrid.ContainsKey(index))
+            return false;
+
+        NetworkGrid.Remove(index);
+        RefreshVisuals();
         return true;
     }
 
     private void Initialize()
     {
         _gridCalculator ??= new GridCalculator(32, 32);
-        _visualController ??= new InfiniteGridVisualController();
-        
+        _visualController ??= new InfiniteGridVisualController();      
     }
 
     private void RefreshVisuals()
     {
-        _visualController.Apply(gameObject, transform, _layout, _guide, _rendering, _gridCalculator);
+        IEnumerable<KeyValuePair<Vector2Int, CellData>> networkGrid = null;
+
+        if (CanUseNetworkGrid())
+        {
+            networkGrid = NetworkGrid;
+        }
+
+        _visualController.Apply(gameObject, transform, _layout, _guide, _rendering, _gridCalculator, networkGrid);
+    }
+
+    private bool CanUseNetworkGrid()
+    {
+        return Application.isPlaying && Object != null && Object.IsValid;
     }
 }

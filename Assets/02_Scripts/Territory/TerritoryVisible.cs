@@ -6,11 +6,11 @@ namespace Dev.Local
     [RequireComponent(typeof(MeshFilter))]
     public class TerritoryVisible : Visible
     {
-        private MeshFilter meshFilter;
+        private MeshFilter _meshFilter;
 
         protected override void OnInitialize()
         {
-            TryGetComponent(out meshFilter);
+            TryGetComponent(out _meshFilter);
         }
 
         public void SetVertices(List<Vector2> vertices)
@@ -23,7 +23,7 @@ namespace Dev.Local
                 return;
             }
 
-            meshFilter.mesh = mesh;
+            _meshFilter.mesh = mesh;
         }
     }
 }

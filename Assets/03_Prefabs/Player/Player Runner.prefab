@@ -5116,6 +5116,7 @@ GameObject:
   - component: {fileID: 2540990109086367435}
   - component: {fileID: -1275711506324664378}
   - component: {fileID: -8069737387449572781}
+  - component: {fileID: 9208446726996137561}
   m_Layer: 10
   m_Name: Player Runner
   m_TagString: Untagged
@@ -5164,6 +5165,7 @@ MonoBehaviour:
   _WeaponReloadSpeedScaler: 1
   _IsDead:
     _value: 0
+  _outOfBodyPrefab: {fileID: -1810958858301183906, guid: c62ce80348b772a4f8832c349d411a32, type: 3}
   _swiftnessVFX: {fileID: 6092269608685176354}
   skillIcons:
   - {fileID: 1471596959, guid: e1a81109ab95c0344a014a0e72fa1378, type: 3}
@@ -5188,6 +5190,7 @@ MonoBehaviour:
   NetworkedBehaviours:
   - {fileID: 6623639392449802583}
   - {fileID: -8069737387449572781}
+  - {fileID: 9208446726996137561}
   ForceRemoteRenderTimeframe: 0
 --- !u!136 &2540990109086367435
 CapsuleCollider:
@@ -5262,3 +5265,15 @@ MonoBehaviour:
     Position: 0.01
     Rotation: 0.01
     Scale: 0.01
+--- !u!114 &9208446726996137561
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9008013758366610681}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6726f22a132e24045b6dddb9b808648d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

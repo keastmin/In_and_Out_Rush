@@ -5,6 +5,7 @@ namespace Dev.Network
 {
     public partial class StageBootstrapper
     {
+        [SerializeField] private Store _store;
         [SerializeField] private StageManager _stageManager;
         [SerializeField] private StageSystem _stageSystem;
         [SerializeField] private PlayerRunner _playerRunner;
@@ -31,12 +32,17 @@ namespace Dev.Network
 
         private void YOUInitializeObjects()
         {
+            _store.PlayerRunnerMovementSpeed = 5f;
+            _store.PlayerRunnerDashScaler = 2f;
+
             _resourceSpawnSystem.SetUp();
             _stageResultView.Hide();
         }
 
         private void YOUBindObjects()
         {
+            Globals.Store = _store;
+
             _playerRunner.OnDied += HandlePlayerDied;
             // Gate.OnGateEntered += HandleGateEntered;
         }

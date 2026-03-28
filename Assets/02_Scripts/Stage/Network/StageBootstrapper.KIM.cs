@@ -12,7 +12,7 @@ namespace Dev.Network
         [SerializeField] private Laboratory _laboratoryPrefab;
 
         public InfiniteGrid Grid => _grid;
-        [Networked] public Laboratory NetworkLaboratory { get; private set; }
+        [HideInInspector] [Networked] public Laboratory NetworkLaboratory { get; private set; }
 
         private void KIMInitializeHost()
         {

@@ -1,5 +1,4 @@
 using Fusion;
-using Grid;
 using UnityEngine;
 
 public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
@@ -13,10 +12,10 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
     public TowerGhost TowerGhost => _towerGhost;
     public Cost BuildCost => _buildCost;
     public bool IsStandByBuild => _isStandByBuild;
-    public bool IsCenterTower => _tower.IsCenter;
-    public bool HasBuffRange => _tower.HasBuffRange;
-    public float BuffRange => _tower.BuffRange;
-    public string TowerID => _tower.TowerID;
+    public bool IsCenterTower => _tower != null && _tower.IsCenter;
+    public bool HasBuffRange => _tower != null && _tower.HasBuffRange;
+    public float BuffRange => (_tower != null) ? _tower.BuffRange : 0f;
+    public string TowerID => (_tower != null) ? _tower.TowerID : string.Empty;
     public int BuildRange => (_tower != null) ? _tower.BuildRange : 0;
 
     private PlayerBuilderTowerSystem _towerSystem;
@@ -30,26 +29,40 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
 
     public bool TowerBuildConditionChecker(string towerId)
     {
-        bool canBuild = true;
+        return true;
+    }
 
-        if (towerId == TowerIDContainer.TELEPORT_TOWER_ID)
-        {
-            canBuild = TeleportTowerBuildConditionChecker();
-        }
-        else if (towerId == TowerIDContainer.SUPPLY_TOWER_ID)
-        {
-            canBuild = SupplyTowerBuildConditionChecker();
-        }
+    public bool HasSufficientResources()
+    {
+        if (StageManager.Instance == null || StageManager.Instance.ResourceSystem == null)
+            return false;
 
-        return canBuild;
+        return StageManager.Instance.ResourceSystem.Mineral >= _buildCost.Mineral &&
+               StageManager.Instance.ResourceSystem.Gas >= _buildCost.Gas;
+    }
+
+    public bool CanBuildAt(Vector2Int index)
+    {
+        if (_tower == null || _towerRef == default)
+            return false;
+
+        if (!HasSufficientResources())
+            return false;
+
+        if (!TowerBuildConditionChecker(TowerID))
+            return false;
+
+        if (InfiniteGrid.Instance == null)
+            return false;
+
+        return InfiniteGrid.Instance.CanPlaceAt(index, BuildRange);
     }
 
     public void BuildTower(Vector2Int index)
     {
         if (_towerRef != default && _tower != null)
         {
-            Vector3 pos = GridManager.Instance.GetCellCenterPositionFromIndex(index);
-            RPC_BuildTower(_towerRef, _buildCost, pos);
+            RPC_BuildTower(_towerRef, _buildCost, index, BuildRange);
         }
     }
 
@@ -95,29 +108,32 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
     }
 
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-    private void RPC_BuildTower(NetworkPrefabRef towerRef, Cost cost, Vector3 position)
+    private void RPC_BuildTower(NetworkPrefabRef towerRef, Cost cost, Vector2Int index, int buildRange)
     {
-        if (HasStateAuthority)
+        if (!HasStateAuthority)
+            return;
+
+        if (InfiniteGrid.Instance == null)
+            return;
+
+        if (ResourceSystem.Instance.Mineral < cost.Mineral || ResourceSystem.Instance.Gas < cost.Gas)
+            return;
+
+        if (!InfiniteGrid.Instance.CanPlaceAt(index, buildRange))
+            return;
+
+        Vector3 position = InfiniteGrid.Instance.GetCellCenterPositionFromCellIndex(index);
+        NetworkObject towerObject = Runner.Spawn(towerRef, position, Quaternion.identity);
+        if (towerObject == null)
+            return;
+
+        if (towerObject.TryGetComponent(out GridPlaceable placeable) && !placeable.HasGridOccupation)
         {
-            ResourceSystem.Instance.Mineral -= cost.Mineral;
-            ResourceSystem.Instance.Gas -= cost.Gas;
-            Runner.Spawn(towerRef, position, Quaternion.identity);
+            Runner.Despawn(towerObject);
+            return;
         }
-    }
 
-    private bool TeleportTowerBuildConditionChecker()
-    {
-        if (TowerManager.Instance.GetTowerCount(TowerIDContainer.TELEPORT_TOWER_ID) >= 2)
-            return false;
-
-        return true;
-    }
-
-    private bool SupplyTowerBuildConditionChecker()
-    {
-        if (SupplyTowerManager.Instance == null)
-            return false;
-
-        return SupplyTowerManager.Instance.HasPendingSupplies;
+        ResourceSystem.Instance.Mineral -= cost.Mineral;
+        ResourceSystem.Instance.Gas -= cost.Gas;
     }
 }

@@ -1,5 +1,4 @@
 using Fusion;
-using Grid;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -22,10 +21,20 @@ public class PlayerBuilderTowerBuildState : IPlayerState
         _player.BuilderUI.ActivationTowerBuildUI(true, "Left Mouse: Build, RightMouse: Cancel");
 
         InfiniteGrid.Instance.SetCellStateOverlayEnabled(true);
+        CreateTowerGhost();
     }
 
     public void Update()
     {
+        if (SnapshotTowerGhost(_player.BuilderTowerBuild.IsCenterTower) &&
+            Input.GetMouseButtonDown(0) &&
+            !EventSystem.current.IsPointerOverGameObject())
+        {
+            _player.BuilderTowerBuild.BuildTower(_towerBuildIndex);
+            _player.BuilderTowerBuild.RevertStandBy();
+            return;
+        }
+
         if (Input.GetMouseButtonDown(1))
         {
             _player.BuilderTowerBuild.RevertStandBy();
@@ -56,51 +65,67 @@ public class PlayerBuilderTowerBuildState : IPlayerState
 
     private void CancelTowerBuild()
     {
-        //Object.Destroy(_towerGhost.gameObject);
+        if (_towerGhost != null)
+        {
+            Object.Destroy(_towerGhost.gameObject);
+            _towerGhost = null;
+        }
+
         _canTowerBuild = false;
 
         _player.BuilderUI.ActivationTowerBuildUI(false);
     }
 
-    private bool IsValidMouseRay(out Vector3 mousePosition)
+    private void CreateTowerGhost()
+    {
+        TowerGhost ghostPrefab = _player.BuilderTowerBuild.TowerGhost;
+        if (ghostPrefab == null)
+            return;
+
+        _towerGhost = Object.Instantiate(ghostPrefab);
+        if (_player.BuilderTowerBuild.HasBuffRange)
+        {
+            _towerGhost.SetGhostBuffRange(_player.BuilderTowerBuild.BuffRange);
+        }
+    }
+
+    private bool TryGetMouseWorldPositionOnGrid(out Vector3 mousePosition)
     {
         mousePosition = default;
-        bool isValid = false;
+        if (InfiniteGrid.Instance == null)
+            return false;
 
-        var cam = Camera.main;
-        var ray = cam.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out var hit, 5000f, _player.EnvironmentalLayer))
+        Camera cam = Camera.main;
+        if (cam == null)
+            return false;
+
+        Plane plane = new Plane(Vector3.up, InfiniteGrid.Instance.GridOrigin);
+        Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+        if (plane.Raycast(ray, out float enter))
         {
-            mousePosition = hit.point;
-            isValid = true;
+            mousePosition = ray.GetPoint(enter);
+            return true;
         }
 
-        return isValid;
+        return false;
     }
 
     private bool SnapshotTowerGhost(bool isCenter)
     {
         bool canTowerCraft = false;
 
-        if (IsValidMouseRay(out Vector3 mouseHitPoint))
+        if (_towerGhost == null || InfiniteGrid.Instance == null)
+            return false;
+
+        if (TryGetMouseWorldPositionOnGrid(out Vector3 mouseHitPoint))
         {
-            _towerBuildIndex = GridManager.Instance.GetNearestCellIndex(mouseHitPoint);
-            _towerBuildPosition = GridManager.Instance.GetCellCenterPositionFromIndex(_towerBuildIndex);
+            _towerBuildIndex = InfiniteGrid.Instance.GetCellIndexFromWorldPosition(mouseHitPoint);
+            _towerBuildPosition = InfiniteGrid.Instance.GetCellCenterPositionFromCellIndex(_towerBuildIndex);
             _towerGhost.transform.position = _towerBuildPosition;
-            GridManager.Instance.SetBuildRangePreview(_towerBuildIndex, _player.BuilderTowerBuild.BuildRange);
 
-            bool canPlaceByArea = GridManager.Instance.CanPlaceInRange(
-                _towerBuildIndex,
-                _player.BuilderTowerBuild.BuildRange,
-                requireEmpty: true,
-                requireTerritory: true);
+            bool canBuild = _player.BuilderTowerBuild.CanBuildAt(_towerBuildIndex);
 
-            bool isMineralEnough = StageManager.Instance.ResourceSystem.Mineral >= _player.BuilderTowerBuild.BuildCost.Mineral;
-            bool isGasEnough = StageManager.Instance.ResourceSystem.Gas >= _player.BuilderTowerBuild.BuildCost.Gas;
-            bool isExceededCenterCount = (!isCenter) || (isCenter && _player.CenterTowerCount < _player.MaxCenterTowerCount);
-            bool eachTowerCondition = _player.BuilderTowerBuild.TowerBuildConditionChecker(_player.BuilderTowerBuild.TowerID);
-
-            if (canPlaceByArea && isMineralEnough && isGasEnough && isExceededCenterCount && eachTowerCondition)
+            if (canBuild)
             {
                 _towerGhost.EnableTower();
                 canTowerCraft = true;
@@ -110,11 +135,8 @@ public class PlayerBuilderTowerBuildState : IPlayerState
                 _towerGhost.DisableTower();
             }
         }
-        else
-        {
-            GridManager.Instance.ClearBuildRangePreview();
-        }
 
+        _canTowerBuild = canTowerCraft;
         return canTowerCraft;
     }
 }

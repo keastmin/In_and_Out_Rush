@@ -91,6 +91,80 @@ public class InfiniteGrid : NetworkBehaviour
         return index;
     }
 
+    public Vector3 GetCellCenterPositionFromCellIndex(Vector2Int index)
+    {
+        if (_gridCalculator == null)
+        {
+            Debug.LogError("그리드 초기화가 되지 않았습니다.");
+            return GridOrigin;
+        }
+
+        return _gridCalculator.GetCellCenterPositionFromCellIndex(GridOrigin, index.x, index.y, _layout.CellSize);
+    }
+
+    public List<Vector2Int> GetCellIndicesInRange(Vector2Int index, int range)
+    {
+        if (_gridCalculator == null)
+        {
+            Debug.LogError("그리드 초기화가 되지 않았습니다.");
+            return new List<Vector2Int>();
+        }
+
+        return _gridCalculator.GetInRangeIndices(index, range);
+    }
+
+    public bool IsCellOccupied(Vector2Int index, ISet<Vector2Int> ignoreIndices = null)
+    {
+        if (ignoreIndices != null && ignoreIndices.Contains(index))
+        {
+            return false;
+        }
+
+        if (!CanUseNetworkGrid())
+        {
+            return false;
+        }
+
+        foreach (var pair in NetworkGrid)
+        {
+            List<Vector2Int> occupiedIndices = _gridCalculator.GetInRangeIndices(pair.Key, pair.Value.ActiveRange);
+            for (int i = 0; i < occupiedIndices.Count; i++)
+            {
+                Vector2Int occupiedIndex = occupiedIndices[i];
+                if (ignoreIndices != null && ignoreIndices.Contains(occupiedIndex))
+                {
+                    continue;
+                }
+
+                if (occupiedIndex == index)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public bool CanPlaceAt(Vector2Int index, int range, ISet<Vector2Int> ignoreIndices = null)
+    {
+        if (_gridCalculator == null)
+        {
+            return false;
+        }
+
+        List<Vector2Int> targetIndices = _gridCalculator.GetInRangeIndices(index, range);
+        for (int i = 0; i < targetIndices.Count; i++)
+        {
+            if (IsCellOccupied(targetIndices[i], ignoreIndices))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     /// <summary>
     /// 사용중인 셀 등록
     /// </summary>
@@ -100,6 +174,9 @@ public class InfiniteGrid : NetworkBehaviour
     public bool AddActiveCell(Vector2Int index, int range)
     {
         if (!HasStateAuthority || NetworkGrid.ContainsKey(index))
+            return false;
+
+        if (!CanPlaceAt(index, range))
             return false;
 
         NetworkGrid.Add(index, new CellData(range, BuffData.Empty));

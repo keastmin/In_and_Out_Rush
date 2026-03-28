@@ -1,5 +1,4 @@
 using Fusion;
-using Grid;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -10,12 +9,12 @@ public class GridPlaceable : NetworkBehaviour
     [SerializeField] protected bool _requireTerritory = true;
 
     private readonly List<Vector2Int> _occupiedIndices = new();
-    private readonly HashSet<Vector2Int> _occupiedIndexSet = new();
     private Vector2Int _occupiedCenterIndex;
     private bool _hasOccupiedCenter;
 
     public int BuildRange => _buildRange;
     public IReadOnlyList<Vector2Int> OccupiedIndices => _occupiedIndices;
+    public bool HasGridOccupation => _hasOccupiedCenter;
 
     [Networked]
     public Vector2Int BuiltIndex { get; set; }
@@ -25,8 +24,7 @@ public class GridPlaceable : NetworkBehaviour
         if (HasStateAuthority)
         {
             Vector2Int index = InfiniteGrid.Instance.GetCellIndexFromWorldPosition(transform.position);
-            BuiltIndex = index;
-            InfiniteGrid.Instance.AddActiveCell(index, BuildRange);
+            TryOccupyAtIndex(index, _requireTerritory, true);
         }
     }
 
@@ -36,13 +34,23 @@ public class GridPlaceable : NetworkBehaviour
 
     public bool TryOccupyAtIndex(Vector2Int centerIndex, bool requireTerritory = true, bool requireEmpty = true)
     {
-        var gm = GridManager.Instance;
-        if (gm == null) return false;
+        var grid = InfiniteGrid.Instance;
+        if (grid == null) return false;
+
+        if (requireEmpty && !grid.CanPlaceAt(centerIndex, _buildRange))
+            return false;
 
         ReleaseGridOccupation();
 
-        if (!gm.SetCellStateInRange(centerIndex, _buildRange, true))
+        if (!grid.AddActiveCell(centerIndex, _buildRange))
             return false;
+
+        BuiltIndex = centerIndex;
+        _occupiedCenterIndex = centerIndex;
+        _hasOccupiedCenter = true;
+
+        _occupiedIndices.Clear();
+        _occupiedIndices.AddRange(grid.GetCellIndicesInRange(centerIndex, _buildRange));
 
         return true;
     }
@@ -54,10 +62,13 @@ public class GridPlaceable : NetworkBehaviour
             return;
         }
 
-        var gm = GridManager.Instance;
-        if (gm != null)
+        var grid = InfiniteGrid.Instance;
+        if (grid != null)
         {
-            gm.SetCellStateInRange(_occupiedCenterIndex, _buildRange, false);
+            grid.RemoveActiveCell(_occupiedCenterIndex);
         }
+
+        _occupiedIndices.Clear();
+        _hasOccupiedCenter = false;
     }
 }

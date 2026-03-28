@@ -8,7 +8,7 @@ public class StageManager : NetworkBehaviour
 {
     [Networked] public PlayerRunner PlayerRunner { get; set; }
     [Networked] public PlayerBuilder PlayerBuilder { get; set; }
-    [Networked] public Laboratory Laboratory { get; set; }
+    //[Networked] public Laboratory Laboratory { get; set; }
     public CinemachineSystem CinemachineSystem { get; private set; }
 
     public static StageManager Instance { get; private set; }
@@ -64,10 +64,12 @@ public class StageManager : NetworkBehaviour
         {
             SpawnPlayer();
             SpawnNetworkInputSystem();
-            SpawnLaboratory();
+            //SpawnLaboratory();
         }
 
-        while (PlayerRunner == null || PlayerBuilder == null || Laboratory == null)
+        //while (PlayerRunner == null || PlayerBuilder == null || Laboratory == null)
+        //    yield return null;
+        while (PlayerRunner == null || PlayerBuilder == null)
             yield return null;
 
         foreach (var system in systems)
@@ -79,7 +81,8 @@ public class StageManager : NetworkBehaviour
         InitUIController();
 
         LaboratoryUIInjectionPlayerRunner(UIController.BuilderUI, PlayerRunner);
-        BuilderReferenceBind(PlayerBuilder, UIController.BuilderUI, Laboratory);
+        //BuilderReferenceBind(PlayerBuilder, UIController.BuilderUI, Laboratory);
+        BuilderReferenceBind(PlayerBuilder, UIController.BuilderUI);
 
         Debug.Log("StageManager init complete");
         _initialized = true;
@@ -120,18 +123,18 @@ public class StageManager : NetworkBehaviour
         Debug.Log($"{Runner.name} - NetworkInputSystem spawned");
     }
 
-    private void SpawnLaboratory()
-    {
-        if (GridManager.Instance == null)
-        {
-            Debug.LogError("GridManager.Instance is null. Failed to spawn Laboratory.");
-            return;
-        }
+    //private void SpawnLaboratory()
+    //{
+    //    if (GridManager.Instance == null)
+    //    {
+    //        Debug.LogError("GridManager.Instance is null. Failed to spawn Laboratory.");
+    //        return;
+    //    }
 
-        Vector3 labPos = GridManager.Instance.GetCenterCellWorldPosition();
-        Laboratory = Runner.Spawn(ResourceManager.Instance.LaboratoryPrefab, labPos, Quaternion.identity);
-        Laboratory.name = $"{Runner.name} - Laboratory";
-    }
+    //    Vector3 labPos = GridManager.Instance.GetCenterCellWorldPosition();
+    //    Laboratory = Runner.Spawn(ResourceManager.Instance.LaboratoryPrefab, labPos, Quaternion.identity);
+    //    Laboratory.name = $"{Runner.name} - Laboratory";
+    //}
 
     private void InitCinemachineSystem()
     {
@@ -151,8 +154,8 @@ public class StageManager : NetworkBehaviour
         builderUI.LaboratoryUIInjectionRunner(runner);
     }
 
-    private void BuilderReferenceBind(PlayerBuilder builder, PlayerBuilderUI builderUI, Laboratory laboratory)
+    private void BuilderReferenceBind(PlayerBuilder builder, PlayerBuilderUI builderUI)
     {
-        builder.PlayerBuilderReferenceInjection(builderUI, laboratory);
+        builder.PlayerBuilderReferenceInjection(builderUI);
     }
 }

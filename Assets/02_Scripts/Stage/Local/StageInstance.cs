@@ -8,6 +8,9 @@ namespace Dev.Local
 
         private int _mineral, _gas;
 
+        public int WaveIndex;
+        public int TrackLevelIndex;
+
         public float Health;
         public float Stamina;
         public float MovementSpeed;

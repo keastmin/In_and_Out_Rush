@@ -1,3 +1,4 @@
+using Dev.Network;
 using DG.Tweening;
 using Fusion;
 using Fusion.Addons.Physics;
@@ -8,6 +9,7 @@ using UnityEngine;
 // TODO: 상호작용 여러번 적용되는 현상 수정, 클라이언트 UI에서도 체력이 갱신되도록 수정, 증폭 타워 BuffExit 구현
 
 [RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(PlayerRunnerMovement))]
 public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
 {
     private static readonly float MAX_HEALTH = 100f; // 임시
@@ -25,28 +27,34 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
     [Networked] public float WeaponAttackSpeedScaler { get; set; } = 1f;
     [Networked] public float WeaponReloadSpeedScaler { get; set; } = 1f;
     [Networked] public NetworkBool IsDead { get; set; }
+    [Networked] private TickTimer _outOfBodyTimer { get; set; }
 
     // 업그레이드: 체력, 이동 속도, 기력량, 기력 회복 속도, 무기 데미지
 
+    [SerializeField] private NetworkObject _outOfBodyPrefab;
     [SerializeField] private ParticleSystem _swiftnessVFX;
 
     public Sprite[] skillIcons;
 
     private Rigidbody _rigidbody; // 리지드바디
+    private PlayerRunnerMovement _movement;
     private RunnerItemConsumer _itemConsumer; // 아이템 소비자
     private RunnerSkillCaster _skillCaster; // 스킬 시전자
     private bool _isSliding = false; // 슬라이드 상태
     private bool _isTumbling = false; // 텀블 상태
     private bool _isOutOfBody = false; // 영혼 상태
     private Sequence _outOfBodySequence;
-    private GameObject _outOfBodySpiritObject;
+    private NetworkObject _outOfBodySpiritObject;
     private bool _isSwiftness = false; // 스위프트니스 상태
     private int _swiftnessSlideCount = 0; // 스위프트니스 슬라이드 횟수
     private bool _isInvincible = false; // 무적 상태
     private float _elapsedTime = 0f; // 경과 시간
+    private Transform _targetTransform;
 
-    public event Action<PlayerRunner> OnPositionChanged; // 영역 관련 이벤트
+    public event Action<Vector3, PlayerRunner, object> OnPositionChanged; // 영역 관련 이벤트
     public event Action<PlayerRunner, object> OnDied;
+    public event Action<PlayerRunner, object> OnLaboratoryLookStarted;
+    public event Action<PlayerRunner, object> OnLaboratoryLookEnded;
 
     public void OnHealthChanged()
     {
@@ -56,6 +64,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
     private void Awake()
     {
         _rigidbody = GetComponent<Rigidbody>();
+        _movement = GetComponent<PlayerRunnerMovement>();
         _itemConsumer = new RunnerItemConsumer();
         _skillCaster = new RunnerSkillCaster();
     }
@@ -73,10 +82,9 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
             // 러너 이동
             if (_isSliding == false && _isTumbling == false)
             {
-                float speed = data.DashInput.IsSet(NetworkInputData.DASH_INPUT) ? MovementSpeed * 2f : MovementSpeed;
-                data.PlayerRunnerDirection.Normalize();
-                _rigidbody.linearVelocity = speed * data.PlayerRunnerDirection;
-                transform.LookAt(transform.position + data.PlayerRunnerDirection);
+                var isDashing = data.DashInput.IsSet(NetworkInputData.DASH_INPUT);
+                var direction = data.PlayerRunnerDirection.normalized;
+                _movement.UpdateMovement(isDashing, direction);
             }
 
             // 러너 슬라이드
@@ -97,7 +105,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
             if (skillUsing)
             {
                 if (_isOutOfBody)
-                    EndOutOfBody(true); // 영혼 상태일 때 스킬 사용 시 영혼 상태 종료
+                    EndOutOfBody(); // 영혼 상태일 때 스킬 사용 시 영혼 상태 종료
                 else
                     CastSkill(data.SelectedSkill);
             }
@@ -112,6 +120,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
             }
 
             // 러너 연구소 상호작용
+            // TODO: 연구소 바라보기 상태가 변할 때만 이벤트 발생
             var laboratoryUsing = data.LaboratoryInput.IsSet(NetworkInputData.LABORATORY_INPUT);
             if (StageManager.Instance.CinemachineSystem != null)
             {
@@ -137,6 +146,15 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
                 // Debug.Log(data.SelectedWeapon);
             }
         }
+
+        if (Object.HasStateAuthority)
+        {
+            if (_isOutOfBody && _outOfBodySpiritObject != null)
+            {
+                if (_outOfBodyTimer.Expired(Runner))
+                    EndOutOfBody();
+            }
+        }
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
@@ -151,7 +169,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
     public override void Render()
     {
         base.Render(); // vfx, 비주얼적인 요소
-        OnPositionChanged?.Invoke(this);
+        OnPositionChanged?.Invoke(_targetTransform.position, this, this);
     }
 
     public override void Despawned(NetworkRunner runner, bool hasState)
@@ -171,6 +189,9 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
     // 플레이어 러너 초기화
     private void InitializePlayerRunner()
     {
+        _targetTransform = transform;
+        _movement.SetTarget(_targetTransform);
+
         if (HasStateAuthority)
         {
             Health = MAX_HEALTH; // MaxHealth는 100f로 하드 코딩
@@ -270,25 +291,37 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
 
     public void StartOutOfBody()
     {
-        // 사선은 앞으로 나가는 영혼한테 따라가도록 구현
         if (_isOutOfBody) return; // 이미 영혼 상태면 무시
         _isOutOfBody = true;
-        _outOfBodySpiritObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        _outOfBodySpiritObject.transform.position = transform.position + transform.forward * 1f;
-        _outOfBodySequence = DOTween.Sequence()
-            .Append(_outOfBodySpiritObject.transform.DOMove(transform.position + transform.forward * 20f, 2.0f).SetEase(Ease.Linear))
-            .AppendCallback(() => EndOutOfBody());
+        RPC_StartOutOfBody();
     }
 
-    private void EndOutOfBody(bool forceEnd = false)
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    private void RPC_StartOutOfBody()
     {
-        if (!_isOutOfBody) return; // 영혼 상태가 아니면 무시
-        _outOfBodySequence.Kill();
-        _outOfBodySequence = null;
+        _outOfBodyTimer = TickTimer.CreateFromSeconds(Runner, 2.0f);
+        _outOfBodySpiritObject = Runner.Spawn(_outOfBodyPrefab, transform.position);
+        _outOfBodySpiritObject.GetComponent<NetworkRigidbody3D>().Teleport(transform.position + transform.forward * 1f);
+        _outOfBodySpiritObject.GetComponent<Rigidbody>().linearVelocity = transform.forward * MovementSpeed;
+
+        _targetTransform = _outOfBodySpiritObject.transform;
+    }
+
+    private void EndOutOfBody()
+    {
+        if (!_isOutOfBody) return;
+        RPC_EndOutOfBody();
         _isOutOfBody = false;
-        if (forceEnd)
-            transform.position = _outOfBodySpiritObject.transform.position;
-        Destroy(_outOfBodySpiritObject);
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    private void RPC_EndOutOfBody()
+    {
+        // ! Teleport하면 _targetTransform의 위치는 여기에 맞춰지지 않음 -> 영역 내부에 있어도 '영혼'의 위치에서부터 사선이 그어짐
+        // * -> 눈에 안보이는 Transform을 두고 이걸 _targetTransform으로 설정(PlayerRunner가 아니라)
+        transform.GetComponent<NetworkRigidbody3D>().Teleport(_outOfBodySpiritObject.transform.position);
+        _targetTransform = transform;
+        Runner.Despawn(_outOfBodySpiritObject);
         _outOfBodySpiritObject = null;
     }
 

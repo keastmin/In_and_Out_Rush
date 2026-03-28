@@ -40,7 +40,7 @@ public class TerritorySystem : NetworkSystemBase
 
         GenerateInitialTerritory();
 
-        StageManager.Instance.PlayerRunner.OnPositionChanged += OnPlayerPositionChanged;
+        StageManager.Instance.PlayerRunner.OnPositionChanged += HandlePlayerPositionChanged;
     }
 
     void GenerateInitialTerritory()
@@ -99,9 +99,9 @@ public class TerritorySystem : NetworkSystemBase
     }
 
     Vector2 toward;
-    public void OnPlayerPositionChanged(PlayerRunner playerRunner) // 러너만
+    public void HandlePlayerPositionChanged(Vector3 position, PlayerRunner playerRunner, object sender) // 러너만
     {
-        var currentPosition = new Vector2(playerRunner.transform.position.x, playerRunner.transform.position.z);
+        var currentPosition = new Vector2(position.x, position.z);
 
         if (Territory.IsPointInPolygon(currentPosition))
         {

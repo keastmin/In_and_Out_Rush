@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 4665693873021043325}
   - component: {fileID: 6873920629067909897}
   - component: {fileID: 4876767757150376269}
+  - component: {fileID: 7928665524494258476}
   m_Layer: 7
   m_Name: Infinite Grid Ground
   m_TagString: Untagged
@@ -52,13 +53,15 @@ MonoBehaviour:
     _gridOrigin: {x: 0, y: 0}
     _cellSize: 1.6
     _cellFill: 0.2
-    _showCellStateOverlay: 0
+    _showCellStateOverlay: 1
   _guide:
     _primaryGuideColor: {r: 0.2, g: 0.45, b: 1, a: 0.78431374}
     _secondaryGuideColor: {r: 1, g: 0.2, b: 0.2, a: 0.78431374}
   _rendering:
     _applyInfiniteGridMaterial: 1
     _infiniteGridMaterial: {fileID: 2100000, guid: 0e91d6bcc51a4e72a2ea4aa10b24facd, type: 2}
+  _NetworkGrid:
+    _items: []
 --- !u!33 &4665693873021043325
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -134,3 +137,22 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &7928665524494258476
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5379209773506943472}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  SortKey: 1516882089
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 2863890552933132054}
+  ForceRemoteRenderTimeframe: 0

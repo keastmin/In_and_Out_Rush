@@ -3264,6 +3264,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1934234198}
     - target: {fileID: 7251378647776299556, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
+      propertyPath: _builderCineCam
+      value: 
+      objectReference: {fileID: 6059979120551381573, guid: 6d656d6de1982824eb4db0bb018ca8fb, type: 3}
+    - target: {fileID: 7251378647776299556, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
       propertyPath: _stageResultView
       value: 
       objectReference: {fileID: 1759260139}
@@ -3314,7 +3318,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2984146816420512075, guid: e4f76d1c9ebcfc94da4fe245963476d1, type: 3}
       propertyPath: _playerPosition
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8681410219602733062, guid: e4f76d1c9ebcfc94da4fe245963476d1, type: 3}
       propertyPath: m_LocalPosition.x

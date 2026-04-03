@@ -77,7 +77,7 @@ public class StageManager : NetworkBehaviour
             system.SetUp();
         }
 
-        InitCinemachineSystem();
+        // InitCinemachineSystem();
         InitUIController();
 
         LaboratoryUIInjectionPlayerRunner(UIController.BuilderUI, PlayerRunner);

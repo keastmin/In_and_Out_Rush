@@ -1,4 +1,5 @@
 using Fusion;
+using Unity.Cinemachine;
 using UnityEngine;
 
 namespace Dev.Network
@@ -39,7 +40,7 @@ namespace Dev.Network
 
         }
 
-        // ?곌뎄???앹꽦
+        // 연구소 스폰
         private void SpawnLaboratory()
         {
             if (HasStateAuthority)

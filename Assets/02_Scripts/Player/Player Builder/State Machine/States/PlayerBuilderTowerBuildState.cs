@@ -45,7 +45,7 @@ public class PlayerBuilderTowerBuildState : IPlayerState
 
     public void LateUpdate()
     {
-        _player.BuilderCamMove();
+        _player.CamMover.Move();
     }
 
     public void Exit()

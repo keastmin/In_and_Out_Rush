@@ -50,11 +50,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 031db61d352854d4b85cad8477ecf2ec, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _cameraBorderThickness: 10
-  _cameraMoveSpeed: 10
-  _cameraMaxZoomDistance: 11
-  _cameraWheelPerZoomDistance: 10
-  _zoomSmoothTime: 0.12
+  _cineCamPrefab: {fileID: 6059979120551381573, guid: 6d656d6de1982824eb4db0bb018ca8fb, type: 3}
+  _cameraMover:
+    _cineCam: {fileID: 0}
+    _cameraBorderThickness: 10
+    _cameraMoveSpeed: 10
+    _cameraMaxZoomDistance: 11
+    _cameraWheelPerZoomDistance: 10
+    _zoomSmoothTime: 0.12
+    _camZoomDistance: 0
+    _zoomTargetDistance: 0
+    _zoomVel: 0
+    _isLock: 0
+    _allowZoom: 1
   _clickDetectLayer:
     serializedVersion: 2
     m_Bits: 385
@@ -68,9 +76,7 @@ MonoBehaviour:
   _builderUI: {fileID: 0}
   _dragSystem: {fileID: 0}
   _builderMover: {fileID: 0}
-  _hexagonGrid: {fileID: 0}
   _laboratory: {fileID: 0}
-  _cineCam: {fileID: 0}
   _environmentalLayer:
     serializedVersion: 2
     m_Bits: 128
@@ -134,7 +140,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5af0ebf0e83ad6549ae680752d720046, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _teleportTowerArray: []
 --- !u!114 &1367329938437336398
 MonoBehaviour:
   m_ObjectHideFlags: 0

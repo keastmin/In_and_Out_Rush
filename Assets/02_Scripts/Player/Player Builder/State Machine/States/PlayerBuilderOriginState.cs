@@ -43,7 +43,7 @@ public class PlayerBuilderOriginState : IPlayerState
     public void LateUpdate()
     {
         if (_player == null) return;
-        _player.BuilderCamMove();
+        _player.CamMover.Move();
     }
 
     public void Exit()

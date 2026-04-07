@@ -1,3 +1,4 @@
+using Dev;
 using Fusion;
 using System.Collections.Generic;
 using UnityEngine;
@@ -5,6 +6,9 @@ using UnityEngine;
 public class InfiniteGrid : NetworkBehaviour
 {
     public static InfiniteGrid Instance;
+
+    [SerializeField] private TerritorySystem _territorySystem;
+    [SerializeField] private TrackSystem _trackSystem;
 
     [SerializeField] private InfiniteGridLayoutSettings _layout = new();
     [SerializeField] private InfiniteGridGuideSettings _guide = new();
@@ -18,6 +22,7 @@ public class InfiniteGrid : NetworkBehaviour
 
     private GridCalculator _gridCalculator;
     private InfiniteGridVisualController _visualController;
+    private bool _isTerritoryEventBound;
 
     private void OnValidate()
     {
@@ -30,6 +35,7 @@ public class InfiniteGrid : NetworkBehaviour
         Instance = this;
 
         Initialize();
+        BindTerritoryEventsIfNeeded();
         RefreshVisuals();
 
         // 시작시 그리드 가이드 끄기
@@ -39,6 +45,7 @@ public class InfiniteGrid : NetworkBehaviour
     private void OnEnable()
     {
         Initialize();
+        BindTerritoryEventsIfNeeded();
         RefreshVisuals();
 
         // 시작시 그리드 가이드 끄기
@@ -48,7 +55,17 @@ public class InfiniteGrid : NetworkBehaviour
     public override void Spawned()
     {
         base.Spawned();
+        BindTerritoryEventsIfNeeded();
         RefreshVisuals();
+    }
+
+    private void OnDestroy()
+    {
+        if (_isTerritoryEventBound && _territorySystem != null)
+        {
+            _territorySystem.OnTerritoryExpandedEvent -= OnTerritoryExpanded;
+            _isTerritoryEventBound = false;
+        }
     }
 
     public void SetCellStateOverlayEnabled(bool enabled)
@@ -146,7 +163,24 @@ public class InfiniteGrid : NetworkBehaviour
         return false;
     }
 
-    public bool CanPlaceAt(Vector2Int index, int range, ISet<Vector2Int> ignoreIndices = null)
+    public bool IsCellInTerritory(Vector2Int index)
+    {
+        if (_gridCalculator == null)
+        {
+            return false;
+        }
+
+        if (_territorySystem == null || _territorySystem.Territory == null)
+        {
+            return false;
+        }
+
+        Vector3 center = GetCellCenterPositionFromCellIndex(index);
+        Vector2 centerXZ = new Vector2(center.x, center.z);
+        return _territorySystem.Territory.IsPointInPolygon(centerXZ);
+    }
+
+    public bool CanPlaceAt(Vector2Int index, int range, ISet<Vector2Int> ignoreIndices = null, bool requireTerritory = true)
     {
         if (_gridCalculator == null)
         {
@@ -156,6 +190,11 @@ public class InfiniteGrid : NetworkBehaviour
         List<Vector2Int> targetIndices = _gridCalculator.GetInRangeIndices(index, range);
         for (int i = 0; i < targetIndices.Count; i++)
         {
+            if (requireTerritory && !IsCellInTerritory(targetIndices[i]))
+            {
+                return false;
+            }
+
             if (IsCellOccupied(targetIndices[i], ignoreIndices))
             {
                 return false;
@@ -171,12 +210,12 @@ public class InfiniteGrid : NetworkBehaviour
     /// <param name="index">등록할 셀의 인덱스</param>
     /// <param name="range">사용 등록 범위</param>
     /// <returns>등록 성공 여부</returns>
-    public bool AddActiveCell(Vector2Int index, int range)
+    public bool AddActiveCell(Vector2Int index, int range, bool requireTerritory = true)
     {
         if (!HasStateAuthority || NetworkGrid.ContainsKey(index))
             return false;
 
-        if (!CanPlaceAt(index, range))
+        if (!CanPlaceAt(index, range, null, requireTerritory))
             return false;
 
         NetworkGrid.Add(index, new CellData(range, BuffData.Empty));
@@ -214,11 +253,27 @@ public class InfiniteGrid : NetworkBehaviour
             networkGrid = NetworkGrid;
         }
 
-        _visualController.Apply(gameObject, transform, _layout, _guide, _rendering, _gridCalculator, networkGrid);
+        _visualController.Apply(gameObject, transform, _layout, _guide, _rendering, _gridCalculator, networkGrid, _territorySystem != null ? _territorySystem.Territory : null);
     }
 
     private bool CanUseNetworkGrid()
     {
         return Application.isPlaying && Object != null && Object.IsValid;
+    }
+
+    private void BindTerritoryEventsIfNeeded()
+    {
+        if (_isTerritoryEventBound || _territorySystem == null)
+        {
+            return;
+        }
+
+        _territorySystem.OnTerritoryExpandedEvent += OnTerritoryExpanded;
+        _isTerritoryEventBound = true;
+    }
+
+    private void OnTerritoryExpanded(Territory territory, TerritorySystem territorySystem)
+    {
+        RefreshVisuals();
     }
 }

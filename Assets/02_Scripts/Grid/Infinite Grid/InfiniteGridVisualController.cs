@@ -4,10 +4,12 @@ using UnityEngine;
 public class InfiniteGridVisualController
 {
     private const int MaxOccupiedCells = 512;
+    private const int MaxTerritoryVertices = 256;
 
     private Renderer _groundRenderer;
     private MaterialPropertyBlock _propertyBlock;
     private readonly Vector4[] _occupiedCellsBuffer = new Vector4[MaxOccupiedCells];
+    private readonly Vector4[] _territoryVerticesBuffer = new Vector4[MaxTerritoryVertices];
 
     public void Apply(
         GameObject owner,
@@ -16,7 +18,8 @@ public class InfiniteGridVisualController
         InfiniteGridGuideSettings guide,
         InfiniteGridRenderingSettings rendering,
         GridCalculator gridCalculator,
-        IEnumerable<KeyValuePair<Vector2Int, CellData>> networkGrid)
+        IEnumerable<KeyValuePair<Vector2Int, CellData>> networkGrid,
+        Territory territory)
     {
         if (layout == null || guide == null || rendering == null || gridCalculator == null)
         {
@@ -46,6 +49,7 @@ public class InfiniteGridVisualController
         _propertyBlock.SetColor("_PrimaryGuideColor", guide.PrimaryGuideColor);
         _propertyBlock.SetColor("_SecondaryGuideColor", guide.SecondaryGuideColor);
         ApplyOccupiedCells(gridCalculator, networkGrid);
+        ApplyTerritoryVertices(territory);
         _groundRenderer.SetPropertyBlock(_propertyBlock);
     }
 
@@ -81,5 +85,24 @@ public class InfiniteGridVisualController
 
         _propertyBlock.SetFloat("_OccupiedCellCount", occupiedCount);
         _propertyBlock.SetVectorArray("_OccupiedCells", _occupiedCellsBuffer);
+    }
+
+    private void ApplyTerritoryVertices(Territory territory)
+    {
+        int territoryVertexCount = 0;
+
+        if (territory != null && territory.Vertices != null)
+        {
+            int count = Mathf.Min(territory.Vertices.Count, MaxTerritoryVertices);
+            for (int i = 0; i < count; i++)
+            {
+                Vector2 vertex = territory.Vertices[i];
+                _territoryVerticesBuffer[i] = new Vector4(vertex.x, vertex.y, 0f, 0f);
+                territoryVertexCount++;
+            }
+        }
+
+        _propertyBlock.SetFloat("_TerritoryVertexCount", territoryVertexCount);
+        _propertyBlock.SetVectorArray("_TerritoryVertices", _territoryVerticesBuffer);
     }
 }

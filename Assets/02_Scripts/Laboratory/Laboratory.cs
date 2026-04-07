@@ -11,6 +11,8 @@ public class Laboratory : GridPlaceable, ICanClickObject
     private PlayerBuilder _pb;
     private PlayerRunner _pr;
 
+    protected override bool RequireTerritoryOnSpawn => !_ignoreTerritoryOnSpawn && _requireTerritory;
+
     public event Action<bool> OnClickLaboratoryObjectAction;
 
     private void Awake()

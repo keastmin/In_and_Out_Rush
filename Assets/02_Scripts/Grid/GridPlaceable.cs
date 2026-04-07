@@ -15,6 +15,7 @@ public class GridPlaceable : NetworkBehaviour
     public int BuildRange => _buildRange;
     public IReadOnlyList<Vector2Int> OccupiedIndices => _occupiedIndices;
     public bool HasGridOccupation => _hasOccupiedCenter;
+    protected virtual bool RequireTerritoryOnSpawn => _requireTerritory;
 
     [Networked]
     public Vector2Int BuiltIndex { get; set; }
@@ -24,7 +25,7 @@ public class GridPlaceable : NetworkBehaviour
         if (HasStateAuthority)
         {
             Vector2Int index = InfiniteGrid.Instance.GetCellIndexFromWorldPosition(transform.position);
-            TryOccupyAtIndex(index, _requireTerritory, true);
+            TryOccupyAtIndex(index, RequireTerritoryOnSpawn, true);
         }
     }
 
@@ -37,12 +38,12 @@ public class GridPlaceable : NetworkBehaviour
         var grid = InfiniteGrid.Instance;
         if (grid == null) return false;
 
-        if (requireEmpty && !grid.CanPlaceAt(centerIndex, _buildRange))
+        if (requireEmpty && !grid.CanPlaceAt(centerIndex, _buildRange, null, requireTerritory))
             return false;
 
         ReleaseGridOccupation();
 
-        if (!grid.AddActiveCell(centerIndex, _buildRange))
+        if (!grid.AddActiveCell(centerIndex, _buildRange, requireTerritory))
             return false;
 
         BuiltIndex = centerIndex;

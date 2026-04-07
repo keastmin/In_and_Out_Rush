@@ -72,6 +72,7 @@ Shader "GridVisualize/InfiniteHexGuide"
             TEXTURE2D(_OcclusionMap);
             SAMPLER(sampler_OcclusionMap);
             #define MAX_OCCUPIED_CELLS 512
+            #define MAX_TERRITORY_VERTICES 256
 
             CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
@@ -89,8 +90,10 @@ Shader "GridVisualize/InfiniteHexGuide"
             float _CellFill;
             float _StateOverlayEnabled;
             float _OccupiedCellCount;
+            float _TerritoryVertexCount;
             CBUFFER_END
             float4 _OccupiedCells[MAX_OCCUPIED_CELLS];
+            float4 _TerritoryVertices[MAX_TERRITORY_VERTICES];
 
             // 오브젝트 좌표를 월드 좌표화 화면 좌표로 바꿈
             // 노멀과 탄젠트를 준비함
@@ -169,6 +172,40 @@ Shader "GridVisualize/InfiniteHexGuide"
                 }
 
                 return 0.0;
+            }
+
+            float IsCellCenterInTerritory(float2 cellCenterWS)
+            {
+                int vertexCount = (int)_TerritoryVertexCount;
+                if (vertexCount < 3)
+                {
+                    return 0.0;
+                }
+
+                bool isInside = false;
+                float2 previous = _TerritoryVertices[vertexCount - 1].xy;
+
+                [loop]
+                for (int i = 0; i < MAX_TERRITORY_VERTICES; i++)
+                {
+                    if (i >= vertexCount)
+                    {
+                        break;
+                    }
+
+                    float2 current = _TerritoryVertices[i].xy;
+                    bool intersects = ((current.y > cellCenterWS.y) != (previous.y > cellCenterWS.y)) &&
+                                      (cellCenterWS.x < ((previous.x - current.x) * (cellCenterWS.y - current.y) / ((previous.y - current.y) + 1e-5) + current.x));
+
+                    if (intersects)
+                    {
+                        isInside = !isInside;
+                    }
+
+                    previous = current;
+                }
+
+                return isInside ? 1.0 : 0.0;
             }
 
             half3 SampleNormalTS(float2 uv)
@@ -259,8 +296,11 @@ Shader "GridVisualize/InfiniteHexGuide"
                 float innerMask = IsInsideFlatTopHex(localPosition, innerSize) * innerEnabled;
                 float guideMask = outerMask * (1.0 - innerMask) * saturate(_StateOverlayEnabled);
 
+                float2 cellCenterWS = centerXZ + _GridOriginWS.xz;
+                float territoryMask = IsCellCenterInTerritory(cellCenterWS);
                 float occupiedMask = IsOccupiedCell(qr);
-                half4 guideColor = lerp(_PrimaryGuideColor, _SecondaryGuideColor, occupiedMask);
+                float canBuildMask = territoryMask * (1.0 - occupiedMask);
+                half4 guideColor = lerp(_SecondaryGuideColor, _PrimaryGuideColor, canBuildMask);
                 half3 mixedAlbedo = lerp(baseColor.rgb, guideColor.rgb, guideColor.a * guideMask);
 
                 SurfaceData surfaceData;

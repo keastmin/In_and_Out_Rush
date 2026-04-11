@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class GridPlaceable : NetworkBehaviour
 {
-    [Header("Grid Occupancy")]
+    [Header("그리드")]
     [SerializeField][Min(0)] protected int _buildRange = 0;
     [SerializeField] protected bool _requireTerritory = true;
 

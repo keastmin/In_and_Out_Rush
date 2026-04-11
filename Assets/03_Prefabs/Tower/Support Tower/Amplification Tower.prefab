@@ -69,6 +69,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: e8ede9c2d00864e40bc00510ee01a046, type: 3}
+--- !u!23 &318617078995245265 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 2139271340351186164, guid: e8ede9c2d00864e40bc00510ee01a046, type: 3}
+  m_PrefabInstance: {fileID: 1863297793346255909}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &6981587791884122296 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8734826463780979869, guid: e8ede9c2d00864e40bc00510ee01a046, type: 3}
@@ -158,6 +163,16 @@ PrefabInstance:
       insertIndex: 1
       addedObject: {fileID: 2149867995664661275}
   m_SourcePrefab: {fileID: 100100000, guid: 3302635113343d046a4921212bd4e79a, type: 3}
+--- !u!23 &713312920468001270 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 4497072389281494414, guid: 3302635113343d046a4921212bd4e79a, type: 3}
+  m_PrefabInstance: {fileID: 4003416191030142072}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &4138332874647200637 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 1072052434212013829, guid: 3302635113343d046a4921212bd4e79a, type: 3}
+  m_PrefabInstance: {fileID: 4003416191030142072}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &4248311435974450162 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 971639999673581450, guid: 3302635113343d046a4921212bd4e79a, type: 3}
@@ -187,6 +202,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _buildRange: 0
   _requireTerritory: 1
+  _BuiltIndex: {x: 0, y: 0}
   _cost:
     Mineral: 0
     Gas: 0
@@ -197,8 +213,17 @@ MonoBehaviour:
   _selectedImage: {fileID: 0}
   _buffRange: 25
   _buffRangeTransform: {fileID: 6981587791884122296}
+  _towerPreviewDebug: 0
+  _buildEnabled: 0
+  _meshRenderers:
+  - {fileID: 713312920468001270}
+  - {fileID: 4138332874647200637}
+  - {fileID: 318617078995245265}
+  _enabledMaterial: {fileID: 0}
+  _disableMaterial: {fileID: 0}
   _buffCellRange: 3
   _showLegacyBuffRangeCircle: 0
+  _buffCellColor: {r: 1, g: 0.85, b: 0.15, a: 0.35}
   _buffParam:
     TowerAttackSpeedBonus: 20
     AttackBonus: 10

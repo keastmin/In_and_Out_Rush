@@ -57,6 +57,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: e8ede9c2d00864e40bc00510ee01a046, type: 3}
+--- !u!23 &1886690583668131689 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 2139271340351186164, guid: e8ede9c2d00864e40bc00510ee01a046, type: 3}
+  m_PrefabInstance: {fileID: 549132278711935901}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &9126191178235750144 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8734826463780979869, guid: e8ede9c2d00864e40bc00510ee01a046, type: 3}
@@ -150,9 +155,19 @@ PrefabInstance:
       insertIndex: 1
       addedObject: {fileID: 6505049582381019717}
   m_SourcePrefab: {fileID: 100100000, guid: 3302635113343d046a4921212bd4e79a, type: 3}
+--- !u!23 &358901246388516908 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 1072052434212013829, guid: 3302635113343d046a4921212bd4e79a, type: 3}
+  m_PrefabInstance: {fileID: 728352556302106409}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &531518923115905187 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 971639999673581450, guid: 3302635113343d046a4921212bd4e79a, type: 3}
+  m_PrefabInstance: {fileID: 728352556302106409}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &3779486869636860583 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 4497072389281494414, guid: 3302635113343d046a4921212bd4e79a, type: 3}
   m_PrefabInstance: {fileID: 728352556302106409}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &5802004456098781740 stripped
@@ -174,6 +189,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _buildRange: 0
   _requireTerritory: 1
+  _BuiltIndex: {x: 0, y: 0}
   _cost:
     Mineral: 0
     Gas: 0
@@ -184,8 +200,17 @@ MonoBehaviour:
   _selectedImage: {fileID: 0}
   _buffRange: 25
   _buffRangeTransform: {fileID: 9126191178235750144}
+  _towerPreviewDebug: 0
+  _buildEnabled: 0
+  _meshRenderers:
+  - {fileID: 3779486869636860583}
+  - {fileID: 358901246388516908}
+  - {fileID: 1886690583668131689}
+  _enabledMaterial: {fileID: 0}
+  _disableMaterial: {fileID: 0}
   _buffCellRange: 3
   _showLegacyBuffRangeCircle: 0
+  _buffCellColor: {r: 1, g: 0.85, b: 0.15, a: 0.35}
   _armor: 100
   _maxHeal: 100
   _healPerSec: 5

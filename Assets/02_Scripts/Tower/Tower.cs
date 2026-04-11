@@ -1,9 +1,11 @@
 using Fusion;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class Tower : GridPlaceable, ICanClickObject
 {
+    [Header("타워")]
     [SerializeField] private Cost _cost;
     [SerializeField] private TowerGhost _ghost;
     [SerializeField] private TowerType _type;

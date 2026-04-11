@@ -81,9 +81,19 @@ PrefabInstance:
       insertIndex: 1
       addedObject: {fileID: 5367626044543591184}
   m_SourcePrefab: {fileID: 100100000, guid: 3302635113343d046a4921212bd4e79a, type: 3}
+--- !u!23 &1453166246203768381 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 1072052434212013829, guid: 3302635113343d046a4921212bd4e79a, type: 3}
+  m_PrefabInstance: {fileID: 1930387285671213368}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1707401287513294514 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 971639999673581450, guid: 3302635113343d046a4921212bd4e79a, type: 3}
+  m_PrefabInstance: {fileID: 1930387285671213368}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &2639903782230281398 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 4497072389281494414, guid: 3302635113343d046a4921212bd4e79a, type: 3}
   m_PrefabInstance: {fileID: 1930387285671213368}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &4635718627050314813 stripped
@@ -103,7 +113,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0af194b812a11444eaeaa1af0b5e71b6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _additionalInfo: []
+  _buildRange: 0
+  _requireTerritory: 1
+  _BuiltIndex: {x: 0, y: 0}
   _cost:
     Mineral: 0
     Gas: 0
@@ -114,3 +126,13 @@ MonoBehaviour:
   _selectedImage: {fileID: 0}
   _buffRange: 25
   _buffRangeTransform: {fileID: 0}
+  _towerPreviewDebug: 0
+  _buildEnabled: 0
+  _meshRenderers:
+  - {fileID: 2639903782230281398}
+  - {fileID: 1453166246203768381}
+  _enabledMaterial: {fileID: 0}
+  _disableMaterial: {fileID: 0}
+  _buffCellRange: 1
+  _showLegacyBuffRangeCircle: 0
+  _buffCellColor: {r: 1, g: 0.85, b: 0.15, a: 0.35}

@@ -5,6 +5,14 @@ using UnityEngine;
 
 public class InfiniteGrid : NetworkBehaviour
 {
+    private struct BuffSourceState
+    {
+        public Vector2Int CenterIndex;
+        public int Range;
+        public Color Color;
+        public HashSet<Vector2Int> Cells;
+    }
+
     public static InfiniteGrid Instance;
 
     [SerializeField] private TerritorySystem _territorySystem;
@@ -19,10 +27,15 @@ public class InfiniteGrid : NetworkBehaviour
 
     public bool ShowCellStateOverlay => _layout.ShowCellStateOverlay;
     public Vector3 GridOrigin => _layout.ResolveOrigin(transform);
+    public float GridHeight => GridOrigin.y;
 
     private GridCalculator _gridCalculator;
     private InfiniteGridVisualController _visualController;
     private bool _isTerritoryEventBound;
+    private readonly HashSet<Vector2Int> _previewCellIndices = new();
+    private readonly Dictionary<int, BuffSourceState> _buffSources = new();
+    private readonly Dictionary<Vector2Int, int> _buffCellRefCount = new();
+    private readonly Dictionary<Vector2Int, Color> _buffCellColorSum = new();
 
     private void OnValidate()
     {
@@ -130,6 +143,18 @@ public class InfiniteGrid : NetworkBehaviour
         return _gridCalculator.GetInRangeIndices(index, range);
     }
 
+    public List<Vector2Int> GetCellIndicesInRange(Vector2Int index, int range, bool includeCenter)
+    {
+        List<Vector2Int> indices = GetCellIndicesInRange(index, range);
+        if (includeCenter)
+        {
+            return indices;
+        }
+
+        indices.RemoveAll(cellIndex => cellIndex == index);
+        return indices;
+    }
+
     public bool IsCellOccupied(Vector2Int index, ISet<Vector2Int> ignoreIndices = null)
     {
         if (ignoreIndices != null && ignoreIndices.Contains(index))
@@ -204,6 +229,129 @@ public class InfiniteGrid : NetworkBehaviour
         return true;
     }
 
+    public bool CanPlaceInRange(
+        Vector2Int centerIndex,
+        int range,
+        bool requireEmpty = true,
+        bool requireTerritory = true,
+        HashSet<Vector2Int> ignoreOccupiedIndices = null)
+    {
+        List<Vector2Int> targetIndices = GetCellIndicesInRange(centerIndex, range, includeCenter: true);
+        if (targetIndices.Count == 0)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < targetIndices.Count; i++)
+        {
+            Vector2Int targetIndex = targetIndices[i];
+            if (requireTerritory && !IsCellInTerritory(targetIndex))
+            {
+                return false;
+            }
+
+            if (requireEmpty && IsCellOccupied(targetIndex, ignoreOccupiedIndices))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public void SetBuildRangePreview(Vector2Int centerIndex, int range)
+    {
+        _previewCellIndices.Clear();
+        List<Vector2Int> indices = GetCellIndicesInRange(centerIndex, range, includeCenter: true);
+        for (int i = 0; i < indices.Count; i++)
+        {
+            _previewCellIndices.Add(indices[i]);
+        }
+
+        RefreshVisuals();
+    }
+
+    public void SetBuildRangePreview(IEnumerable<Vector2Int> indices)
+    {
+        _previewCellIndices.Clear();
+        if (indices != null)
+        {
+            foreach (Vector2Int index in indices)
+            {
+                _previewCellIndices.Add(index);
+            }
+        }
+
+        RefreshVisuals();
+    }
+
+    public void ClearBuildRangePreview()
+    {
+        if (_previewCellIndices.Count == 0)
+        {
+            return;
+        }
+
+        _previewCellIndices.Clear();
+        RefreshVisuals();
+    }
+
+    public void RegisterOrUpdateBuffSource(int sourceId, Vector2Int centerIndex, int range, Color color)
+    {
+        if (sourceId == 0)
+            return;
+
+        int normalizedRange = Mathf.Max(0, range);
+        if (_buffSources.TryGetValue(sourceId, out BuffSourceState oldState))
+        {
+            if (oldState.CenterIndex == centerIndex &&
+                oldState.Range == normalizedRange &&
+                oldState.Color == color)
+            {
+                return;
+            }
+
+            RemoveBuffCells(oldState.Cells, oldState.Color);
+        }
+
+        var cells = new HashSet<Vector2Int>(GetCellIndicesInRange(centerIndex, normalizedRange, includeCenter: true));
+        AddBuffCells(cells, color);
+
+        _buffSources[sourceId] = new BuffSourceState
+        {
+            CenterIndex = centerIndex,
+            Range = normalizedRange,
+            Color = color,
+            Cells = cells
+        };
+
+        RefreshVisuals();
+    }
+
+    public void RemoveBuffSource(int sourceId)
+    {
+        if (sourceId == 0 || !_buffSources.TryGetValue(sourceId, out BuffSourceState state))
+            return;
+
+        RemoveBuffCells(state.Cells, state.Color);
+        _buffSources.Remove(sourceId);
+        RefreshVisuals();
+    }
+
+    public bool IsCellInBuffSource(int sourceId, Vector2Int index)
+    {
+        return sourceId != 0 &&
+               _buffSources.TryGetValue(sourceId, out BuffSourceState sourceState) &&
+               sourceState.Cells != null &&
+               sourceState.Cells.Contains(index);
+    }
+
+    public bool IsWorldPositionInBuffSource(int sourceId, Vector3 worldPosition)
+    {
+        Vector2Int index = GetCellIndexFromWorldPosition(worldPosition);
+        return IsCellInBuffSource(sourceId, index);
+    }
+
     /// <summary>
     /// 사용중인 셀 등록
     /// </summary>
@@ -253,7 +401,18 @@ public class InfiniteGrid : NetworkBehaviour
             networkGrid = NetworkGrid;
         }
 
-        _visualController.Apply(gameObject, transform, _layout, _guide, _rendering, _gridCalculator, networkGrid, _territorySystem != null ? _territorySystem.Territory : null);
+        _visualController.Apply(
+            gameObject,
+            transform,
+            _layout,
+            _guide,
+            _rendering,
+            _gridCalculator,
+            networkGrid,
+            _previewCellIndices,
+            _buffCellRefCount,
+            _buffCellColorSum,
+            _territorySystem != null ? _territorySystem.Territory : null);
     }
 
     private bool CanUseNetworkGrid()
@@ -275,5 +434,66 @@ public class InfiniteGrid : NetworkBehaviour
     private void OnTerritoryExpanded(Territory territory, TerritorySystem territorySystem)
     {
         RefreshVisuals();
+    }
+
+    private void AddBuffCells(IEnumerable<Vector2Int> indices, Color color)
+    {
+        if (indices == null)
+            return;
+
+        foreach (Vector2Int index in indices)
+        {
+            if (_buffCellRefCount.TryGetValue(index, out int count))
+            {
+                _buffCellRefCount[index] = count + 1;
+            }
+            else
+            {
+                _buffCellRefCount[index] = 1;
+            }
+
+            if (_buffCellColorSum.TryGetValue(index, out Color sumColor))
+            {
+                _buffCellColorSum[index] = sumColor + color;
+            }
+            else
+            {
+                _buffCellColorSum[index] = color;
+            }
+        }
+    }
+
+    private void RemoveBuffCells(IEnumerable<Vector2Int> indices, Color color)
+    {
+        if (indices == null)
+            return;
+
+        foreach (Vector2Int index in indices)
+        {
+            if (_buffCellRefCount.TryGetValue(index, out int count))
+            {
+                if (count <= 1)
+                {
+                    _buffCellRefCount.Remove(index);
+                }
+                else
+                {
+                    _buffCellRefCount[index] = count - 1;
+                }
+            }
+
+            if (_buffCellColorSum.TryGetValue(index, out Color sumColor))
+            {
+                Color nextColor = sumColor - color;
+                if (_buffCellRefCount.ContainsKey(index))
+                {
+                    _buffCellColorSum[index] = nextColor;
+                }
+                else
+                {
+                    _buffCellColorSum.Remove(index);
+                }
+            }
+        }
     }
 }

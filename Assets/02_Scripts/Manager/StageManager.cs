@@ -1,6 +1,5 @@
 using Dev.Local;
 using Fusion;
-using Grid;
 using System.Collections;
 using UnityEngine;
 
@@ -8,7 +7,6 @@ public class StageManager : NetworkBehaviour
 {
     [Networked] public PlayerRunner PlayerRunner { get; set; }
     [Networked] public PlayerBuilder PlayerBuilder { get; set; }
-    //[Networked] public Laboratory Laboratory { get; set; }
     public CinemachineSystem CinemachineSystem { get; private set; }
 
     public static StageManager Instance { get; private set; }
@@ -64,11 +62,8 @@ public class StageManager : NetworkBehaviour
         {
             SpawnPlayer();
             SpawnNetworkInputSystem();
-            //SpawnLaboratory();
         }
 
-        //while (PlayerRunner == null || PlayerBuilder == null || Laboratory == null)
-        //    yield return null;
         while (PlayerRunner == null || PlayerBuilder == null)
             yield return null;
 
@@ -77,11 +72,9 @@ public class StageManager : NetworkBehaviour
             system.SetUp();
         }
 
-        // InitCinemachineSystem();
         InitUIController();
 
         LaboratoryUIInjectionPlayerRunner(UIController.BuilderUI, PlayerRunner);
-        //BuilderReferenceBind(PlayerBuilder, UIController.BuilderUI, Laboratory);
         BuilderReferenceBind(PlayerBuilder, UIController.BuilderUI);
 
         Debug.Log("StageManager init complete");
@@ -121,26 +114,6 @@ public class StageManager : NetworkBehaviour
         var instance = Runner.Spawn(networkInputSystemPrefab, Vector3.zero, Quaternion.identity);
         instance.name = $"{Runner.name} - NetworkInputSystem";
         Debug.Log($"{Runner.name} - NetworkInputSystem spawned");
-    }
-
-    //private void SpawnLaboratory()
-    //{
-    //    if (GridManager.Instance == null)
-    //    {
-    //        Debug.LogError("GridManager.Instance is null. Failed to spawn Laboratory.");
-    //        return;
-    //    }
-
-    //    Vector3 labPos = GridManager.Instance.GetCenterCellWorldPosition();
-    //    Laboratory = Runner.Spawn(ResourceManager.Instance.LaboratoryPrefab, labPos, Quaternion.identity);
-    //    Laboratory.name = $"{Runner.name} - Laboratory";
-    //}
-
-    private void InitCinemachineSystem()
-    {
-        var instance = Instantiate(cinemachineSystemPrefab);
-        instance.InitCinemachineCamera(NetworkManager.Instance.Registry.RefToPosition[Runner.LocalPlayer], PlayerRunner, PlayerBuilder);
-        CinemachineSystem = instance;
     }
 
     private void InitUIController()

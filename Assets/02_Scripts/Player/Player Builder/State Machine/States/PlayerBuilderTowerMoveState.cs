@@ -1,4 +1,3 @@
-using Grid;
 using UnityEngine;
 
 public class PlayerBuilderTowerMoveState : IPlayerState
@@ -12,8 +11,8 @@ public class PlayerBuilderTowerMoveState : IPlayerState
 
     public void Enter()
     {
-        GridManager.Instance.SetCellStateOverlayEnabled(true);
-        GridManager.Instance.ClearBuildRangePreview();
+        InfiniteGrid.Instance.SetCellStateOverlayEnabled(true);
+        InfiniteGrid.Instance.ClearBuildRangePreview();
 
         _player.BuilderUI.ActivationTowerBuildUI(true, "Left Mouse: Complete, RightMouse: Cancel");
         _player.BuilderTowerMove.TowerMoveSet(_player.SelectedTowers);
@@ -46,8 +45,8 @@ public class PlayerBuilderTowerMoveState : IPlayerState
 
     public void Exit()
     {
-        GridManager.Instance.ClearBuildRangePreview();
-        GridManager.Instance.SetCellStateOverlayEnabled(false);
+        InfiniteGrid.Instance.ClearBuildRangePreview();
+        InfiniteGrid.Instance.SetCellStateOverlayEnabled(false);
 
         _player.BuilderTowerMove.TowerMoveClear();
         _player.BuilderUI.ActivationTowerBuildUI(false);
@@ -68,7 +67,10 @@ public class PlayerBuilderTowerMoveState : IPlayerState
     private Vector3 GetMouseWorldPos()
     {
         Vector3 pos = Vector3.zero;
-        float height = GridManager.Instance.GridHeight;
+        if (InfiniteGrid.Instance == null || Camera.main == null)
+            return pos;
+
+        float height = InfiniteGrid.Instance.GridHeight;
         Plane plane = new Plane(Vector3.up, height);
 
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);

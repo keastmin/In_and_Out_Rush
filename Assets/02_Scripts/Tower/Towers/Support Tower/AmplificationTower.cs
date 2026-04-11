@@ -1,5 +1,4 @@
 using Fusion;
-using Grid;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -33,7 +32,7 @@ public sealed class AmplificationTower : SupportTower, ICanDragObject
             return;
         }
 
-        if (!TryGetGridManager(out GridManager gm))
+        if (!TryGetGrid(out InfiniteGrid gm))
         {
             ClearAllReceivers();
             return;

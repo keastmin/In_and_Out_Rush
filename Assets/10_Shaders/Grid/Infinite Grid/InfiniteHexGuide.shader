@@ -20,6 +20,7 @@ Shader "GridVisualize/InfiniteHexGuide"
         _HexSize ("Hex Size", Float) = 1.6
         _PrimaryGuideColor ("Primary Guide Color", Color) = (0.2,0.45,1,0.28)
         _SecondaryGuideColor ("Secondary Guide Color", Color) = (1,0.2,0.2,0.30)
+        _PreviewGuideColor ("Preview Guide Color", Color) = (0.1,1,0.2,0.45)
         _CellFill ("Cell Fill", Range(0,1)) = 0.2
         _StateOverlayEnabled ("State Overlay Enabled", Float) = 1
     }
@@ -72,6 +73,8 @@ Shader "GridVisualize/InfiniteHexGuide"
             TEXTURE2D(_OcclusionMap);
             SAMPLER(sampler_OcclusionMap);
             #define MAX_OCCUPIED_CELLS 512
+            #define MAX_PREVIEW_CELLS 512
+            #define MAX_BUFF_CELLS 512
             #define MAX_TERRITORY_VERTICES 256
 
             CBUFFER_START(UnityPerMaterial)
@@ -81,6 +84,7 @@ Shader "GridVisualize/InfiniteHexGuide"
             float4 _GridOriginWS;
             float4 _PrimaryGuideColor;
             float4 _SecondaryGuideColor;
+            float4 _PreviewGuideColor;
             float _BumpScale;
             float _Parallax;
             float _Metallic;
@@ -90,9 +94,14 @@ Shader "GridVisualize/InfiniteHexGuide"
             float _CellFill;
             float _StateOverlayEnabled;
             float _OccupiedCellCount;
+            float _PreviewCellCount;
+            float _BuffCellCount;
             float _TerritoryVertexCount;
             CBUFFER_END
             float4 _OccupiedCells[MAX_OCCUPIED_CELLS];
+            float4 _PreviewCells[MAX_PREVIEW_CELLS];
+            float4 _BuffCells[MAX_BUFF_CELLS];
+            float4 _BuffCellColors[MAX_BUFF_CELLS];
             float4 _TerritoryVertices[MAX_TERRITORY_VERTICES];
 
             // 오브젝트 좌표를 월드 좌표화 화면 좌표로 바꿈
@@ -172,6 +181,50 @@ Shader "GridVisualize/InfiniteHexGuide"
                 }
 
                 return 0.0;
+            }
+
+            float IsPreviewCell(float2 axial)
+            {
+                int previewCount = (int)_PreviewCellCount;
+
+                [loop]
+                for (int i = 0; i < MAX_PREVIEW_CELLS; i++)
+                {
+                    if (i >= previewCount)
+                    {
+                        break;
+                    }
+
+                    float2 previewAxial = _PreviewCells[i].xy;
+                    if (all(abs(previewAxial - axial) < 0.01))
+                    {
+                        return 1.0;
+                    }
+                }
+
+                return 0.0;
+            }
+
+            float4 GetBuffCellColor(float2 axial)
+            {
+                int buffCount = (int)_BuffCellCount;
+
+                [loop]
+                for (int i = 0; i < MAX_BUFF_CELLS; i++)
+                {
+                    if (i >= buffCount)
+                    {
+                        break;
+                    }
+
+                    float2 buffAxial = _BuffCells[i].xy;
+                    if (all(abs(buffAxial - axial) < 0.01))
+                    {
+                        return _BuffCellColors[i];
+                    }
+                }
+
+                return float4(0, 0, 0, 0);
             }
 
             float IsCellCenterInTerritory(float2 cellCenterWS)
@@ -299,9 +352,13 @@ Shader "GridVisualize/InfiniteHexGuide"
                 float2 cellCenterWS = centerXZ + _GridOriginWS.xz;
                 float territoryMask = IsCellCenterInTerritory(cellCenterWS);
                 float occupiedMask = IsOccupiedCell(qr);
+                float previewMask = IsPreviewCell(qr);
+                float4 buffColor = GetBuffCellColor(qr);
                 float canBuildMask = territoryMask * (1.0 - occupiedMask);
                 half4 guideColor = lerp(_SecondaryGuideColor, _PrimaryGuideColor, canBuildMask);
                 half3 mixedAlbedo = lerp(baseColor.rgb, guideColor.rgb, guideColor.a * guideMask);
+                mixedAlbedo = lerp(mixedAlbedo, _PreviewGuideColor.rgb, _PreviewGuideColor.a * guideMask * previewMask);
+                mixedAlbedo = lerp(mixedAlbedo, buffColor.rgb, buffColor.a * guideMask);
 
                 SurfaceData surfaceData;
                 BuildSurfaceData(materialUV, mixedAlbedo, baseColor.a, surfaceData);

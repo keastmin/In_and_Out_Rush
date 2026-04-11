@@ -1,10 +1,13 @@
 using Fusion;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
 public class PlayerBuilderTowerBuildState : IPlayerState
 {
     private readonly PlayerBuilder _player;
+    private readonly HashSet<Vector2Int> _previewValidIndices = new();
+    private readonly HashSet<Vector2Int> _previewBlockedIndices = new();
 
     private TowerGhost _towerGhost;
     private Vector3 _towerBuildPosition;
@@ -70,6 +73,10 @@ public class PlayerBuilderTowerBuildState : IPlayerState
             _towerGhost = null;
         }
 
+        _previewValidIndices.Clear();
+        _previewBlockedIndices.Clear();
+        InfiniteGrid.Instance?.ClearBuildRangePreview();
+
         _player.BuilderUI.ActivationTowerBuildUI(false);
     }
 
@@ -115,6 +122,9 @@ public class PlayerBuilderTowerBuildState : IPlayerState
             _towerBuildIndex = InfiniteGrid.Instance.GetCellIndexFromWorldPosition(mouseHitPoint);
             _towerBuildPosition = InfiniteGrid.Instance.GetCellCenterPositionFromCellIndex(_towerBuildIndex);
             _towerGhost.transform.position = _towerBuildPosition;
+
+            _player.BuilderTowerBuild.EvaluateBuildFootprint(_towerBuildIndex, _previewValidIndices, _previewBlockedIndices);
+            InfiniteGrid.Instance.SetBuildRangePreview(_previewValidIndices, _previewBlockedIndices);
 
             bool canBuild = _player.BuilderTowerBuild.CanBuildAt(_towerBuildIndex);
 

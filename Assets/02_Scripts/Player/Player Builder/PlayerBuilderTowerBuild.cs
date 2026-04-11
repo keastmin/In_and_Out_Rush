@@ -1,4 +1,5 @@
 using Fusion;
+using System.Collections.Generic;
 using UnityEngine;
 
 public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
@@ -56,6 +57,32 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
             return false;
 
         return InfiniteGrid.Instance.CanPlaceAt(index, BuildRange);
+    }
+
+    public void EvaluateBuildFootprint(Vector2Int centerIndex, HashSet<Vector2Int> validIndices, HashSet<Vector2Int> blockedIndices)
+    {
+        validIndices?.Clear();
+        blockedIndices?.Clear();
+
+        if (_tower == null || InfiniteGrid.Instance == null)
+            return;
+
+        var indices = InfiniteGrid.Instance.GetCellIndicesInRange(centerIndex, BuildRange, includeCenter: true);
+        for (int i = 0; i < indices.Count; i++)
+        {
+            Vector2Int targetIndex = indices[i];
+            bool canPlaceCell = InfiniteGrid.Instance.IsCellInTerritory(targetIndex) &&
+                                !InfiniteGrid.Instance.IsCellOccupied(targetIndex);
+
+            if (canPlaceCell)
+            {
+                validIndices?.Add(targetIndex);
+            }
+            else
+            {
+                blockedIndices?.Add(targetIndex);
+            }
+        }
     }
 
     public void BuildTower(Vector2Int index)

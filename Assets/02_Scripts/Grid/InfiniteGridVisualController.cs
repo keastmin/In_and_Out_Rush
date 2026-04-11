@@ -5,6 +5,7 @@ public class InfiniteGridVisualController
 {
     private const int MaxOccupiedCells = 512;
     private const int MaxPreviewCells = 512;
+    private const int MaxBlockedPreviewCells = 512;
     private const int MaxBuffCells = 512;
     private const int MaxTerritoryVertices = 256;
 
@@ -12,6 +13,7 @@ public class InfiniteGridVisualController
     private MaterialPropertyBlock _propertyBlock;
     private readonly Vector4[] _occupiedCellsBuffer = new Vector4[MaxOccupiedCells];
     private readonly Vector4[] _previewCellsBuffer = new Vector4[MaxPreviewCells];
+    private readonly Vector4[] _blockedPreviewCellsBuffer = new Vector4[MaxBlockedPreviewCells];
     private readonly Vector4[] _buffCellsBuffer = new Vector4[MaxBuffCells];
     private readonly Vector4[] _buffColorsBuffer = new Vector4[MaxBuffCells];
     private readonly Vector4[] _territoryVerticesBuffer = new Vector4[MaxTerritoryVertices];
@@ -25,6 +27,7 @@ public class InfiniteGridVisualController
         GridCalculator gridCalculator,
         IEnumerable<KeyValuePair<Vector2Int, CellData>> networkGrid,
         IEnumerable<Vector2Int> previewIndices,
+        IEnumerable<Vector2Int> blockedPreviewIndices,
         IReadOnlyDictionary<Vector2Int, int> buffCellRefCount,
         IReadOnlyDictionary<Vector2Int, Color> buffCellColorSum,
         Territory territory)
@@ -56,9 +59,10 @@ public class InfiniteGridVisualController
         _propertyBlock.SetFloat("_StateOverlayEnabled", layout.ShowCellStateOverlay ? 1f : 0f);
         _propertyBlock.SetColor("_PrimaryGuideColor", guide.PrimaryGuideColor);
         _propertyBlock.SetColor("_SecondaryGuideColor", guide.SecondaryGuideColor);
-        _propertyBlock.SetColor("_PreviewGuideColor", guide.PreviewGuideColor);
+        _propertyBlock.SetColor("_PreviewValidGuideColor", guide.PreviewValidGuideColor);
+        _propertyBlock.SetColor("_PreviewBlockedGuideColor", guide.PreviewBlockedGuideColor);
         ApplyOccupiedCells(gridCalculator, networkGrid);
-        ApplyPreviewCells(gridCalculator, previewIndices);
+        ApplyPreviewCells(gridCalculator, previewIndices, blockedPreviewIndices);
         ApplyBuffCells(gridCalculator, buffCellRefCount, buffCellColorSum);
         ApplyTerritoryVertices(territory);
         _groundRenderer.SetPropertyBlock(_propertyBlock);
@@ -98,9 +102,13 @@ public class InfiniteGridVisualController
         _propertyBlock.SetVectorArray("_OccupiedCells", _occupiedCellsBuffer);
     }
 
-    private void ApplyPreviewCells(GridCalculator gridCalculator, IEnumerable<Vector2Int> previewIndices)
+    private void ApplyPreviewCells(
+        GridCalculator gridCalculator,
+        IEnumerable<Vector2Int> previewIndices,
+        IEnumerable<Vector2Int> blockedPreviewIndices)
     {
         int previewCount = 0;
+        int blockedPreviewCount = 0;
 
         if (previewIndices != null)
         {
@@ -117,8 +125,25 @@ public class InfiniteGridVisualController
             }
         }
 
+        if (blockedPreviewIndices != null)
+        {
+            foreach (Vector2Int previewIndex in blockedPreviewIndices)
+            {
+                if (blockedPreviewCount >= MaxBlockedPreviewCells)
+                {
+                    break;
+                }
+
+                Vector2Int axial = gridCalculator.GetAxialFromOffsetIndex(previewIndex);
+                _blockedPreviewCellsBuffer[blockedPreviewCount] = new Vector4(axial.x, axial.y, 0f, 0f);
+                blockedPreviewCount++;
+            }
+        }
+
         _propertyBlock.SetFloat("_PreviewCellCount", previewCount);
         _propertyBlock.SetVectorArray("_PreviewCells", _previewCellsBuffer);
+        _propertyBlock.SetFloat("_BlockedPreviewCellCount", blockedPreviewCount);
+        _propertyBlock.SetVectorArray("_BlockedPreviewCells", _blockedPreviewCellsBuffer);
     }
 
     private void ApplyBuffCells(

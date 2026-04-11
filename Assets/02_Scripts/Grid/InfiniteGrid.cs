@@ -32,7 +32,8 @@ public class InfiniteGrid : NetworkBehaviour
     private GridCalculator _gridCalculator;
     private InfiniteGridVisualController _visualController;
     private bool _isTerritoryEventBound;
-    private readonly HashSet<Vector2Int> _previewCellIndices = new();
+    private readonly HashSet<Vector2Int> _previewValidCellIndices = new();
+    private readonly HashSet<Vector2Int> _previewBlockedCellIndices = new();
     private readonly Dictionary<int, BuffSourceState> _buffSources = new();
     private readonly Dictionary<Vector2Int, int> _buffCellRefCount = new();
     private readonly Dictionary<Vector2Int, Color> _buffCellColorSum = new();
@@ -261,11 +262,12 @@ public class InfiniteGrid : NetworkBehaviour
 
     public void SetBuildRangePreview(Vector2Int centerIndex, int range)
     {
-        _previewCellIndices.Clear();
+        _previewValidCellIndices.Clear();
+        _previewBlockedCellIndices.Clear();
         List<Vector2Int> indices = GetCellIndicesInRange(centerIndex, range, includeCenter: true);
         for (int i = 0; i < indices.Count; i++)
         {
-            _previewCellIndices.Add(indices[i]);
+            _previewValidCellIndices.Add(indices[i]);
         }
 
         RefreshVisuals();
@@ -273,12 +275,38 @@ public class InfiniteGrid : NetworkBehaviour
 
     public void SetBuildRangePreview(IEnumerable<Vector2Int> indices)
     {
-        _previewCellIndices.Clear();
+        _previewValidCellIndices.Clear();
+        _previewBlockedCellIndices.Clear();
         if (indices != null)
         {
             foreach (Vector2Int index in indices)
             {
-                _previewCellIndices.Add(index);
+                _previewValidCellIndices.Add(index);
+            }
+        }
+
+        RefreshVisuals();
+    }
+
+    public void SetBuildRangePreview(IEnumerable<Vector2Int> validIndices, IEnumerable<Vector2Int> blockedIndices)
+    {
+        _previewValidCellIndices.Clear();
+        _previewBlockedCellIndices.Clear();
+
+        if (validIndices != null)
+        {
+            foreach (Vector2Int index in validIndices)
+            {
+                _previewValidCellIndices.Add(index);
+            }
+        }
+
+        if (blockedIndices != null)
+        {
+            foreach (Vector2Int index in blockedIndices)
+            {
+                _previewBlockedCellIndices.Add(index);
+                _previewValidCellIndices.Remove(index);
             }
         }
 
@@ -287,12 +315,13 @@ public class InfiniteGrid : NetworkBehaviour
 
     public void ClearBuildRangePreview()
     {
-        if (_previewCellIndices.Count == 0)
+        if (_previewValidCellIndices.Count == 0 && _previewBlockedCellIndices.Count == 0)
         {
             return;
         }
 
-        _previewCellIndices.Clear();
+        _previewValidCellIndices.Clear();
+        _previewBlockedCellIndices.Clear();
         RefreshVisuals();
     }
 
@@ -409,7 +438,8 @@ public class InfiniteGrid : NetworkBehaviour
             _rendering,
             _gridCalculator,
             networkGrid,
-            _previewCellIndices,
+            _previewValidCellIndices,
+            _previewBlockedCellIndices,
             _buffCellRefCount,
             _buffCellColorSum,
             _territorySystem != null ? _territorySystem.Territory : null);

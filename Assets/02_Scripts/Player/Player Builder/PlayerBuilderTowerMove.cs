@@ -17,7 +17,8 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
     private List<TowerGhost> _ghosts;
     private Dictionary<TowerGhost, Tower> _ghostToTowerDic;
     private Dictionary<Tower, Vector3> _towerToVecDic;
-    private readonly HashSet<Vector2Int> _previewIndices = new();
+    private readonly HashSet<Vector2Int> _previewValidIndices = new();
+    private readonly HashSet<Vector2Int> _previewBlockedIndices = new();
 
     private PlayerBuilderTowerSystem _towerSystem;
 
@@ -46,7 +47,8 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
         }
 
         bool canMoveAll = true;
-        _previewIndices.Clear();
+        _previewValidIndices.Clear();
+        _previewBlockedIndices.Clear();
         var gridManager = InfiniteGrid.Instance;
         if (gridManager == null)
             return false;
@@ -72,7 +74,6 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
 
             ghost.transform.position = snapshotPos;
             ghost.EnableTower();
-            AddIndicesToSet(targetIndices, _previewIndices);
 
             plannedMoves.Add(new PlannedTowerMove
             {
@@ -119,6 +120,8 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
             bool conflicted = conflictedTowers.Contains(move.Tower);
             bool canMoveThisTower = !isSamePosition && canPlace && !conflicted;
 
+            AddPreviewIndices(move.TargetIndices, canMoveThisTower, _previewValidIndices, _previewBlockedIndices);
+
             if (canMoveThisTower)
             {
                 move.Ghost.EnableTower();
@@ -130,7 +133,7 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
             }
         }
 
-        gridManager.SetBuildRangePreview(_previewIndices);
+        gridManager.SetBuildRangePreview(_previewValidIndices, _previewBlockedIndices);
         return canMoveAll;
     }
 
@@ -270,7 +273,8 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
 
         _ghostToTowerDic?.Clear();
         _towerToVecDic?.Clear();
-        _previewIndices.Clear();
+        _previewValidIndices.Clear();
+        _previewBlockedIndices.Clear();
     }
 
     public void RemoveTower(Tower tower)
@@ -435,12 +439,29 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
         return occupied;
     }
 
-    private static void AddIndicesToSet(List<Vector2Int> source, HashSet<Vector2Int> target)
+    private static void AddPreviewIndices(
+        List<Vector2Int> source,
+        bool isValid,
+        HashSet<Vector2Int> validTarget,
+        HashSet<Vector2Int> blockedTarget)
     {
-        if (source == null || target == null) return;
+        if (source == null || validTarget == null || blockedTarget == null) return;
+
         for (int i = 0; i < source.Count; i++)
         {
-            target.Add(source[i]);
+            Vector2Int index = source[i];
+            if (isValid)
+            {
+                if (!blockedTarget.Contains(index))
+                {
+                    validTarget.Add(index);
+                }
+            }
+            else
+            {
+                blockedTarget.Add(index);
+                validTarget.Remove(index);
+            }
         }
     }
 

@@ -1855,6 +1855,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2049226344}
     m_Modifications:
+    - target: {fileID: 2863890552933132054, guid: 4860868dac3037343a9034cbfef85387, type: 3}
+      propertyPath: _trackSystem
+      value: 
+      objectReference: {fileID: 896837533}
+    - target: {fileID: 2863890552933132054, guid: 4860868dac3037343a9034cbfef85387, type: 3}
+      propertyPath: _territorySystem
+      value: 
+      objectReference: {fileID: 1028244186}
     - target: {fileID: 5379209773506943472, guid: 4860868dac3037343a9034cbfef85387, type: 3}
       propertyPath: m_Name
       value: Infinite Grid Ground

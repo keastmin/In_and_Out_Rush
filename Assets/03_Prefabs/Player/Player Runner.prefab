@@ -5117,6 +5117,8 @@ GameObject:
   - component: {fileID: -1275711506324664378}
   - component: {fileID: -8069737387449572781}
   - component: {fileID: 9208446726996137561}
+  - component: {fileID: 1669351244208117714}
+  - component: {fileID: 373271162909325404}
   m_Layer: 10
   m_Name: Player Runner
   m_TagString: Untagged
@@ -5166,8 +5168,7 @@ MonoBehaviour:
   _WeaponReloadSpeedScaler: 1
   _IsDead:
     _value: 0
-  _outOfBodyPrefab: {fileID: -1810958858301183906, guid: c62ce80348b772a4f8832c349d411a32, type: 3}
-  _swiftnessVFX: {fileID: 6092269608685176354}
+  _swiftnessParticleEffect: {fileID: 6092269608685176354}
   skillIcons:
   - {fileID: 1471596959, guid: e1a81109ab95c0344a014a0e72fa1378, type: 3}
   - {fileID: -33431389, guid: e1a81109ab95c0344a014a0e72fa1378, type: 3}
@@ -5192,6 +5193,8 @@ MonoBehaviour:
   - {fileID: 6623639392449802583}
   - {fileID: -8069737387449572781}
   - {fileID: 9208446726996137561}
+  - {fileID: 1669351244208117714}
+  - {fileID: 373271162909325404}
   ForceRemoteRenderTimeframe: 0
 --- !u!136 &2540990109086367435
 CapsuleCollider:
@@ -5276,5 +5279,30 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6726f22a132e24045b6dddb9b808648d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1669351244208117714
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9008013758366610681}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1aaf9af5f5bf4b74e8ddb7b583cd04d8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _outOfBodyPrefab: {fileID: -1810958858301183906, guid: c62ce80348b772a4f8832c349d411a32, type: 3}
+--- !u!114 &373271162909325404
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9008013758366610681}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2463961c24eae1b4ca4ba8a8fe3422bb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 

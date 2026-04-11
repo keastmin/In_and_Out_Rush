@@ -1,24 +1,23 @@
 using Dev.Network;
-using DG.Tweening;
 using Fusion;
-using Fusion.Addons.Physics;
 using System;
-using System.Threading.Tasks;
 using UnityEngine;
 
 // TODO: 상호작용 여러번 적용되는 현상 수정, 클라이언트 UI에서도 체력이 갱신되도록 수정, 증폭 타워 BuffExit 구현
 
 [RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(PlayerRunnerMovement))]
+[RequireComponent(typeof(PlayerRunnerOutOfBodyController))]
+[RequireComponent(typeof(PlayerRunnerTeleporter))]
 public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
 {
-    private static readonly float MAX_HEALTH = 100f; // 임시
+    public const float MaxHealth = 100f;
 
     [Header("Statistics")]
     [Networked, OnChangedRender(nameof(OnHealthChanged))]
     public float Health { get; set; } = 100f;
-    [Networked] public float Stamina { get; set; } = 100f; // 소모 1초 후 회복
-    [Networked] public float StaminaRecoveryRate { get; set; } = 10f; // 초당 회복량
+    [Networked] public float Stamina { get; set; } = 100f;
+    [Networked] public float StaminaRecoveryRate { get; set; } = 10f;
     [Networked] public float MovementSpeed { get; set; } = 6f;
     [Networked] public float WeaponDamage { get; set; } = 1f;
     [Networked] public float RunningPower { get; set; } = 30f;
@@ -27,150 +26,93 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
     [Networked] public float WeaponAttackSpeedScaler { get; set; } = 1f;
     [Networked] public float WeaponReloadSpeedScaler { get; set; } = 1f;
     [Networked] public NetworkBool IsDead { get; set; }
-    [Networked] private TickTimer _outOfBodyTimer { get; set; }
 
-    // 업그레이드: 체력, 이동 속도, 기력량, 기력 회복 속도, 무기 데미지
-
-    [SerializeField] private NetworkObject _outOfBodyPrefab;
-    [SerializeField] private ParticleSystem _swiftnessVFX;
-
+    [SerializeField] private ParticleSystem _swiftnessParticleEffect;
     public Sprite[] skillIcons;
 
-    private Rigidbody _rigidbody; // 리지드바디
+    private Rigidbody _rigidbody;
     private PlayerRunnerMovement _movement;
-    private RunnerItemConsumer _itemConsumer; // 아이템 소비자
-    private RunnerSkillCaster _skillCaster; // 스킬 시전자
-    private bool _isSliding = false; // 슬라이드 상태
-    private bool _isTumbling = false; // 텀블 상태
-    private bool _isOutOfBody = false; // 영혼 상태
-    private Sequence _outOfBodySequence;
-    private NetworkObject _outOfBodySpiritObject;
-    private bool _isSwiftness = false; // 스위프트니스 상태
-    private int _swiftnessSlideCount = 0; // 스위프트니스 슬라이드 횟수
-    private bool _isInvincible = false; // 무적 상태
-    private float _elapsedTime = 0f; // 경과 시간
-    private Transform _targetTransform;
+    private RunnerItemConsumer _itemConsumer;
+    private RunnerSkillCaster _skillCaster;
+    private PlayerRunnerOutOfBodyController _outOfBodyController;
+    private PlayerRunnerTeleporter _teleporter;
 
-    public event Action<Vector3, PlayerRunner, object> OnPositionChanged; // 영역 관련 이벤트
+    private PlayerRunnerCombatHandler _combatHandler;
+    private PlayerRunnerSlideHandler _slideHandler;
+    private PlayerRunnerTumbleHandler _tumbleHandler;
+    private PlayerRunnerSwiftnessHandler _swiftnessHandler;
+    private PlayerRunnerBuffHandler _buffHandler;
+    private PlayerRunnerUpgradeHandler _upgradeHandler;
+
+    private float _elapsedTime = 0f;
+
+    public event Action<Vector3, PlayerRunner, object> OnPositionChanged;
     public event Action<PlayerRunner, object> OnDied;
     public event Action<PlayerRunner, object> OnLaboratoryLookStarted;
     public event Action<PlayerRunner, object> OnLaboratoryLookEnded;
 
     public void OnHealthChanged()
     {
-        StageManager.Instance.UIController.RunnerUI.Display.Player.SetHealthBarRatio(Health / MAX_HEALTH); // UI 체력바 갱신
+        StageManager.Instance.UIController.RunnerUI.Display.Player
+            .SetHealthBarRatio(Health / MaxHealth);
     }
 
     private void Awake()
     {
         _rigidbody = GetComponent<Rigidbody>();
         _movement = GetComponent<PlayerRunnerMovement>();
+        _outOfBodyController = GetComponent<PlayerRunnerOutOfBodyController>();
+        _teleporter = GetComponent<PlayerRunnerTeleporter>();
         _itemConsumer = new RunnerItemConsumer();
         _skillCaster = new RunnerSkillCaster();
+        _combatHandler = new PlayerRunnerCombatHandler();
+        _slideHandler = new PlayerRunnerSlideHandler();
+        _tumbleHandler = new PlayerRunnerTumbleHandler();
+        _swiftnessHandler = new PlayerRunnerSwiftnessHandler();
+        _buffHandler = new PlayerRunnerBuffHandler();
+        _upgradeHandler = new PlayerRunnerUpgradeHandler();
     }
 
     public override void Spawned()
     {
         base.Spawned();
-        InitializePlayerRunner();
+        _movement.SetTarget(transform);
+        if (HasStateAuthority)
+        {
+            Health = MaxHealth;
+            IsDead = false;
+        }
         BuffReceiverRegistry.Register(this, transform, BuffTargetType.Runner);
     }
 
     public override void FixedUpdateNetwork()
     {
-        if (GetInput(out NetworkInputData data))
-        {
-            // 러너 이동
-            if (_isSliding == false && _isTumbling == false)
-            {
-                var isDashing = data.DashInput.IsSet(NetworkInputData.DASH_INPUT);
-                var direction = data.PlayerRunnerDirection.normalized;
-                _movement.UpdateMovement(isDashing, direction);
-            }
+        if (!GetInput(out NetworkInputData data)) return;
 
-            // 러너 슬라이드
-            var slideUsing = data.SlideInput.IsSet(NetworkInputData.SLIDE_INPUT);
-            if (slideUsing)
-            {
-                _ = StartSlide();
-                RPC_DecreaseHealthTest(50f);
-            }
-                
-            // 러너 아이템 사용
-            var itemUsing = data.ItemInput.IsSet(NetworkInputData.ITEM_INPUT);
-            if (itemUsing)
-                UseItem(data.SelectedItem);
-
-            // 러너 스킬 사용
-            var skillUsing = data.SkillInput.IsSet(NetworkInputData.SKILL_INPUT);
-            if (skillUsing)
-            {
-                if (_isOutOfBody)
-                    EndOutOfBody(); // 영혼 상태일 때 스킬 사용 시 영혼 상태 종료
-                else
-                    CastSkill(data.SelectedSkill);
-            }
-            UpdateSkillIcon(data.SelectedSkill);
-
-            // 러너 상호작용
-            var interactUsing = data.InteractInput.IsSet(NetworkInputData.INTERACT_INPUT);
-            if (interactUsing)
-            {
-                Interact();
-                Debug.Log("상호작용 사용");
-            }
-
-            // 러너 연구소 상호작용
-            // TODO: 연구소 바라보기 상태가 변할 때만 이벤트 발생
-            var laboratoryUsing = data.LaboratoryInput.IsSet(NetworkInputData.LABORATORY_INPUT);
-            if (StageManager.Instance.CinemachineSystem != null)
-            {
-                if (laboratoryUsing)
-                {
-                    //var lab = StageManager.Instance.Laboratory;
-                    //if (lab != null)
-                    //{
-                    //    StageManager.Instance.CinemachineSystem.SetTrackingTarget(lab.transform);
-                    //    Debug.Log("연구소 보기");
-                    //}
-                }
-                else
-                {
-                    StageManager.Instance.CinemachineSystem.SetTrackingTarget(transform);
-                }
-            }
-
-            var weaponUsing = data.WeaponInput.IsSet(NetworkInputData.WEAPON_INPUT);
-            if (weaponUsing)
-            {
-                Debug.Log("무기 사용"); // 빌더가 구매해서 러너에게 장착시킴
-                // Debug.Log(data.SelectedWeapon);
-            }
-        }
-
-        if (Object.HasStateAuthority)
-        {
-            if (_isOutOfBody && _outOfBodySpiritObject != null)
-            {
-                if (_outOfBodyTimer.Expired(Runner))
-                    EndOutOfBody();
-            }
-        }
-    }
-
-    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    private void RPC_DecreaseHealthTest(float amount)
-    {
-        if (HasStateAuthority)
-        {
-            TakeDamage(amount);
-        }
+        HandleMovementInput(data);
+        HandleSlideInput(data);
+        HandleItemInput(data);
+        HandleSkillInput(data);
+        HandleInteractInput(data);
+        HandleLaboratoryInput(data);
     }
 
     public override void Render()
     {
-        base.Render(); // vfx, 비주얼적인 요소
-        OnPositionChanged?.Invoke(_targetTransform.position, this, this);
+        base.Render();
+        var targetTransform = _outOfBodyController.CurrentTargetTransform;
+        var sharedPosition = targetTransform.position;
+
+        if (_outOfBodyController.IsRecovering)
+        {
+            var recoveryPosition = _outOfBodyController.RecoveryTargetPosition;
+            if (Vector3.Distance(targetTransform.position, recoveryPosition) > Vector3.kEpsilon)
+                sharedPosition = recoveryPosition;
+            else
+                _outOfBodyController.ClearRecovering();
+        }
+
+        OnPositionChanged?.Invoke(sharedPosition, this, this);
     }
 
     public override void Despawned(NetworkRunner runner, bool hasState)
@@ -182,283 +124,92 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
     private void Update()
     {
         _elapsedTime += Time.deltaTime;
-        var minutes = Mathf.FloorToInt(_elapsedTime / 60f);
-        var seconds = Mathf.FloorToInt(_elapsedTime % 60f);
-        StageManager.Instance.UIController.RunnerUI.Display.ElapsedTime.SetElapsedTimeText($"{minutes:D2}:{seconds:D2}");
+        int minutes = Mathf.FloorToInt(_elapsedTime / 60f);
+        int seconds = Mathf.FloorToInt(_elapsedTime % 60f);
+        StageManager.Instance.UIController.RunnerUI.Display.ElapsedTime
+            .SetElapsedTimeText($"{minutes:D2}:{seconds:D2}");
     }
 
-    // 플레이어 러너 초기화
-    private void InitializePlayerRunner()
+    private void HandleMovementInput(NetworkInputData data)
     {
-        _targetTransform = transform;
-        _movement.SetTarget(_targetTransform);
-
-        if (HasStateAuthority)
-        {
-            Health = MAX_HEALTH; // MaxHealth는 100f로 하드 코딩
-            IsDead = false;
-            _isSliding = false;
-            _isInvincible = false;
-        }
+        if (_slideHandler.IsSliding || _tumbleHandler.IsTumbling) return;
+        bool isDashing = data.DashInput.IsSet(NetworkInputData.DASH_INPUT);
+        Vector3 direction = data.PlayerRunnerDirection.normalized;
+        _movement.UpdateMovement(isDashing, direction);
     }
 
-    private async Task StartSlide()
+    private void HandleSlideInput(NetworkInputData data)
     {
-        if (_isSliding) return; // 이미 슬라이드 상태면 무시
-        Debug.Log("슬라이드 시작");
-        _isSliding = true;
-        _rigidbody.linearVelocity = Vector3.zero; // 슬라이드 시작 시 현재 속도 초기화
-        _rigidbody.AddForce(3f * MovementSpeed * transform.forward, ForceMode.Impulse);
-        var originalDrag = _rigidbody.linearDamping;
-        _rigidbody.linearDamping = 2f; // 슬라이드 시 마찰력 증가
-        if (_isSwiftness && _swiftnessSlideCount > 0)
-        {
-            _swiftnessSlideCount--;
-            Debug.Log($"스위프트니스 슬라이드 남음: {_swiftnessSlideCount}회");
-        }
+        if (!data.SlideInput.IsSet(NetworkInputData.SLIDE_INPUT)) return;
+        _ = _slideHandler.StartSlide(this, _rigidbody, _swiftnessHandler);
+        RPC_DecreaseHealthTest(50f);
+    }
+
+    private void HandleItemInput(NetworkInputData data)
+    {
+        if (!data.ItemInput.IsSet(NetworkInputData.ITEM_INPUT)) return;
+        _itemConsumer.Use((RunnerItemType)data.SelectedItem, this);
+    }
+
+    private void HandleSkillInput(NetworkInputData data)
+    {
+        UpdateSkillIcon(data.SelectedSkill);
+        if (!data.SkillInput.IsSet(NetworkInputData.SKILL_INPUT)) return;
+        if (_outOfBodyController.IsOutOfBodyActive)
+            _outOfBodyController.EndOutOfBody();
         else
-        {
-            Stamina -= 10f;
-            StageManager.Instance.UIController.RunnerUI.Display.Player.SetStaminaBarRatio(Stamina / 100f); // UI 기력바 갱신
-        }
-        await Task.Delay(1000); // 1초 동안 슬라이드 상태 유지
-        _rigidbody.linearDamping = originalDrag;
-        _isSliding = false;
-        Debug.Log("슬라이드 종료");
+            _skillCaster.Cast((RunnerSkillType)data.SelectedSkill, this);
     }
 
-    private void UseItem(int itemIndex)
+    private void HandleInteractInput(NetworkInputData data)
     {
-        Debug.Log($"아이템 {itemIndex} 사용");
-
-        var runnerItemType = (RunnerItemType)itemIndex;
-        _itemConsumer.Use(runnerItemType, this);
+        if (!data.InteractInput.IsSet(NetworkInputData.INTERACT_INPUT)) return;
+        if (Physics.Raycast(transform.position + Vector3.up, transform.forward, out RaycastHit hit, 3f))
+            if (hit.collider.TryGetComponent<IRunnerInteractableTower>(out var interactableTower))
+                interactableTower.Interact(this);
+        Debug.Log("상호작용 사용");
     }
 
-    private void CastSkill(int skillIndex)
+    private void HandleLaboratoryInput(NetworkInputData data)
     {
-        Debug.Log($"스킬 {skillIndex} 사용");
-
-        var skillType = (RunnerSkillType)skillIndex;
-        _skillCaster.Cast(skillType, this);
+        if (StageManager.Instance.CinemachineSystem == null) return;
+        if (!data.LaboratoryInput.IsSet(NetworkInputData.LABORATORY_INPUT))
+            StageManager.Instance.CinemachineSystem.SetTrackingTarget(transform);
     }
 
     private void UpdateSkillIcon(int skillIndex)
     {
-        if (skillIndex < 1 || skillIndex > skillIcons.Length)
-            return;
-        StageManager.Instance.UIController.RunnerUI.Display.Player.SetSkillIcon(skillIcons[skillIndex - 1]);
-    }
-
-    private void Interact()
-    {
-        if (Physics.Raycast(transform.position + Vector3.up, transform.forward, out RaycastHit hit, 3f))
-        {
-            var hasInteractableTower = hit.collider.TryGetComponent<IRunnerInteractableTower>(out var interactableTower);
-            if (hasInteractableTower)
-                interactableTower.Interact(this);
-        }
-    }
-
-    public void StartTumble()
-    {
-        if (_isTumbling) return; // 이미 텀블 상태면 무시
-        _isTumbling = true;
-        _rigidbody.linearVelocity = MovementSpeed * transform.forward;
-        transform.Find("Root").DOLocalMoveY(2f, 0.5f).SetLoops(2, LoopType.Yoyo).SetEase(Ease.InOutQuad);
-        transform.Find("Root").DOLocalRotate(new Vector3(360f, 0f, 0f), 1f, RotateMode.FastBeyond360).SetEase(Ease.Linear);
-        DOTween.Sequence()
-            .AppendInterval(1.0f)
-            .AppendCallback(() => _isTumbling = false);
-    }
-
-    public void StartInvincibility(float duration)
-    {
-        if (!HasStateAuthority) return; // 상태 권한이 없으면 무시 - 호스트만 변수값 변경 가능
-        if (_isInvincible) return; // 이미 무적 상태면 무시 ... 처음부터 다시 무적 상태 시작 | 지속시간 추가 | 무시
-
-        Debug.Log("무적 상태 시작");
-        _isInvincible = true; // 무적 상태 시작
-        _ = EndInvincibilityAfterDelay(duration); // 일정 시간 후 무적 상태 종료
-    }
-
-    private async Task EndInvincibilityAfterDelay(float duration)
-    {
-        await Task.Delay(TimeSpan.FromSeconds(duration));
-        if (HasStateAuthority)
-            _isInvincible = false; // 무적 상태 종료
-        Debug.Log("무적 상태 종료");
-    }
-
-    public void StartOutOfBody()
-    {
-        if (_isOutOfBody) return; // 이미 영혼 상태면 무시
-        _isOutOfBody = true;
-        RPC_StartOutOfBody();
+        if (skillIndex < 1 || skillIndex > skillIcons.Length) return;
+        StageManager.Instance.UIController.RunnerUI.Display.Player
+            .SetSkillIcon(skillIcons[skillIndex - 1]);
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    private void RPC_StartOutOfBody()
+    private void RPC_DecreaseHealthTest(float amount)
     {
-        _outOfBodyTimer = TickTimer.CreateFromSeconds(Runner, 2.0f);
-        _outOfBodySpiritObject = Runner.Spawn(_outOfBodyPrefab, transform.position);
-        _outOfBodySpiritObject.GetComponent<NetworkRigidbody3D>().Teleport(transform.position + transform.forward * 1f);
-        _outOfBodySpiritObject.GetComponent<Rigidbody>().linearVelocity = transform.forward * MovementSpeed;
-
-        _targetTransform = _outOfBodySpiritObject.transform;
+        if (HasStateAuthority) TakeDamage(amount);
     }
 
-    private void EndOutOfBody()
-    {
-        if (!_isOutOfBody) return;
-        RPC_EndOutOfBody();
-        _isOutOfBody = false;
-    }
+    // IDamageable
+    public void TakeDamage(float damage) => _combatHandler.TakeDamage(this, damage);
+    public void InvokeDiedEvent(PlayerRunner runner, object sender) => OnDied?.Invoke(runner, sender);
 
-    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    private void RPC_EndOutOfBody()
-    {
-        // ! Teleport하면 _targetTransform의 위치는 여기에 맞춰지지 않음 -> 영역 내부에 있어도 '영혼'의 위치에서부터 사선이 그어짐
-        // * -> 눈에 안보이는 Transform을 두고 이걸 _targetTransform으로 설정(PlayerRunner가 아니라)
-        transform.GetComponent<NetworkRigidbody3D>().Teleport(_outOfBodySpiritObject.transform.position);
-        _targetTransform = transform;
-        Runner.Despawn(_outOfBodySpiritObject);
-        _outOfBodySpiritObject = null;
-    }
+    // IHeal
+    public float Heal(float amount) => _combatHandler.Heal(this, amount);
+    public void ReceiveArmor(float amount) => _combatHandler.ReceiveArmor(this, amount);
 
-    public void StartSwiftness()
-    {
-        if (_isSwiftness) return; // 이미 스위프트니스 상태면 무시
-        _isSwiftness = true;
-        WeaponAttackSpeedScaler *= 1.5f; // 공격 속도 50% 증가
-        WeaponReloadSpeedScaler *= 1.5f; // 장전 속도 50% 증가
-        _swiftnessSlideCount = 3; // 슬라이드 3회 획득
-        Debug.Log("스위프트니스 상태 시작");
-        _swiftnessVFX.Play();
-        DOTween.Sequence()
-            .AppendInterval(10.0f) // 10초 지속
-            .AppendCallback(() =>
-            {
-                WeaponAttackSpeedScaler /= 1.5f; // 공격 속도 원래대로
-                WeaponReloadSpeedScaler /= 1.5f; // 장전 속도 원래대로
-                _isSwiftness = false;
-                _swiftnessSlideCount = 0;
-                _swiftnessVFX.Stop();
-                Debug.Log("스위프트니스 상태 종료");
-            });
-    }
+    // IBuffReceiver
+    public void BuffEnter(IBuffParam buffParam) => _buffHandler.BuffEnter(this, buffParam);
+    public void BuffStay(IBuffParam buffParam) => _buffHandler.BuffStay(this, buffParam);
+    public void BuffExit(IBuffParam buffParam) => _buffHandler.BuffExit(this, buffParam);
 
-    public void TakeDamage(float damage)
-    {
-        if (!HasStateAuthority) return; // 상태 권한이 없으면 무시 - 호스트만 변수값 변경 가능
-        if (IsDead) return; // 이미 죽었으면 무시
-        if (_isInvincible) return; // 무적 상태면 무시
-
-        Health -= damage; // 체력 감소
-        StageManager.Instance.UIController.RunnerUI.Display.Player.SetHealthBarRatio(Health / MAX_HEALTH); // UI 체력바 갱신
-
-        if (Health <= 0f)
-        {
-            IsDead = true;
-            OnDied?.Invoke(this, this);
-        }
-    }
-
-    #region Runner Upgrade Methods
-    public void AttackUp(float amount)
-    {
-        WeaponDamageScaler += amount;
-    }
-
-    public void SpeedUp(float amount)
-    {
-        MovementSpeed += amount;
-    }
-    #endregion
-
-    #region BuffReceiver Methods
-    public void BuffEnter(IBuffParam buffParam)
-    {
-        switch (buffParam)
-        {
-            case AmplificationTowerBuffParam amplificationTowerBuffParam:
-                WeaponDamageScaler += amplificationTowerBuffParam.AttackBonus;
-                MovementSpeed += amplificationTowerBuffParam.SpeedBonus;
-                break;
-            default:
-                break;
-        }
-    }
-    public void BuffStay(IBuffParam buffParam)
-    {
-        // 버프 지속 로직 구현
-    }
-
-    public void BuffExit(IBuffParam buffParam)
-    {
-        // 버프 종료 로직 구현
-        switch (buffParam)
-        {
-            case AmplificationTowerBuffParam amplificationTowerBuffParam:
-                WeaponDamageScaler -= amplificationTowerBuffParam.AttackBonus;
-                MovementSpeed -= amplificationTowerBuffParam.SpeedBonus;
-                break;
-            default:
-                break;
-        }
-    }
-    #endregion
-
-    #region Supply Methods
-    public void Supply(IObtainable obtainable)
-    {
-        switch (obtainable)
-        {
-            case Item item:
-                Debug.Log("아이템 획득");
-                break;
-            case Weapon weapon:
-                Debug.Log("무기 획득");
-                break;
-            case Skill skill:
-                Debug.Log("스킬 획득");
-                break;
-            default:
-                Debug.Log("알 수 없는 획득물");
-                break;
-        }
-    }
-    #endregion
-
-    #region Teleport Methods
-    public void TeleportTo(Vector3 position)
-    {
-        RPC_TeleportTo(position);
-    }
-
-    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    private void RPC_TeleportTo(Vector3 position)
-    {
-        if (HasStateAuthority)
-        {
-            TryGetComponent(out NetworkRigidbody3D networkRigidbody);
-            networkRigidbody.Teleport(position, transform.rotation);
-        }
-    }
-
-    public void ReceiveArmor(float amount)
-    {
-        
-    }
-
-    public float Heal(float amount)
-    {
-        if (IsDead) return 0f; // 이미 죽었으면 무시
-
-        float healedAmount = Mathf.Min(amount, MAX_HEALTH - Health);
-        Health += healedAmount; // 체력 회복
-        StageManager.Instance.UIController.RunnerUI.Display.Player.SetHealthBarRatio(Health / MAX_HEALTH); // UI 체력바 갱신
-        return healedAmount;
-    }
-    #endregion
+    // RunnerSkillCaster 호출용 공개 메서드
+    public void StartTumble() => _tumbleHandler.StartTumble(this, _rigidbody);
+    public void StartInvincibility(float duration) => _combatHandler.StartInvincibility(this, duration);
+    public void StartOutOfBody() => _outOfBodyController.StartOutOfBody();
+    public void StartSwiftness() => _swiftnessHandler.StartSwiftness(this, _swiftnessParticleEffect);
+    public void TeleportTo(Vector3 position) => _teleporter.TeleportTo(position);
+    public void AttackUp(float amount) => _upgradeHandler.AttackUp(this, amount);
+    public void SpeedUp(float amount) => _upgradeHandler.SpeedUp(this, amount);
+    public void Supply(IObtainable obtainable) => _upgradeHandler.Supply(this, obtainable);
 }

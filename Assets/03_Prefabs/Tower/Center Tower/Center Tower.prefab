@@ -75,9 +75,19 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 5788506057211119010, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
   m_PrefabInstance: {fileID: 4663521085442727334}
   m_PrefabAsset: {fileID: 0}
+--- !u!23 &1402738534334980235 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 6039222628841061677, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
+  m_PrefabInstance: {fileID: 4663521085442727334}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2553892069381617317 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7190305726298204931, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
+  m_PrefabInstance: {fileID: 4663521085442727334}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &2594067627665134080 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 7153930055231049638, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
   m_PrefabInstance: {fileID: 4663521085442727334}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &5118422083082584715 stripped
@@ -99,6 +109,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _buildRange: 1
   _requireTerritory: 1
+  _BuiltIndex: {x: 0, y: 0}
   _cost:
     Mineral: 0
     Gas: 0
@@ -109,6 +120,13 @@ MonoBehaviour:
   _selectedImage: {fileID: 0}
   _buffRange: 25
   _buffRangeTransform: {fileID: 0}
+  _towerPreviewDebug: 0
+  _buildEnabled: 0
+  _meshRenderers:
+  - {fileID: 2594067627665134080}
+  - {fileID: 1402738534334980235}
+  _enabledMaterial: {fileID: 0}
+  _disableMaterial: {fileID: 0}
   _bullet: {fileID: 3383989042019545065, guid: b09406aae9916994e8ce9e5cadb1e573, type: 3}
   _bulletSpeed: 40
   _firePosition: {fileID: 5158920055649005697}

@@ -1,5 +1,4 @@
 using Fusion;
-using Grid;
 using UnityEngine;
 
 public class RegenerationTower : SupportTower
@@ -29,7 +28,7 @@ public class RegenerationTower : SupportTower
             return;
         }
 
-        if (!TryGetGridManager(out GridManager gm))
+        if (!TryGetGrid(out InfiniteGrid gm))
         {
             _detectedRunner = null;
             _enteringRunner = null;

@@ -5153,6 +5153,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75e96b398c6569b4187f2f6575ae1577, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _cineCamPrefab: {fileID: 4353033904106726711, guid: 4e4841cec5e071f4b8139bae6a2b9696, type: 3}
   _Health: 100
   _Stamina: 100
   _StaminaRecoveryRate: 10

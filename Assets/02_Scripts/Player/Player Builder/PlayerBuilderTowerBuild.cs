@@ -107,6 +107,16 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
         _isStandByBuild = true;
     }
 
+    public TowerGhost CreateTowerGhostInstance()
+    {
+        if (_towerGhost == null)
+            return null;
+
+        TowerGhost towerGhost = UnityEngine.Object.Instantiate(_towerGhost);
+        towerGhost.InitializePreview();
+        return towerGhost;
+    }
+
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
     private void RPC_BuildTower(NetworkPrefabRef towerRef, Cost cost, Vector2Int index, int buildRange)
     {

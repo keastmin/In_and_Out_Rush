@@ -314,12 +314,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc7fdef8c57f4f147a943aa46edfea82, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _buildRange: 0
+  _requireTerritory: 1
+  _BuiltIndex: {x: 0, y: 0}
   _cost:
     Mineral: 0
     Gas: 0
   _ghost: {fileID: 0}
+  _type: 0
+  _towerId: 
   _selectedChecker: {fileID: 8753637989599523519}
   _selectedImage: {fileID: 0}
+  _buffRange: 25
+  _buffRangeTransform: {fileID: 0}
+  _towerPreviewDebug: 0
+  _buildEnabled: 0
+  _meshRenderers:
+  - {fileID: 5361554817355102395}
+  - {fileID: 8854195836421655088}
+  _enabledMaterial: {fileID: 2100000, guid: 28692f7f1e3a530459cc61512adeb04b, type: 2}
+  _disableMaterial: {fileID: 2100000, guid: f476d72d8e4b2df458a80a806a27b46c, type: 2}
 --- !u!114 &1727701568027292707
 MonoBehaviour:
   m_ObjectHideFlags: 0

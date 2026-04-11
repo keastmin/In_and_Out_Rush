@@ -103,12 +103,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 11de846089f05c24dbc6917e0b6b9a23, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _buildRange: 0
+  _requireTerritory: 1
+  _BuiltIndex: {x: 0, y: 0}
   _cost:
     Mineral: 0
     Gas: 0
   _ghost: {fileID: 7665473588800853303, guid: 0b364e81c2959854787a47f8ade54f35, type: 3}
+  _type: 0
+  _towerId: 
   _selectedChecker: {fileID: 6741192922173202427}
   _selectedImage: {fileID: 0}
+  _buffRange: 25
+  _buffRangeTransform: {fileID: 0}
+  _towerPreviewDebug: 0
+  _buildEnabled: 0
+  _meshRenderers:
+  - {fileID: 7971017106085860863}
+  - {fileID: 6779817755514546036}
+  _enabledMaterial: {fileID: 0}
+  _disableMaterial: {fileID: 0}
   _attackSpeed: 1
   _attackPosition: {fileID: 790783490424944510}
   _enemyLayer:
@@ -122,14 +136,9 @@ MonoBehaviour:
   _bioEffect: {fileID: 268686593581800444}
   _currTarget: {fileID: 0}
   _missliePrefab: {fileID: -8257491614462668254, guid: 28d14186b36c59e459e4d71d5ff83aca, type: 3}
-  _attackRange: 1
   _missileDamage: 1
   _explosionRange: 3
   _missileSpeed: 10
-  AttackRange: 10
-  MissileSpeed: 3
-  MissileDamage: 2
-  MissileExplosionRange: 3
 --- !u!4 &790783490424944510 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 513425532071931175, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
@@ -156,8 +165,18 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 5788506057211119010, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
   m_PrefabInstance: {fileID: 997935067257297497}
   m_PrefabAsset: {fileID: 0}
+--- !u!23 &6779817755514546036 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 6039222628841061677, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
+  m_PrefabInstance: {fileID: 997935067257297497}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &7930971290443247962 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7190305726298204931, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
+  m_PrefabInstance: {fileID: 997935067257297497}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &7971017106085860863 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 7153930055231049638, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}
   m_PrefabInstance: {fileID: 997935067257297497}
   m_PrefabAsset: {fileID: 0}

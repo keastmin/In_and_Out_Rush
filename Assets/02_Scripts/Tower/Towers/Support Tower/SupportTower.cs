@@ -1,4 +1,3 @@
-using Grid;
 using UnityEngine;
 
 public class SupportTower : Tower
@@ -45,14 +44,14 @@ public class SupportTower : Tower
     {
         if (!EmitBuffCells) return;
 
-        if (!TryGetGridManager(out GridManager gm)) return;
+        if (!TryGetGrid(out InfiniteGrid gm)) return;
 
         if (_buffSourceId == 0)
         {
             _buffSourceId = GetInstanceID();
         }
 
-        Vector2Int centerIndex = gm.GetNearestCellIndex(transform.position);
+        Vector2Int centerIndex = gm.GetCellIndexFromWorldPosition(transform.position);
         int range = Mathf.Max(0, _buffCellRange);
 
         if (_isBuffSourceRegistered && _lastBuffCenterIndex == centerIndex && _lastBuffCellRange == range)
@@ -70,7 +69,7 @@ public class SupportTower : Tower
     {
         if (!_isBuffSourceRegistered) return;
 
-        if (TryGetGridManager(out GridManager gm))
+        if (TryGetGrid(out InfiniteGrid gm))
         {
             gm.RemoveBuffSource(_buffSourceId);
         }
@@ -85,12 +84,12 @@ public class SupportTower : Tower
         ReleaseBuffCellSource();
     }
 
-    protected bool TryGetGridManager(out GridManager gridManager)
+    protected bool TryGetGrid(out InfiniteGrid gridManager)
     {
-        gridManager = GridManager.Instance;
+        gridManager = InfiniteGrid.Instance;
         if (gridManager == null)
         {
-            gridManager = UnityEngine.Object.FindFirstObjectByType<GridManager>();
+            gridManager = UnityEngine.Object.FindFirstObjectByType<InfiniteGrid>();
         }
 
         return gridManager != null;

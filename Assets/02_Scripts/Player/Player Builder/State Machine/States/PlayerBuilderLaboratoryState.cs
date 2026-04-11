@@ -22,7 +22,7 @@ public class PlayerBuilderLaboratoryState : IPlayerState
         if (Input.GetMouseButtonDown(1))
             _player.IsOpenLaboratory(false);
 
-        _player.BuilderCamMove();
+        _player.CamMover.Move();
         TransitionTo();
     }
 

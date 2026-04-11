@@ -1,5 +1,4 @@
 using Fusion;
-using Grid;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -42,13 +41,15 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
         PruneInvalidTowers();
         if (!HasMoveTargets)
         {
-            GridManager.Instance?.ClearBuildRangePreview();
+            InfiniteGrid.Instance?.ClearBuildRangePreview();
             return false;
         }
 
         bool canMoveAll = true;
         _previewIndices.Clear();
-        var gridManager = GridManager.Instance;
+        var gridManager = InfiniteGrid.Instance;
+        if (gridManager == null)
+            return false;
         var selectedOccupied = CollectSelectedOccupiedIndices();
         var claimedTargets = new Dictionary<Vector2Int, Tower>();
         var conflictedTowers = new HashSet<Tower>();
@@ -64,9 +65,9 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
 
             Vector3 targetPos = mousePos + diff;
 
-            Vector2Int snapshotIndex = gridManager.GetNearestCellIndex(targetPos);
-            Vector3 snapshotPos = gridManager.GetCellCenterPositionFromIndex(snapshotIndex);
-            Vector2Int currentIndex = gridManager.GetNearestCellIndex(targetTower.transform.position);
+            Vector2Int snapshotIndex = gridManager.GetCellIndexFromWorldPosition(targetPos);
+            Vector3 snapshotPos = gridManager.GetCellCenterPositionFromCellIndex(snapshotIndex);
+            Vector2Int currentIndex = gridManager.GetCellIndexFromWorldPosition(targetTower.transform.position);
             List<Vector2Int> targetIndices = gridManager.GetCellIndicesInRange(snapshotIndex, targetTower.BuildRange, includeCenter: true);
 
             ghost.transform.position = snapshotPos;
@@ -139,7 +140,7 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
         if (!HasMoveTargets)
             return;
 
-        var gridManager = GridManager.Instance;
+        var gridManager = InfiniteGrid.Instance;
         if (gridManager == null) return;
 
         var selectedOccupied = CollectSelectedOccupiedIndices();
@@ -152,8 +153,8 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
             if (ghost == null || !_ghostToTowerDic.TryGetValue(ghost, out Tower tower) || tower == null)
                 continue;
 
-            Vector2Int currentIndex = gridManager.GetNearestCellIndex(tower.transform.position);
-            Vector2Int targetIndex = gridManager.GetNearestCellIndex(ghost.transform.position);
+            Vector2Int currentIndex = gridManager.GetCellIndexFromWorldPosition(tower.transform.position);
+            Vector2Int targetIndex = gridManager.GetCellIndexFromWorldPosition(ghost.transform.position);
             List<Vector2Int> targetIndices = gridManager.GetCellIndicesInRange(targetIndex, tower.BuildRange, includeCenter: true);
 
             plannedMoves.Add(new PlannedTowerMove
@@ -252,7 +253,7 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
 
     public void TowerMoveClear()
     {
-        GridManager.Instance?.ClearBuildRangePreview();
+        InfiniteGrid.Instance?.ClearBuildRangePreview();
 
         if (_ghosts != null)
         {
@@ -308,7 +309,7 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
 
         if (!HasMoveTargets)
         {
-            GridManager.Instance?.ClearBuildRangePreview();
+            InfiniteGrid.Instance?.ClearBuildRangePreview();
         }
     }
 
@@ -354,6 +355,10 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
                 continue;
 
             var ghost = Instantiate(tower.Ghost);
+            if (ghost == null)
+                continue;
+
+            ghost.InitializePreview();
             if (tower.HasBuffRange)
             {
                 ghost.SetGhostBuffRange(tower.BuffRange);

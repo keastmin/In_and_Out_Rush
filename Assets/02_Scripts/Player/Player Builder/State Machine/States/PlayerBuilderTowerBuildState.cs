@@ -9,7 +9,6 @@ public class PlayerBuilderTowerBuildState : IPlayerState
     private TowerGhost _towerGhost;
     private Vector3 _towerBuildPosition;
     private Vector2Int _towerBuildIndex;
-    private bool _canTowerBuild;
 
     public PlayerBuilderTowerBuildState(PlayerBuilder player)
     {
@@ -45,7 +44,7 @@ public class PlayerBuilderTowerBuildState : IPlayerState
 
     public void LateUpdate()
     {
-        _player.BuilderCamMove();
+        _player.CamMover.Move();
     }
 
     public void Exit()
@@ -71,19 +70,13 @@ public class PlayerBuilderTowerBuildState : IPlayerState
             _towerGhost = null;
         }
 
-        _canTowerBuild = false;
-
         _player.BuilderUI.ActivationTowerBuildUI(false);
     }
 
     private void CreateTowerGhost()
     {
-        TowerGhost ghostPrefab = _player.BuilderTowerBuild.TowerGhost;
-        if (ghostPrefab == null)
-            return;
-
-        _towerGhost = Object.Instantiate(ghostPrefab);
-        if (_player.BuilderTowerBuild.HasBuffRange)
+        _towerGhost = _player.BuilderTowerBuild.CreateTowerGhostInstance();
+        if (_towerGhost != null && _player.BuilderTowerBuild.HasBuffRange)
         {
             _towerGhost.SetGhostBuffRange(_player.BuilderTowerBuild.BuffRange);
         }
@@ -136,7 +129,6 @@ public class PlayerBuilderTowerBuildState : IPlayerState
             }
         }
 
-        _canTowerBuild = canTowerCraft;
         return canTowerCraft;
     }
 }

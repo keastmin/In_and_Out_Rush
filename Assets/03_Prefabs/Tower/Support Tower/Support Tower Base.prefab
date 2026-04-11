@@ -50,7 +50,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3359582742811060272, guid: 1eacc95d9e3eca74e8c0b5edc3c35205, type: 3}
       propertyPath: m_Name
-      value: Support Tower Base Variant
+      value: Support Tower Base
       objectReference: {fileID: 0}
     - target: {fileID: 9093304404240583085, guid: 1eacc95d9e3eca74e8c0b5edc3c35205, type: 3}
       propertyPath: SortKey
@@ -69,6 +69,16 @@ PrefabInstance:
       insertIndex: 1
       addedObject: {fileID: 1522401907864096044}
   m_SourcePrefab: {fileID: 100100000, guid: 1eacc95d9e3eca74e8c0b5edc3c35205, type: 3}
+--- !u!23 &1072052434212013829 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 8854195836421655088, guid: 1eacc95d9e3eca74e8c0b5edc3c35205, type: 3}
+  m_PrefabInstance: {fileID: 8358925214333734197}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &4497072389281494414 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 5361554817355102395, guid: 1eacc95d9e3eca74e8c0b5edc3c35205, type: 3}
+  m_PrefabInstance: {fileID: 8358925214333734197}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &6530074897574667525 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3359582742811060272, guid: 1eacc95d9e3eca74e8c0b5edc3c35205, type: 3}
@@ -86,10 +96,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9a3c5ff212a4b6b44ab6cf81da905adf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _buildRange: 0
+  _requireTerritory: 1
+  _BuiltIndex: {x: 0, y: 0}
   _cost:
     Mineral: 0
     Gas: 0
   _ghost: {fileID: 0}
-  _isCenter: 0
+  _type: 0
+  _towerId: 
   _selectedChecker: {fileID: 0}
   _selectedImage: {fileID: 0}
+  _buffRange: 25
+  _buffRangeTransform: {fileID: 0}
+  _towerPreviewDebug: 0
+  _buildEnabled: 0
+  _meshRenderers:
+  - {fileID: 4497072389281494414}
+  - {fileID: 1072052434212013829}
+  _enabledMaterial: {fileID: 0}
+  _disableMaterial: {fileID: 0}
+  _buffCellRange: 1
+  _showLegacyBuffRangeCircle: 0
+  _buffCellColor: {r: 1, g: 0.85, b: 0.15, a: 0.35}

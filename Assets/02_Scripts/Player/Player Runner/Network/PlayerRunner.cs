@@ -71,6 +71,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
 
     public override void Spawned()
     {
+        base.Spawned();
         InitializePlayerRunner();
         BuffReceiverRegistry.Register(this, transform, BuffTargetType.Runner);
     }

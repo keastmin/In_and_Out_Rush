@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Dev;
 using Dev.Local;
@@ -16,6 +17,8 @@ public class TrackSystem : NetworkSystemBase
 
     public Track Track;
     TrackVisible trackVisible;
+    public event Action<Vector3[], TrackSystem, object> OnTrackChanged;
+    public float TrackLineWidth => trackVisible != null ? trackVisible.LineWidth : 0f;
 
     void OnDrawGizmosSelected()
     {
@@ -46,6 +49,11 @@ public class TrackSystem : NetworkSystemBase
         trackVisible.name = $"{Runner.name} - Track";
         trackVisible.GenerateTrackVertices(Track.Vertices);
         trackVisible.GenerateTrackLine(Track.Vertices);
+
+        if (Object != null && Object.HasStateAuthority)
+        {
+            NotifyTrackChanged();
+        }
     }
 
     void CreateTrack(int vertexCount, float horizontalRadius, float verticalRadius, float noise)
@@ -58,8 +66,8 @@ public class TrackSystem : NetworkSystemBase
             float x = Mathf.Cos(angle) * horizontalRadius;
             float z = Mathf.Sin(angle) * verticalRadius;
 
-            x += Random.Range(-noise, noise);
-            z += Random.Range(-noise, noise);
+            x += UnityEngine.Random.Range(-noise, noise);
+            z += UnityEngine.Random.Range(-noise, noise);
 
             var vertex = new Vector3(x, 0, z);
             trackVertices[i] = vertex;
@@ -128,6 +136,7 @@ public class TrackSystem : NetworkSystemBase
         trackVisible.GenerateTrackLine(vertices);
 
         temporaryVertices.Clear();
+        NotifyTrackChanged();
     }
 
     int expansionLevel;
@@ -135,11 +144,11 @@ public class TrackSystem : NetworkSystemBase
     {
         expansionLevel++;
         CreateTrack(vertexCount * expansionLevel, horizontalRadius * expansionLevel, verticalRadius * expansionLevel, noise);
-        var noiseCount = Random.Range(2, noiseVertexCount);
+        var noiseCount = UnityEngine.Random.Range(2, noiseVertexCount);
         for (int i = 0; i < noiseCount; i++)
         {
-            var randomIndex = Random.Range(0, Track.Vertices.Length);
-            var intensity = Random.Range(1f / noiseIntensity, 1f * noiseIntensity);
+            var randomIndex = UnityEngine.Random.Range(0, Track.Vertices.Length);
+            var intensity = UnityEngine.Random.Range(1f / noiseIntensity, 1f * noiseIntensity);
             Track.Vertices[randomIndex] *= intensity;
         }
 
@@ -165,6 +174,12 @@ public class TrackSystem : NetworkSystemBase
         trackVisible.GenerateTrackVertices(Track.Vertices);
         trackVisible.GenerateTrackLine(Track.Vertices);
 
+        if (Object != null && Object.HasStateAuthority)
+        {
+            SyncTrack(Track.Vertices);
+            NotifyTrackChanged();
+        }
+
         if (!Object.HasStateAuthority)
         {
             RequestSyncTrack();
@@ -177,5 +192,10 @@ public class TrackSystem : NetworkSystemBase
         {
             ExpandTrack();
         }
+    }
+
+    void NotifyTrackChanged()
+    {
+        OnTrackChanged?.Invoke(Track?.Vertices, this, this);
     }
 }

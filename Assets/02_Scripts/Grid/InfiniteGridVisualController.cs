@@ -26,6 +26,7 @@ public class InfiniteGridVisualController
         InfiniteGridRenderingSettings rendering,
         GridCalculator gridCalculator,
         IEnumerable<KeyValuePair<Vector2Int, CellData>> networkGrid,
+        IEnumerable<Vector2Int> additionalOccupiedIndices,
         IEnumerable<Vector2Int> previewIndices,
         IEnumerable<Vector2Int> blockedPreviewIndices,
         IReadOnlyDictionary<Vector2Int, int> buffCellRefCount,
@@ -61,21 +62,23 @@ public class InfiniteGridVisualController
         _propertyBlock.SetColor("_SecondaryGuideColor", guide.SecondaryGuideColor);
         _propertyBlock.SetColor("_PreviewValidGuideColor", guide.PreviewValidGuideColor);
         _propertyBlock.SetColor("_PreviewBlockedGuideColor", guide.PreviewBlockedGuideColor);
-        ApplyOccupiedCells(gridCalculator, networkGrid);
+        ApplyOccupiedCells(gridCalculator, networkGrid, additionalOccupiedIndices);
         ApplyPreviewCells(gridCalculator, previewIndices, blockedPreviewIndices);
         ApplyBuffCells(gridCalculator, buffCellRefCount, buffCellColorSum);
         ApplyTerritoryVertices(territory);
         _groundRenderer.SetPropertyBlock(_propertyBlock);
     }
 
-    private void ApplyOccupiedCells(GridCalculator gridCalculator, IEnumerable<KeyValuePair<Vector2Int, CellData>> networkGrid)
+    private void ApplyOccupiedCells(
+        GridCalculator gridCalculator,
+        IEnumerable<KeyValuePair<Vector2Int, CellData>> networkGrid,
+        IEnumerable<Vector2Int> additionalOccupiedIndices)
     {
         int occupiedCount = 0;
+        var occupiedIndices = new HashSet<Vector2Int>();
 
         if (networkGrid != null)
         {
-            var occupiedIndices = new HashSet<Vector2Int>();
-
             foreach (var pair in networkGrid)
             {
                 List<Vector2Int> indicesInRange = gridCalculator.GetInRangeIndices(pair.Key, pair.Value.ActiveRange);
@@ -84,18 +87,26 @@ public class InfiniteGridVisualController
                     occupiedIndices.Add(indicesInRange[i]);
                 }
             }
+        }
 
-            foreach (Vector2Int occupiedIndex in occupiedIndices)
+        if (additionalOccupiedIndices != null)
+        {
+            foreach (Vector2Int occupiedIndex in additionalOccupiedIndices)
             {
-                if (occupiedCount >= MaxOccupiedCells)
-                {
-                    break;
-                }
-
-                Vector2Int axial = gridCalculator.GetAxialFromOffsetIndex(occupiedIndex);
-                _occupiedCellsBuffer[occupiedCount] = new Vector4(axial.x, axial.y, 0f, 0f);
-                occupiedCount++;
+                occupiedIndices.Add(occupiedIndex);
             }
+        }
+
+        foreach (Vector2Int occupiedIndex in occupiedIndices)
+        {
+            if (occupiedCount >= MaxOccupiedCells)
+            {
+                break;
+            }
+
+            Vector2Int axial = gridCalculator.GetAxialFromOffsetIndex(occupiedIndex);
+            _occupiedCellsBuffer[occupiedCount] = new Vector4(axial.x, axial.y, 0f, 0f);
+            occupiedCount++;
         }
 
         _propertyBlock.SetFloat("_OccupiedCellCount", occupiedCount);

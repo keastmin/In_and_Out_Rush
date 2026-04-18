@@ -24,6 +24,7 @@ public class InfiniteGrid : NetworkBehaviour
 
     [Networked, Capacity(512), OnChangedRender(nameof(RefreshVisuals))]
     public NetworkDictionary<Vector2Int, CellData> NetworkGrid => default;
+    public HashSet<Tower> HostOnlyReadTowers = new();
 
     public bool ShowCellStateOverlay => _layout.ShowCellStateOverlay;
     public Vector3 GridOrigin => _layout.ResolveOrigin(transform);
@@ -32,8 +33,10 @@ public class InfiniteGrid : NetworkBehaviour
     private GridCalculator _gridCalculator;
     private InfiniteGridVisualController _visualController;
     private bool _isTerritoryEventBound;
+    private bool _isTrackEventBound;
     private readonly HashSet<Vector2Int> _previewValidCellIndices = new();
     private readonly HashSet<Vector2Int> _previewBlockedCellIndices = new();
+    private readonly HashSet<Vector2Int> _trackBlockedCellIndices = new();
     private readonly Dictionary<int, BuffSourceState> _buffSources = new();
     private readonly Dictionary<Vector2Int, int> _buffCellRefCount = new();
     private readonly Dictionary<Vector2Int, Color> _buffCellColorSum = new();
@@ -50,6 +53,7 @@ public class InfiniteGrid : NetworkBehaviour
 
         Initialize();
         BindTerritoryEventsIfNeeded();
+        BindTrackEventsIfNeeded();
         RefreshVisuals();
 
         // 시작시 그리드 가이드 끄기
@@ -60,6 +64,7 @@ public class InfiniteGrid : NetworkBehaviour
     {
         Initialize();
         BindTerritoryEventsIfNeeded();
+        BindTrackEventsIfNeeded();
         RefreshVisuals();
 
         // 시작시 그리드 가이드 끄기
@@ -70,6 +75,8 @@ public class InfiniteGrid : NetworkBehaviour
     {
         base.Spawned();
         BindTerritoryEventsIfNeeded();
+        BindTrackEventsIfNeeded();
+        RefreshTrackBlockedCells();
         RefreshVisuals();
     }
 
@@ -79,6 +86,12 @@ public class InfiniteGrid : NetworkBehaviour
         {
             _territorySystem.OnTerritoryExpandedEvent -= OnTerritoryExpanded;
             _isTerritoryEventBound = false;
+        }
+
+        if (_isTrackEventBound && _trackSystem != null)
+        {
+            _trackSystem.OnTrackChanged -= OnTrackChanged;
+            _isTrackEventBound = false;
         }
     }
 
@@ -206,6 +219,26 @@ public class InfiniteGrid : NetworkBehaviour
         return _territorySystem.Territory.IsPointInPolygon(centerXZ);
     }
 
+    public bool IsCellBlockedByTrack(Vector2Int index)
+    {
+        return _trackBlockedCellIndices.Contains(index);
+    }
+
+    public bool IsCellBuildBlocked(Vector2Int index, ISet<Vector2Int> ignoreIndices = null, bool requireTerritory = true)
+    {
+        if (requireTerritory && !IsCellInTerritory(index))
+        {
+            return true;
+        }
+
+        if (IsCellBlockedByTrack(index))
+        {
+            return true;
+        }
+
+        return IsCellOccupied(index, ignoreIndices);
+    }
+
     public bool CanPlaceAt(Vector2Int index, int range, ISet<Vector2Int> ignoreIndices = null, bool requireTerritory = true)
     {
         if (_gridCalculator == null)
@@ -216,12 +249,7 @@ public class InfiniteGrid : NetworkBehaviour
         List<Vector2Int> targetIndices = _gridCalculator.GetInRangeIndices(index, range);
         for (int i = 0; i < targetIndices.Count; i++)
         {
-            if (requireTerritory && !IsCellInTerritory(targetIndices[i]))
-            {
-                return false;
-            }
-
-            if (IsCellOccupied(targetIndices[i], ignoreIndices))
+            if (IsCellBuildBlocked(targetIndices[i], ignoreIndices, requireTerritory))
             {
                 return false;
             }
@@ -246,12 +274,12 @@ public class InfiniteGrid : NetworkBehaviour
         for (int i = 0; i < targetIndices.Count; i++)
         {
             Vector2Int targetIndex = targetIndices[i];
-            if (requireTerritory && !IsCellInTerritory(targetIndex))
+            if (requireEmpty && IsCellBuildBlocked(targetIndex, ignoreOccupiedIndices, requireTerritory))
             {
                 return false;
             }
 
-            if (requireEmpty && IsCellOccupied(targetIndex, ignoreOccupiedIndices))
+            if (!requireEmpty && requireTerritory && !IsCellInTerritory(targetIndex))
             {
                 return false;
             }
@@ -438,6 +466,7 @@ public class InfiniteGrid : NetworkBehaviour
             _rendering,
             _gridCalculator,
             networkGrid,
+            _trackBlockedCellIndices,
             _previewValidCellIndices,
             _previewBlockedCellIndices,
             _buffCellRefCount,
@@ -461,9 +490,173 @@ public class InfiniteGrid : NetworkBehaviour
         _isTerritoryEventBound = true;
     }
 
+    private void BindTrackEventsIfNeeded()
+    {
+        if (_isTrackEventBound || _trackSystem == null)
+        {
+            return;
+        }
+
+        _trackSystem.OnTrackChanged += OnTrackChanged;
+        _isTrackEventBound = true;
+        RefreshTrackBlockedCells();
+    }
+
     private void OnTerritoryExpanded(Territory territory, TerritorySystem territorySystem)
     {
         RefreshVisuals();
+    }
+
+    private void OnTrackChanged(Vector3[] vertices, TrackSystem trackSystem, object sender)
+    {
+        RefreshTrackBlockedCells();
+    }
+
+    private void RefreshTrackBlockedCells()
+    {
+        _trackBlockedCellIndices.Clear();
+
+        if (_gridCalculator == null || _trackSystem == null || _trackSystem.Track?.Vertices == null || _trackSystem.Track.Vertices.Length < 2)
+        {
+            RefreshVisuals();
+            return;
+        }
+
+        Vector3[] vertices = _trackSystem.Track.Vertices;
+        float overlapRadius = _layout.CellSize + (_trackSystem.TrackLineWidth * 0.5f);
+        Bounds bounds = new Bounds(vertices[0], Vector3.zero);
+
+        for (int i = 1; i < vertices.Length; i++)
+        {
+            bounds.Encapsulate(vertices[i]);
+        }
+
+        bounds.Expand(new Vector3(overlapRadius * 2f, 0f, overlapRadius * 2f));
+
+        Vector2Int[] corners =
+        {
+            GetCellIndexFromWorldPosition(new Vector3(bounds.min.x, GridHeight, bounds.min.z)),
+            GetCellIndexFromWorldPosition(new Vector3(bounds.min.x, GridHeight, bounds.max.z)),
+            GetCellIndexFromWorldPosition(new Vector3(bounds.max.x, GridHeight, bounds.min.z)),
+            GetCellIndexFromWorldPosition(new Vector3(bounds.max.x, GridHeight, bounds.max.z))
+        };
+
+        int padding = Mathf.CeilToInt(overlapRadius / Mathf.Max(0.001f, _layout.CellSize)) + 2;
+        int minCol = corners[0].x;
+        int maxCol = corners[0].x;
+        int minRow = corners[0].y;
+        int maxRow = corners[0].y;
+
+        for (int i = 1; i < corners.Length; i++)
+        {
+            minCol = Mathf.Min(minCol, corners[i].x);
+            maxCol = Mathf.Max(maxCol, corners[i].x);
+            minRow = Mathf.Min(minRow, corners[i].y);
+            maxRow = Mathf.Max(maxRow, corners[i].y);
+        }
+
+        minCol -= padding;
+        maxCol += padding;
+        minRow -= padding;
+        maxRow += padding;
+
+        for (int col = minCol; col <= maxCol; col++)
+        {
+            for (int row = minRow; row <= maxRow; row++)
+            {
+                Vector2Int cellIndex = new Vector2Int(col, row);
+                Vector3 cellCenter = GetCellCenterPositionFromCellIndex(cellIndex);
+                if (IsTrackOverlappingCell(cellCenter, vertices, overlapRadius))
+                {
+                    _trackBlockedCellIndices.Add(cellIndex);
+                }
+            }
+        }
+
+        DestroyBlockedTowers();
+        RefreshVisuals();
+    }
+
+    private bool IsTrackOverlappingCell(Vector3 cellCenter, Vector3[] trackVertices, float overlapRadius)
+    {
+        Vector2 center = new Vector2(cellCenter.x, cellCenter.z);
+        float overlapRadiusSqr = overlapRadius * overlapRadius;
+
+        for (int i = 0; i < trackVertices.Length; i++)
+        {
+            Vector3 startVertex = trackVertices[i];
+            Vector3 endVertex = trackVertices[(i + 1) % trackVertices.Length];
+            Vector2 start = new Vector2(startVertex.x, startVertex.z);
+            Vector2 end = new Vector2(endVertex.x, endVertex.z);
+
+            if (GetDistanceToSegmentSqr(center, start, end) <= overlapRadiusSqr)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static float GetDistanceToSegmentSqr(Vector2 point, Vector2 start, Vector2 end)
+    {
+        Vector2 segment = end - start;
+        float segmentLengthSqr = segment.sqrMagnitude;
+
+        if (segmentLengthSqr <= Mathf.Epsilon)
+        {
+            return (point - start).sqrMagnitude;
+        }
+
+        float t = Mathf.Clamp01(Vector2.Dot(point - start, segment) / segmentLengthSqr);
+        Vector2 closestPoint = start + segment * t;
+        return (point - closestPoint).sqrMagnitude;
+    }
+
+    private void DestroyBlockedTowers()
+    {
+        if (!HasStateAuthority || HostOnlyReadTowers.Count == 0 || Runner == null)
+        {
+            return;
+        }
+
+        List<Tower> towersToDestroy = new();
+
+        foreach (Tower tower in HostOnlyReadTowers)
+        {
+            if (tower == null || !tower.HasGridOccupation)
+            {
+                continue;
+            }
+
+            IReadOnlyList<Vector2Int> occupiedIndices = tower.OccupiedIndices;
+            for (int i = 0; i < occupiedIndices.Count; i++)
+            {
+                if (IsCellBlockedByTrack(occupiedIndices[i]))
+                {
+                    towersToDestroy.Add(tower);
+                    break;
+                }
+            }
+        }
+
+        for (int i = 0; i < towersToDestroy.Count; i++)
+        {
+            Tower tower = towersToDestroy[i];
+            if (tower == null || tower.Object == null)
+            {
+                continue;
+            }
+
+            if (tower.IsCenter && StageManager.Instance != null && StageManager.Instance.PlayerBuilder != null)
+            {
+                int nextCenterCount = Mathf.Max(0, StageManager.Instance.PlayerBuilder.CenterTowerCount - 1);
+                StageManager.Instance.PlayerBuilder.SetCenterTowerCount(nextCenterCount);
+            }
+
+            tower.ReleaseGridOccupation();
+            Runner.Despawn(tower.Object);
+        }
     }
 
     private void AddBuffCells(IEnumerable<Vector2Int> indices, Color color)

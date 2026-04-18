@@ -71,8 +71,7 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
         for (int i = 0; i < indices.Count; i++)
         {
             Vector2Int targetIndex = indices[i];
-            bool canPlaceCell = InfiniteGrid.Instance.IsCellInTerritory(targetIndex) &&
-                                !InfiniteGrid.Instance.IsCellOccupied(targetIndex);
+            bool canPlaceCell = !InfiniteGrid.Instance.IsCellBuildBlocked(targetIndex);
 
             if (canPlaceCell)
             {

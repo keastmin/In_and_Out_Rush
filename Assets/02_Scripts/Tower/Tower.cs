@@ -40,7 +40,10 @@ public class Tower : GridPlaceable, ICanClickObject
         base.Spawned();
 
         if (HasStateAuthority)
+        {
             NetBuffRange = _buffRange;
+            InfiniteGrid.Instance?.HostOnlyReadTowers.Add(this);
+        }
 
         OnChangeBuffScale();
         TowerSpawned();
@@ -53,6 +56,9 @@ public class Tower : GridPlaceable, ICanClickObject
 
     public override void Despawned(NetworkRunner runner, bool hasState)
     {
+        if(HasStateAuthority)
+            InfiniteGrid.Instance?.HostOnlyReadTowers.Remove(this);
+
         NotifyBuilderTowerDespawned();
         base.Despawned(runner, hasState);
         TowerDespawned();

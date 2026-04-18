@@ -9,6 +9,8 @@ namespace Dev.Local
 
         private GameObject[] _vertexObjects;
 
+        public float LineWidth => _lineRenderer != null ? _lineRenderer.widthMultiplier : 0f;
+
         public void GenerateTrackVertices(Vector3[] vertices)
         {
             if (_vertexObjects != null)

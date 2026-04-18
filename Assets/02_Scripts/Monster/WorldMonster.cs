@@ -24,7 +24,7 @@ public class WorldMonster : Monster
         Gizmos.DrawSphere(patrolTargetPosition, 0.1f);
     }
 
-    void OnDrawGizmos()
+    protected virtual void OnDrawGizmos()
     {
         Gizmos.color = Color.blue;
         Gizmos.DrawLine(transform.position + Vector3.up * 0.1f, patrolTargetPosition + Vector3.up * 0.1f);

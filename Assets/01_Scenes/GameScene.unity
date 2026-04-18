@@ -402,7 +402,7 @@ MonoBehaviour:
   trackSystem: {fileID: 896837533}
   monsterParentTransform: {fileID: 636045684}
   monsterPrefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
-  spawnInterval: 0.1
+  spawnInterval: 1
   spawnCount: 20
 --- !u!1 &272488528
 GameObject:
@@ -806,7 +806,7 @@ MonoBehaviour:
   - {fileID: -1371715635768697079, guid: 3febb430baa3e5a42834c9c276f5ce3e, type: 3}
   - {fileID: -7740008079418054329, guid: 016c82c53b2d0094ea2d7832ca2e11b1, type: 3}
   - {fileID: -5550781050059216141, guid: ad46d8f98d96fd94196ef19d385fdd25, type: 3}
-  spawnCount: 10
+  spawnCount: 2
   spawnRadius: 30
   playerTransform: {fileID: 0}
 --- !u!1 &855305307

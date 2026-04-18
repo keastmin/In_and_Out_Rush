@@ -9,12 +9,14 @@ public class Centipede : WorldMonster
     [SerializeField] protected int segmentCount = 5;
     [SerializeField] protected float segmentAmplitude = 1.0f;
     [SerializeField] protected float segmentFrequency = 1.0f;
-    [SerializeField] protected float moveCountThreshold = 10f;
+    [SerializeField] protected float segmentSpacing = 1.0f; // 세그먼트 간 거리 (월드 단위)
 
-    List<Transform> segments = new List<Transform>();
-    List<Vector3> originalSegmentPositions = new List<Vector3>();
-    List<Vector3> segmentPositions = new List<Vector3>();
-    int moveCount = 0;
+    readonly List<Transform> segments = new();
+    // 헤드가 지나온 경로 기록 (인덱스 0이 가장 오래된 위치, 마지막이 현재 위치)
+    readonly List<Vector3> positionHistory = new();
+
+    // 너무 촘촘하게 기록하면 리스트가 폭증하므로 최소 기록 거리 설정
+    const float MinRecordDistance = 0.02f;
 
     public override void Spawned()
     {
@@ -28,45 +30,62 @@ public class Centipede : WorldMonster
         {
             GameObject segment = Instantiate(segmentPrefab, transform);
             segment.name = $"Segment_{i}";
-            Transform segmentTransform = segment.transform;
-            segmentTransform.position = head.position;
-            segments.Add(segmentTransform);
-            originalSegmentPositions.Add(segmentTransform.position);
-            segmentPositions.Add(segmentTransform.position);
+            segments.Add(segment.transform);
         }
+        positionHistory.Add(head.position);
     }
 
     Vector3 originalPosition;
-    float duration;
+    Vector3 progressivePosition;
     float elapsedTime;
+    float distance;
+
+    protected override void OnDrawGizmos()
+    {
+        base.OnDrawGizmos();
+        Gizmos.color = Color.red;
+        if (isPatrolling)
+        {
+            Gizmos.DrawLine(originalPosition + Vector3.up * 0.1f, progressivePosition + Vector3.up * 0.1f);
+        }
+    }
 
     protected override void Patrol()
     {
         if (isPatrolling == false)
         {
             var randomTargetPosition = patrolPivotPosition + Random.insideUnitSphere * patrolRadius;
-            if (!territory.IsPointInPolygon(randomTargetPosition))
+            if (!territory.IsPointInPolygon(new Vector2(randomTargetPosition.x, randomTargetPosition.z)))
             {
                 originalPosition = transform.position;
+                progressivePosition = transform.position;
                 patrolTargetPosition = randomTargetPosition;
                 patrolTargetPosition.y = transform.position.y;
                 elapsedTime = 0;
-                duration = Vector3.Distance(transform.position, randomTargetPosition) / movementSpeed;
+                distance = Vector3.Distance(transform.position, randomTargetPosition);
                 isPatrolling = true;
+                // Debug.Log("!!: " + distance);
             }
         }
         else
         {
-            elapsedTime += Time.deltaTime;
-            Vector3 direction = (patrolTargetPosition - transform.position).normalized;
-            var verticalDirection = Quaternion.AngleAxis(90f, Vector3.up) * direction;
-            rigidBody.linearVelocity = Vector3.Lerp(originalPosition, patrolTargetPosition, Mathf.Min(elapsedTime / duration, 1)) +
-                segmentAmplitude * Mathf.Sin(elapsedTime * segmentFrequency) * verticalDirection - transform.position;
-
-            if (elapsedTime >= duration)
+            elapsedTime += Runner.DeltaTime; // Fusion 고정 틱 델타타임 사용
+            Vector3 direction = (patrolTargetPosition - originalPosition).normalized;
+            progressivePosition += movementSpeed * Runner.DeltaTime * direction;
+            // Debug.Log("??: " + Vector3.Distance(progressivePosition, originalPosition));
+            if (distance < Vector3.Distance(progressivePosition, originalPosition))
             {
-                isPatrolling = false; // 목표 위치에 도달하면 다시 순찰 시작
+                isPatrolling = false;
+                return;
             }
+            var verticalDirection = Quaternion.AngleAxis(90f, Vector3.up) * direction;
+            var verticalMovement = segmentAmplitude * Mathf.Sin(elapsedTime * segmentFrequency) * verticalDirection;
+            rigidBody.linearVelocity = progressivePosition + verticalMovement - transform.position;
+            // TODO: 안닿게 하려면 길찾기 알고리즘이 필요함
+            // if (territory.IsPointInPolygon(new Vector2(transform.position.x, transform.position.z)))
+            // {
+            //     isPatrolling = false;
+            // }
         }
     }
 
@@ -74,32 +93,55 @@ public class Centipede : WorldMonster
 
     protected virtual void FollowSegments()
     {
-        moveCount++;
-        if (moveCount > moveCountThreshold)
+        // 헤드가 일정 거리 이상 이동했을 때만 경로에 기록 (프레임률 무관)
+        Vector3 headPos = head.position;
+        if (Vector3.Distance(headPos, positionHistory[^1]) >= MinRecordDistance)
         {
-            moveCount = 0;
-            Vector3 targetPosition = head.position;
-            for (int i = 0; i < segmentCount; i++)
-            {
-                originalSegmentPositions[i] = segmentPositions[i];
-            }
-            for (int i = segmentCount - 1; i >= 0; i--)
-            {
-                if (i == 0)
-                {
-                    segmentPositions[i] = targetPosition;
-                }
-                else
-                {
-                    segmentPositions[i] = segmentPositions[i - 1];
-                }
-            }
+            positionHistory.Add(headPos);
         }
-        for (int i = 0; i < segmentCount; i++)
+
+        // 각 세그먼트를 경로상의 고정 거리 위치에 배치
+        for (int i = 0; i < segments.Count; i++)
         {
-            Transform segment = segments[i];
-            Vector3 targetPosition = segmentPositions[i];
-            segment.position = Vector3.Lerp(originalSegmentPositions[i], targetPosition, moveCount / moveCountThreshold);
+            segments[i].position = GetPositionAlongHistory((i + 1) * segmentSpacing);
+        }
+
+        // 더 이상 필요 없는 오래된 경로 기록 정리
+        TrimHistory(segmentCount * segmentSpacing);
+    }
+
+    // 헤드로부터 targetDistance만큼 경로를 거슬러 올라간 위치를 반환
+    Vector3 GetPositionAlongHistory(float targetDistance)
+    {
+        float accumulated = 0f;
+        for (int i = positionHistory.Count - 1; i > 0; i--)
+        {
+            float segDist = Vector3.Distance(positionHistory[i], positionHistory[i - 1]);
+            if (accumulated + segDist >= targetDistance)
+            {
+                // 두 기록점 사이에서 선형 보간
+                float t = (targetDistance - accumulated) / segDist;
+                return Vector3.Lerp(positionHistory[i], positionHistory[i - 1], t);
+            }
+            accumulated += segDist;
+        }
+        // 히스토리가 아직 충분히 쌓이지 않은 경우 (초기 스폰 직후)
+        return positionHistory[0];
+    }
+
+    // maxDistance 이상 멀어진 오래된 기록을 제거
+    void TrimHistory(float maxDistance)
+    {
+        float accumulated = 0f;
+        for (int i = positionHistory.Count - 1; i > 0; i--)
+        {
+            accumulated += Vector3.Distance(positionHistory[i], positionHistory[i - 1]);
+            if (accumulated > maxDistance + segmentSpacing)
+            {
+                if (i > 1)
+                    positionHistory.RemoveRange(0, i - 1);
+                break;
+            }
         }
     }
 }

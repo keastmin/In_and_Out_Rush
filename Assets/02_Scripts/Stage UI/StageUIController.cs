@@ -5,10 +5,19 @@ public class StageUIController : MonoBehaviour
 {
     public PlayerBuilderUI BuilderUI; // 플레이어 빌더가 보게 될 UI 오브젝트
     public PlayerRunnerUI RunnerUI; // 플레이어 러너가 보게 될 UI 오브젝트
+    public SettingUI SettingUI; // 설정 UI 오브젝트
 
     private void Awake()
     {
         SetDisableAllUI(); // 시작할 때 모든 UI 비활성화
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            ToggleSettingUI();
+        }
     }
 
     /// <summary>
@@ -35,5 +44,22 @@ public class StageUIController : MonoBehaviour
     {
         BuilderUI.gameObject.SetActive(false);
         RunnerUI.gameObject.SetActive(false);
+        HideSettingUI();
+    }
+
+    public void ToggleSettingUI()
+    {
+        if (SettingUI == null)
+            return;
+
+        SettingUI.gameObject.SetActive(!SettingUI.gameObject.activeSelf);
+    }
+
+    public void HideSettingUI()
+    {
+        if (SettingUI == null)
+            return;
+
+        SettingUI.gameObject.SetActive(false);
     }
 }

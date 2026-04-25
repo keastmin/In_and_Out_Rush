@@ -6,9 +6,7 @@ namespace Dev.Network
     public partial class StageBootstrapper
     {
         [SerializeField] private Store _store;
-        [SerializeField] private StageManager _stageManager;
         [SerializeField] private StageSystem _stageSystem;
-        [SerializeField] private PlayerRunner _playerRunner;
         [SerializeField] private ResourceSpawnSystem _resourceSpawnSystem;
 
         [Header("Gate")]
@@ -22,7 +20,6 @@ namespace Dev.Network
         private void YOUInitializeHost()
         {
             // Debug.Log("StageBootstrapper: initialize host complete");
-            _playerRunner = _stageManager.PlayerRunner;
         }
 
         private void YOUCreateObjects()
@@ -43,7 +40,7 @@ namespace Dev.Network
         {
             Globals.Store = _store;
 
-            _playerRunner.OnDied += HandlePlayerDied;
+            PlayerRunner.OnDied += HandlePlayerDied;
             // Gate.OnGateEntered += HandleGateEntered;
         }
 

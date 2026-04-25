@@ -1,4 +1,5 @@
 using Dev;
+using Dev.Network;
 using Fusion;
 using System.Collections.Generic;
 using UnityEngine;
@@ -648,10 +649,10 @@ public class InfiniteGrid : NetworkBehaviour
                 continue;
             }
 
-            if (tower.IsCenter && StageManager.Instance != null && StageManager.Instance.PlayerBuilder != null)
+            if (tower.IsCenter && StageBootstrapper.Instance != null && StageBootstrapper.Instance.PlayerBuilder != null)
             {
-                int nextCenterCount = Mathf.Max(0, StageManager.Instance.PlayerBuilder.CenterTowerCount - 1);
-                StageManager.Instance.PlayerBuilder.SetCenterTowerCount(nextCenterCount);
+                int nextCenterCount = Mathf.Max(0, StageBootstrapper.Instance.PlayerBuilder.CenterTowerCount - 1);
+                StageBootstrapper.Instance.PlayerBuilder.SetCenterTowerCount(nextCenterCount);
             }
 
             tower.ReleaseGridOccupation();

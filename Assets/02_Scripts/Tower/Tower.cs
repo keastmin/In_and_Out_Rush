@@ -1,4 +1,5 @@
 using Fusion;
+using Dev.Network;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -110,7 +111,7 @@ public class Tower : GridPlaceable, ICanClickObject
 
     public void OnLeftMouseUpThisObject()
     {
-        var builder = StageManager.Instance.PlayerBuilder;
+        var builder = StageBootstrapper.Instance.PlayerBuilder;
         if (builder != null)
         {
             builder.TowerSelected(this);
@@ -133,10 +134,10 @@ public class Tower : GridPlaceable, ICanClickObject
 
     private void NotifyBuilderTowerDespawned()
     {
-        if (StageManager.Instance == null)
+        if (StageBootstrapper.Instance == null)
             return;
 
-        var builder = StageManager.Instance.PlayerBuilder;
+        var builder = StageBootstrapper.Instance.PlayerBuilder;
         if (builder == null)
             return;
 

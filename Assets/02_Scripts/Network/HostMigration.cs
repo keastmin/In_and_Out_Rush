@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Dev.Network;
 using Fusion;
 using Fusion.Sockets;
 using UnityEngine;
@@ -9,7 +10,7 @@ namespace Dev
     public class HostMigration : MonoBehaviour, INetworkRunnerCallbacks
     {
         [SerializeField] private NetworkRunner _runnerPrefab;
-        [SerializeField] private StageManager _stageManagerPrefab;
+        [SerializeField] private StageBootstrapper _stageBootstrapperPrefab;
 
         public void OnConnectedToServer(NetworkRunner runner) { }
 
@@ -110,7 +111,7 @@ namespace Dev
         public void OnSceneLoadDone(NetworkRunner runner)
         {
             // Debug.Log("Scene Load Done");
-            // runner.Spawn(_stageManagerPrefab);
+            // runner.Spawn(_stageBootstrapperPrefab);
         }
 
         public void OnSceneLoadStart(NetworkRunner runner) { }

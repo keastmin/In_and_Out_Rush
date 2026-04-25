@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Dev.Local;
+using Dev.Network;
 using Fusion;
 using UnityEngine;
 
@@ -36,11 +37,11 @@ public class TerritorySystem : NetworkSystemBase
 
     public override void SetUp()
     {
-        TerritoryVisible = StageManager.Instance.TerritoryVisible;
+        TerritoryVisible = Dev.Network.StageBootstrapper.Instance.TerritoryVisible;
 
         GenerateInitialTerritory();
 
-        StageManager.Instance.PlayerRunner.OnPositionChanged += HandlePlayerPositionChanged;
+        Dev.Network.StageBootstrapper.Instance.PlayerRunner.OnPositionChanged += HandlePlayerPositionChanged;
     }
 
     void GenerateInitialTerritory()

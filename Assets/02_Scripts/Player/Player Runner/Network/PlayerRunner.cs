@@ -53,7 +53,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
 
     public void OnHealthChanged()
     {
-        StageManager.Instance.UIController.RunnerUI.Display.Player
+        StageBootstrapper.Instance.UIController.RunnerUI.Display.Player
             .SetHealthBarRatio(Health / MaxHealth);
     }
 
@@ -126,7 +126,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
         _elapsedTime += Time.deltaTime;
         int minutes = Mathf.FloorToInt(_elapsedTime / 60f);
         int seconds = Mathf.FloorToInt(_elapsedTime % 60f);
-        StageManager.Instance.UIController.RunnerUI.Display.ElapsedTime
+        StageBootstrapper.Instance.UIController.RunnerUI.Display.ElapsedTime
             .SetElapsedTimeText($"{minutes:D2}:{seconds:D2}");
     }
 
@@ -172,15 +172,15 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
 
     private void HandleLaboratoryInput(NetworkInputData data)
     {
-        if (StageManager.Instance.CinemachineSystem == null) return;
+        if (StageBootstrapper.Instance.CinemachineSystem == null) return;
         if (!data.LaboratoryInput.IsSet(NetworkInputData.LABORATORY_INPUT))
-            StageManager.Instance.CinemachineSystem.SetTrackingTarget(transform);
+            StageBootstrapper.Instance.CinemachineSystem.SetTrackingTarget(transform);
     }
 
     private void UpdateSkillIcon(int skillIndex)
     {
         if (skillIndex < 1 || skillIndex > skillIcons.Length) return;
-        StageManager.Instance.UIController.RunnerUI.Display.Player
+        StageBootstrapper.Instance.UIController.RunnerUI.Display.Player
             .SetSkillIcon(skillIcons[skillIndex - 1]);
     }
 

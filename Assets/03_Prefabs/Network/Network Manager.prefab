@@ -45,7 +45,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _runnerPrefab: {fileID: 6947161378665982860, guid: 0d7ca1b5494443141b511feaa35663f9, type: 3}
-  _stageManagerPrefab: {fileID: 6118610569785656979, guid: 8ee0ca47d4ca2f542a19a96fdec5cdec, type: 3}
+  _stageBootstrapperPrefab: {fileID: 7251378647776299556, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
 --- !u!1 &2990749792417339691
 GameObject:
   m_ObjectHideFlags: 0

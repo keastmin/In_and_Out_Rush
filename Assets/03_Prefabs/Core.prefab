@@ -139,10 +139,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44c9d5b3de3806741a9bd99a49244065, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  playerRunnerPrefab: {fileID: 6623639392449802583, guid: b8a1ffa8094371542a9c31e14125af5b, type: 3}
+  playerBuilderPrefab: {fileID: 3984747633682037487, guid: 515b90f1716e1d14a9fa8526fb3363d7, type: 3}
+  networkInputSystemPrefab: {fileID: 6846751696317313442, guid: 8c946bd9ccd8fd747b1fea37f61f58ec, type: 3}
+  systems: []
+  ResourceSystem: {fileID: 2667290622005498128}
+  cinemachineSystemPrefab: {fileID: 7730110464124259016, guid: aed0d24cf0400854f840e4956fa0356b, type: 3}
+  UIController: {fileID: 0}
+  TerritoryVisible: {fileID: 0}
+  TrackVisible: {fileID: 0}
   _store: {fileID: 835821744579008095}
-  _stageManager: {fileID: 0}
   _stageSystem: {fileID: 8839147315426102197}
-  _playerRunner: {fileID: 0}
   _resourceSpawnSystem: {fileID: 7322582062983139011}
   _gatePrefab: {fileID: 4847213134287343287, guid: f80e2a9882b60234382ffa9183dd1627, type: 3}
   _stageResultView: {fileID: 0}

@@ -1,4 +1,5 @@
 using Fusion;
+using Dev.Network;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -122,7 +123,7 @@ public sealed class AmplificationTower : SupportTower, ICanDragObject
 
     public void OnDragCompleteThisObject()
     {
-        var manager = StageManager.Instance;
+        var manager = StageBootstrapper.Instance;
         if (manager != null)
         {
             manager.PlayerBuilder.TowerSelected(this);

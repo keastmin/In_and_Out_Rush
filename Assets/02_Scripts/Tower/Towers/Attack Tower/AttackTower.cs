@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Fusion;
+using Dev.Network;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -169,7 +170,7 @@ public class AttackTower : Tower, ICanClickObject, ICanDragObject
 
     public void OnDragCompleteThisObject()
     {
-        var manager = StageManager.Instance;
+        var manager = StageBootstrapper.Instance;
         if (manager != null)
         {
             // 빌더의 타워 선택을 함수를 호출하여 자신을 선택된 타워로 넘겨줌

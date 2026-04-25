@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Dev.Network;
 using UnityEngine;
 
 public class PlayerRunnerSlideHandler
@@ -30,7 +31,7 @@ public class PlayerRunnerSlideHandler
         else
         {
             runner.Stamina -= 10f;
-            StageManager.Instance.UIController.RunnerUI.Display.Player
+            StageBootstrapper.Instance.UIController.RunnerUI.Display.Player
                 .SetStaminaBarRatio(runner.Stamina / 100f);
         }
 

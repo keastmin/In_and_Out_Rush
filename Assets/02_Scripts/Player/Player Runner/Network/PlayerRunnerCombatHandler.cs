@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Dev.Network;
 using UnityEngine;
 
 public class PlayerRunnerCombatHandler
@@ -15,7 +16,7 @@ public class PlayerRunnerCombatHandler
         if (_isInvincible) return;
 
         runner.Health -= damage;
-        StageManager.Instance.UIController.RunnerUI.Display.Player
+        StageBootstrapper.Instance.UIController.RunnerUI.Display.Player
             .SetHealthBarRatio(runner.Health / PlayerRunner.MaxHealth);
 
         if (runner.Health <= 0f)
@@ -31,7 +32,7 @@ public class PlayerRunnerCombatHandler
 
         float healedAmount = Mathf.Min(amount, PlayerRunner.MaxHealth - runner.Health);
         runner.Health += healedAmount;
-        StageManager.Instance.UIController.RunnerUI.Display.Player
+        StageBootstrapper.Instance.UIController.RunnerUI.Display.Player
             .SetHealthBarRatio(runner.Health / PlayerRunner.MaxHealth);
         return healedAmount;
     }

@@ -1,3 +1,4 @@
+using Dev.Network;
 using Fusion;
 using UnityEngine;
 
@@ -13,7 +14,7 @@ public class WorldMonsterSpawnSystem : NetworkSystemBase
     public override void SetUp()
     {
         if (!Object.HasStateAuthority) { return; }
-        playerTransform = StageManager.Instance.PlayerRunner.transform;
+        playerTransform = StageBootstrapper.Instance.PlayerRunner.transform;
         SpawnMonsters();
     }
 

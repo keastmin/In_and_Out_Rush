@@ -7,9 +7,6 @@ namespace Dev.Local
 {
     public class StageBootstrapper : Entity
     {
-        // [Header("Regacy")]
-        // [SerializeField] private StageManager _stageManager;
-
         [Header("Time")]
         [SerializeField] private TimeSystem _timerSystem;
 

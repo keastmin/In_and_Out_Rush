@@ -1,4 +1,5 @@
 using Fusion;
+using Dev.Network;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -35,11 +36,11 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
 
     public bool HasSufficientResources()
     {
-        if (StageManager.Instance == null || StageManager.Instance.ResourceSystem == null)
+        if (StageBootstrapper.Instance == null || StageBootstrapper.Instance.ResourceSystem == null)
             return false;
 
-        return StageManager.Instance.ResourceSystem.Mineral >= _buildCost.Mineral &&
-               StageManager.Instance.ResourceSystem.Gas >= _buildCost.Gas;
+        return StageBootstrapper.Instance.ResourceSystem.Mineral >= _buildCost.Mineral &&
+               StageBootstrapper.Instance.ResourceSystem.Gas >= _buildCost.Gas;
     }
 
     public bool CanBuildAt(Vector2Int index)

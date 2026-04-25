@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Dev;
 using Dev.Local;
+using Dev.Network;
 using Fusion;
 using UnityEngine;
 
@@ -33,7 +34,7 @@ public class TrackSystem : NetworkSystemBase
 
     public override void SetUp()
     {
-        trackVisible = StageManager.Instance.TrackVisible;
+        trackVisible = Dev.Network.StageBootstrapper.Instance.TrackVisible;
 
         GenerateTrack();
         if (!Object.HasStateAuthority)

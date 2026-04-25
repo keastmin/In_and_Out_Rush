@@ -25,8 +25,6 @@ public class PlayerBuilderTowerSell : NetworkBehaviour
         {
             if (t == null) continue;
 
-            t.ReleaseGridOccupation();
-
             NetworkObject no = t.Object;
             if (no == null) continue;
 
@@ -65,6 +63,11 @@ public class PlayerBuilderTowerSell : NetworkBehaviour
         {
             if (!Runner.TryFindObject(id, out NetworkObject obj))
                 continue;
+
+            if (obj.TryGetComponent(out Tower tower))
+            {
+                tower.ReleaseGridOccupation();
+            }
 
             Runner.Despawn(obj);
         }

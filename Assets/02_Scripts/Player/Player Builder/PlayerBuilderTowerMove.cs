@@ -209,36 +209,10 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
             }
         }
 
-        for (int i = 0; i < plannedMoves.Count; i++)
-        {
-            plannedMoves[i].Tower.ReleaseGridOccupation();
-        }
-
-        for (int i = 0; i < plannedMoves.Count; i++)
-        {
-            var move = plannedMoves[i];
-            bool occupied = move.Tower.TryOccupyAtIndex(move.TargetCenter, requireTerritory: true, requireEmpty: true);
-            if (!occupied)
-            {
-                for (int j = 0; j < plannedMoves.Count; j++)
-                {
-                    plannedMoves[j].Tower.ReleaseGridOccupation();
-                }
-
-                for (int j = 0; j < plannedMoves.Count; j++)
-                {
-                    var rollback = plannedMoves[j];
-                    rollback.Tower.TryOccupyAtIndex(rollback.CurrentCenter, requireTerritory: true, requireEmpty: true);
-                }
-
-                return;
-            }
-        }
-
         int arrayCount = plannedMoves.Count;
         int currentCount = 0;
         NetworkId[] netId = new NetworkId[arrayCount];
-        Vector3[] vec = new Vector3[arrayCount];
+        Vector3[] positions = new Vector3[arrayCount];
 
         for (int i = 0; i < plannedMoves.Count; i++)
         {
@@ -246,12 +220,10 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
             Tower tower = move.Tower;
 
             netId[currentCount] = tower.Object.Id;
-            vec[currentCount++] = move.TargetPosition;
-
-            TowerMoveProcess(tower);
+            positions[currentCount++] = move.TargetPosition;
         }
 
-        RPC_TowerMove(netId, vec);
+        RPC_TowerMove(netId, positions);
     }
 
     public void TowerMoveClear()
@@ -466,16 +438,139 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
     }
 
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-    private void RPC_TowerMove(NetworkId[] netId, Vector3[] pos)
+    private void RPC_TowerMove(NetworkId[] netId, Vector3[] positions)
     {
-        for (int i = 0; i < netId.Length && i < pos.Length; i++)
+        if (netId == null || positions == null || netId.Length != positions.Length)
+            return;
+
+        var gridManager = InfiniteGrid.Instance;
+        if (gridManager == null)
+            return;
+
+        var claimedTargets = new Dictionary<Vector2Int, Tower>();
+        var conflictedTowers = new HashSet<Tower>();
+        var plannedMoves = new List<PlannedTowerMove>(netId.Length);
+
+        for (int i = 0; i < netId.Length; i++)
         {
             if (!Runner.TryFindObject(netId[i], out NetworkObject obj))
                 continue;
 
-            obj.TryGetComponent(out NetworkTransform nt);
-            nt.Teleport(pos[i]);
+            if (!obj.TryGetComponent(out Tower tower) || tower == null)
+                continue;
+
+            Vector2Int currentCenter = tower.HasGridOccupation
+                ? tower.BuiltIndex
+                : gridManager.GetCellIndexFromWorldPosition(tower.transform.position);
+            Vector2Int targetCenter = gridManager.GetCellIndexFromWorldPosition(positions[i]);
+
+            plannedMoves.Add(new PlannedTowerMove
+            {
+                Tower = tower,
+                CurrentCenter = currentCenter,
+                TargetCenter = targetCenter,
+                TargetPosition = gridManager.GetCellCenterPositionFromCellIndex(targetCenter),
+                TargetIndices = gridManager.GetCellIndicesInRange(targetCenter, tower.BuildRange, includeCenter: true)
+            });
         }
+
+        if (plannedMoves.Count == 0)
+            return;
+
+        var selectedOccupied = CollectOccupiedIndices(plannedMoves);
+
+        for (int i = 0; i < plannedMoves.Count; i++)
+        {
+            var move = plannedMoves[i];
+            for (int j = 0; j < move.TargetIndices.Count; j++)
+            {
+                Vector2Int idx = move.TargetIndices[j];
+                if (claimedTargets.TryGetValue(idx, out Tower owner))
+                {
+                    if (owner != move.Tower)
+                    {
+                        conflictedTowers.Add(owner);
+                        conflictedTowers.Add(move.Tower);
+                    }
+                }
+                else
+                {
+                    claimedTargets[idx] = move.Tower;
+                }
+            }
+        }
+
+        for (int i = 0; i < plannedMoves.Count; i++)
+        {
+            var move = plannedMoves[i];
+            bool isSamePosition = move.TargetCenter == move.CurrentCenter;
+            bool canPlace = gridManager.CanPlaceInRange(
+                move.TargetCenter,
+                move.Tower.BuildRange,
+                requireEmpty: true,
+                requireTerritory: true,
+                ignoreOccupiedIndices: selectedOccupied);
+            bool conflicted = conflictedTowers.Contains(move.Tower);
+
+            if (isSamePosition || !canPlace || conflicted)
+            {
+                return;
+            }
+        }
+
+        for (int i = 0; i < plannedMoves.Count; i++)
+        {
+            plannedMoves[i].Tower.ReleaseGridOccupation();
+        }
+
+        for (int i = 0; i < plannedMoves.Count; i++)
+        {
+            var move = plannedMoves[i];
+            bool occupied = move.Tower.TryOccupyAtIndex(move.TargetCenter, requireTerritory: true, requireEmpty: true);
+            if (!occupied)
+            {
+                for (int j = 0; j < plannedMoves.Count; j++)
+                {
+                    plannedMoves[j].Tower.ReleaseGridOccupation();
+                }
+
+                for (int j = 0; j < plannedMoves.Count; j++)
+                {
+                    var rollback = plannedMoves[j];
+                    rollback.Tower.TryOccupyAtIndex(rollback.CurrentCenter, requireTerritory: true, requireEmpty: true);
+                }
+
+                return;
+            }
+        }
+
+        for (int i = 0; i < plannedMoves.Count; i++)
+        {
+            var move = plannedMoves[i];
+            if (!move.Tower.Object.TryGetComponent(out NetworkTransform nt))
+                continue;
+
+            nt.Teleport(move.TargetPosition);
+            TowerMoveProcess(move.Tower);
+        }
+    }
+
+    private static HashSet<Vector2Int> CollectOccupiedIndices(List<PlannedTowerMove> plannedMoves)
+    {
+        var occupied = new HashSet<Vector2Int>();
+        if (plannedMoves == null)
+            return occupied;
+
+        for (int i = 0; i < plannedMoves.Count; i++)
+        {
+            var indices = plannedMoves[i].Tower.OccupiedIndices;
+            for (int j = 0; j < indices.Count; j++)
+            {
+                occupied.Add(indices[j]);
+            }
+        }
+
+        return occupied;
     }
 
     private void TowerMoveProcess(Tower tower)

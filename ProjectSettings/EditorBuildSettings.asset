@@ -8,18 +8,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/01_Scenes/LobbyScene.unity
     guid: 3b0c61a0794f273408ee48be4d2f162a
-  - enabled: 0
-    path: Assets/01_Scenes/Fusion Test/FusionStartScene.unity
-    guid: 9b888ec1d303af44da851bec4d9c399e
-  - enabled: 0
-    path: Assets/01_Scenes/NetworkGameLauncher.unity
-    guid: 6b857f0e871fe0d4f8ec8e9b3451b211
   - enabled: 1
     path: Assets/01_Scenes/GameScene.unity
     guid: 2cd5d7e18eba8c946a9c25a7cbbbdafd
-  - enabled: 1
-    path: Assets/01_Scenes/New Scene.unity
-    guid: c818ea8fe665c6d4bb360c467d1890dd
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

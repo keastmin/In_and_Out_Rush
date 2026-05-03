@@ -8,7 +8,7 @@ namespace Dev.Network
     {
         private CollisionField collisionField;
 
-        public event Action<Collider, Gate, object> OnGateEntered;
+        public event Action<PlayerRunner, Gate, object> OnPlayerRunnerEntered;
 
         protected override void OnInitialize()
         {
@@ -16,10 +16,22 @@ namespace Dev.Network
             collisionField.OnCollisionFieldEntered += HandleCollisionFieldEntered;
         }
 
+        protected override void OnDispose()
+        {
+            if (collisionField != null)
+                collisionField.OnCollisionFieldEntered -= HandleCollisionFieldEntered;
+        }
+
         private void HandleCollisionFieldEntered(Collider other, CollisionField collisionField, object sender)
         {
-            if (Object.HasStateAuthority)
-                OnGateEntered?.Invoke(other, this, sender);
+            if (!Object.HasStateAuthority)
+                return;
+
+            var runner = other.GetComponentInParent<PlayerRunner>();
+            if (runner == null)
+                return;
+
+            OnPlayerRunnerEntered?.Invoke(runner, this, sender);
         }
     }
 }

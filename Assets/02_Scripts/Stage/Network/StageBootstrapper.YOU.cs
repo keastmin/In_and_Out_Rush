@@ -17,6 +17,8 @@ namespace Dev.Network
         private bool _isGameOverPresented = false;
         private bool _isReturningToTitle = false;
 
+        public event global::System.Action<PlayerRunner, Gate, object> OnGateEntered;
+
         private void YOUInitializeHost()
         {
             // Debug.Log("StageBootstrapper: initialize host complete");
@@ -41,11 +43,13 @@ namespace Dev.Network
             Globals.Store = _store;
 
             PlayerRunner.OnDied += HandlePlayerDied;
-            // Gate.OnGateEntered += HandleGateEntered;
         }
 
         private void YOUSetUpObjects()
         {
+            if (!HasStateAuthority)
+                return;
+
             // TODO: Field Object 생성
             var randomAngle = Random.value * 360f;
             var randomDistance = _worldBoundaryRadius;
@@ -55,7 +59,7 @@ namespace Dev.Network
                 Mathf.Sin(randomAngle * Mathf.Deg2Rad) * randomDistance
             );
             var gate = Runner.Spawn(_gatePrefab, gatePosition, Quaternion.identity);
-            gate.OnGateEntered += HandleGateEntered;
+            gate.OnPlayerRunnerEntered += HandleGateEntered;
         }
 
         private void HandlePlayerDied(PlayerRunner runner, object sender)
@@ -63,8 +67,9 @@ namespace Dev.Network
             _stageSystem.Defeat();
         }
 
-        private void HandleGateEntered(Collider other, Gate gate, object sender)
+        private void HandleGateEntered(PlayerRunner runner, Gate gate, object sender)
         {
+            OnGateEntered?.Invoke(runner, gate, this);
             _stageSystem.Victory();
         }
     }

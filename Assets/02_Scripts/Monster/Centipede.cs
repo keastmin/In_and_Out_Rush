@@ -40,6 +40,7 @@ public class Centipede : WorldMonster
     float elapsedTime;
     float distance;
 
+#if UNITY_EDITOR
     protected override void OnDrawGizmos()
     {
         base.OnDrawGizmos();
@@ -49,6 +50,7 @@ public class Centipede : WorldMonster
             Gizmos.DrawLine(originalPosition + Vector3.up * 0.1f, progressivePosition + Vector3.up * 0.1f);
         }
     }
+#endif
 
     protected override void Patrol()
     {

@@ -16,8 +16,23 @@ namespace Dev.Network
 
         public void Victory()
         {
-            if (Object.HasStateAuthority)
-                RPC_ShowStageResult();
+            //if (Object.HasStateAuthority)
+            //    RPC_ShowStageResult();
+            Debug.Log("닿음");
+
+            RPC_ShowVictoryUI();
+        }
+
+        [Rpc(RpcSources.All, RpcTargets.All, Channel = RpcChannel.Reliable)]
+        private void RPC_ShowVictoryUI()
+        {
+            if (InterfaceManager.Instance != null)
+            {
+                Debug.Log("띄움");
+                InterfaceManager.Instance.SetVictoryUIActivation(true);
+            }
+            else
+                Debug.LogError("인터페이스 매니저가 없음");
         }
 
         [Rpc(RpcSources.StateAuthority, RpcTargets.All, Channel = RpcChannel.Reliable)]

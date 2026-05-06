@@ -41,6 +41,7 @@ public class InfiniteGrid : NetworkBehaviour
     private readonly Dictionary<int, BuffSourceState> _buffSources = new();
     private readonly Dictionary<Vector2Int, int> _buffCellRefCount = new();
     private readonly Dictionary<Vector2Int, Color> _buffCellColorSum = new();
+    private bool _hasSpawned;
 
     private void OnValidate()
     {
@@ -75,10 +76,17 @@ public class InfiniteGrid : NetworkBehaviour
     public override void Spawned()
     {
         base.Spawned();
+        _hasSpawned = true;
         BindTerritoryEventsIfNeeded();
         BindTrackEventsIfNeeded();
         RefreshTrackBlockedCells();
         RefreshVisuals();
+    }
+
+    public override void Despawned(NetworkRunner runner, bool hasState)
+    {
+        base.Despawned(runner, hasState);
+        _hasSpawned = false;
     }
 
     private void OnDestroy()
@@ -94,6 +102,9 @@ public class InfiniteGrid : NetworkBehaviour
             _trackSystem.OnTrackChanged -= OnTrackChanged;
             _isTrackEventBound = false;
         }
+
+        _visualController?.Release();
+        _visualController = null;
     }
 
     public void SetCellStateOverlayEnabled(bool enabled)
@@ -477,7 +488,7 @@ public class InfiniteGrid : NetworkBehaviour
 
     private bool CanUseNetworkGrid()
     {
-        return Application.isPlaying && Object != null && Object.IsValid;
+        return Application.isPlaying && _hasSpawned && Object != null && Object.IsValid && Object.IsInSimulation;
     }
 
     private void BindTerritoryEventsIfNeeded()

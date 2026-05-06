@@ -24,11 +24,17 @@ Shader "GridVisualize/InfiniteHexGuide"
         _PreviewBlockedGuideColor ("Preview Blocked Guide Color", Color) = (1,0.55,0.1,0.42)
         _CellFill ("Cell Fill", Range(0,1)) = 0.2
         _StateOverlayEnabled ("State Overlay Enabled", Float) = 1
+        _OccupiedCellsTex ("Occupied Cells Tex", 2D) = "black" {}
+        _PreviewCellsTex ("Preview Cells Tex", 2D) = "black" {}
+        _BlockedPreviewCellsTex ("Blocked Preview Cells Tex", 2D) = "black" {}
+        _BuffCellsTex ("Buff Cells Tex", 2D) = "black" {}
+        _BuffCellColorsTex ("Buff Cell Colors Tex", 2D) = "black" {}
+        _TerritoryVerticesTex ("Territory Vertices Tex", 2D) = "black" {}
     }
 
     SubShader
     {
-        Tags { "RenderType"="Opaque" "Queue"="Geometry" "RenderPipeline"="UniversalRenderPipeline" }
+        Tags { "RenderType"="Opaque" "Queue"="Geometry" "RenderPipeline"="UniversalPipeline" }
 
         Pass
         {
@@ -73,11 +79,11 @@ Shader "GridVisualize/InfiniteHexGuide"
             SAMPLER(sampler_MetallicGlossMap);
             TEXTURE2D(_OcclusionMap);
             SAMPLER(sampler_OcclusionMap);
-            #define MAX_OCCUPIED_CELLS 512
-            #define MAX_PREVIEW_CELLS 512
-            #define MAX_BLOCKED_PREVIEW_CELLS 512
-            #define MAX_BUFF_CELLS 512
-            #define MAX_TERRITORY_VERTICES 256
+            #define MAX_OCCUPIED_CELLS 64
+            #define MAX_PREVIEW_CELLS 64
+            #define MAX_BLOCKED_PREVIEW_CELLS 64
+            #define MAX_BUFF_CELLS 64
+            #define MAX_TERRITORY_VERTICES 64
 
             CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
@@ -102,12 +108,23 @@ Shader "GridVisualize/InfiniteHexGuide"
             float _BuffCellCount;
             float _TerritoryVertexCount;
             CBUFFER_END
-            float4 _OccupiedCells[MAX_OCCUPIED_CELLS];
-            float4 _PreviewCells[MAX_PREVIEW_CELLS];
-            float4 _BlockedPreviewCells[MAX_BLOCKED_PREVIEW_CELLS];
-            float4 _BuffCells[MAX_BUFF_CELLS];
-            float4 _BuffCellColors[MAX_BUFF_CELLS];
-            float4 _TerritoryVertices[MAX_TERRITORY_VERTICES];
+            TEXTURE2D(_OccupiedCellsTex);
+            SAMPLER(sampler_OccupiedCellsTex);
+            TEXTURE2D(_PreviewCellsTex);
+            SAMPLER(sampler_PreviewCellsTex);
+            TEXTURE2D(_BlockedPreviewCellsTex);
+            SAMPLER(sampler_BlockedPreviewCellsTex);
+            TEXTURE2D(_BuffCellsTex);
+            SAMPLER(sampler_BuffCellsTex);
+            TEXTURE2D(_BuffCellColorsTex);
+            SAMPLER(sampler_BuffCellColorsTex);
+            TEXTURE2D(_TerritoryVerticesTex);
+            SAMPLER(sampler_TerritoryVerticesTex);
+
+            float2 GetDataUV(int index, float capacity)
+            {
+                return float2(((float)index + 0.5) / capacity, 0.5);
+            }
 
             // 오브젝트 좌표를 월드 좌표화 화면 좌표로 바꿈
             // 노멀과 탄젠트를 준비함
@@ -178,7 +195,7 @@ Shader "GridVisualize/InfiniteHexGuide"
                         break;
                     }
 
-                    float2 occupiedAxial = _OccupiedCells[i].xy;
+                    float2 occupiedAxial = SAMPLE_TEXTURE2D_LOD(_OccupiedCellsTex, sampler_OccupiedCellsTex, GetDataUV(i, MAX_OCCUPIED_CELLS), 0).xy;
                     if (all(abs(occupiedAxial - axial) < 0.01))
                     {
                         return 1.0;
@@ -200,7 +217,7 @@ Shader "GridVisualize/InfiniteHexGuide"
                         break;
                     }
 
-                    float2 previewAxial = _PreviewCells[i].xy;
+                    float2 previewAxial = SAMPLE_TEXTURE2D_LOD(_PreviewCellsTex, sampler_PreviewCellsTex, GetDataUV(i, MAX_PREVIEW_CELLS), 0).xy;
                     if (all(abs(previewAxial - axial) < 0.01))
                     {
                         return 1.0;
@@ -222,7 +239,7 @@ Shader "GridVisualize/InfiniteHexGuide"
                         break;
                     }
 
-                    float2 previewAxial = _BlockedPreviewCells[i].xy;
+                    float2 previewAxial = SAMPLE_TEXTURE2D_LOD(_BlockedPreviewCellsTex, sampler_BlockedPreviewCellsTex, GetDataUV(i, MAX_BLOCKED_PREVIEW_CELLS), 0).xy;
                     if (all(abs(previewAxial - axial) < 0.01))
                     {
                         return 1.0;
@@ -244,10 +261,10 @@ Shader "GridVisualize/InfiniteHexGuide"
                         break;
                     }
 
-                    float2 buffAxial = _BuffCells[i].xy;
+                    float2 buffAxial = SAMPLE_TEXTURE2D_LOD(_BuffCellsTex, sampler_BuffCellsTex, GetDataUV(i, MAX_BUFF_CELLS), 0).xy;
                     if (all(abs(buffAxial - axial) < 0.01))
                     {
-                        return _BuffCellColors[i];
+                        return SAMPLE_TEXTURE2D_LOD(_BuffCellColorsTex, sampler_BuffCellColorsTex, GetDataUV(i, MAX_BUFF_CELLS), 0);
                     }
                 }
 
@@ -263,7 +280,7 @@ Shader "GridVisualize/InfiniteHexGuide"
                 }
 
                 bool isInside = false;
-                float2 previous = _TerritoryVertices[vertexCount - 1].xy;
+                float2 previous = SAMPLE_TEXTURE2D_LOD(_TerritoryVerticesTex, sampler_TerritoryVerticesTex, GetDataUV(vertexCount - 1, MAX_TERRITORY_VERTICES), 0).xy;
 
                 [loop]
                 for (int i = 0; i < MAX_TERRITORY_VERTICES; i++)
@@ -273,7 +290,7 @@ Shader "GridVisualize/InfiniteHexGuide"
                         break;
                     }
 
-                    float2 current = _TerritoryVertices[i].xy;
+                    float2 current = SAMPLE_TEXTURE2D_LOD(_TerritoryVerticesTex, sampler_TerritoryVerticesTex, GetDataUV(i, MAX_TERRITORY_VERTICES), 0).xy;
                     bool intersects = ((current.y > cellCenterWS.y) != (previous.y > cellCenterWS.y)) &&
                                       (cellCenterWS.x < ((previous.x - current.x) * (cellCenterWS.y - current.y) / ((previous.y - current.y) + 1e-5) + current.x));
 

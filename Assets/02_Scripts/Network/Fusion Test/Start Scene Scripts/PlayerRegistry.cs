@@ -39,6 +39,20 @@ public class PlayerRegistry : NetworkBehaviour
         }
     }
 
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    public void RPC_NotifyHostShutdown(bool wasGame)
+    {
+        if (!HasStateAuthority)
+            MatchMaker.Instance?.MarkHostShutdownIntent(wasGame);
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    public void RPC_NotifyPlayerGameShutdown(PlayerRef player)
+    {
+        if (HasStateAuthority)
+            MatchMaker.Instance?.MarkPlayerGameShutdownIntent(player);
+    }
+
     public PlayerRef GetPlayerRefFromPosition(PlayerPosition position)
     {
         foreach(var player in RefToPosition)

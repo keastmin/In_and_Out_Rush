@@ -13,16 +13,20 @@ public class NetworkManager : NetworkBehaviour, INetworkRunnerCallbacks
     // 플레이어 정보
     public PlayerRegistry Registry { get; private set; }
 
-    private HostMigration _hostMigration;
-
     // 현재 테스트 모드 여부
     private bool _isTestMode = false;
     private PlayerPosition _testPosition = PlayerPosition.Builder;
 
+    // 다음 스테이지 변수
+    private bool _playerReady1 = false;
+    private bool _playerReady2 = false;
+
+    public event Action OnLocalPlayerReady;
+    public event Action OnNetworkPlayerReady;
+
     private void Awake()
     {
         Registry = GetComponent<PlayerRegistry>();
-        transform.Find("Host Migration").TryGetComponent(out _hostMigration);
     }
 
     public override void Spawned()
@@ -39,13 +43,67 @@ public class NetworkManager : NetworkBehaviour, INetworkRunnerCallbacks
         {
             Runner.AddCallbacks(this);
         }
-        else
-        {
-            Runner.AddCallbacks(_hostMigration);
-            Debug.Log($"콜백 등록 {_hostMigration}");
-        }
+
         Debug.Log("네트워크 매니저 스폰 완료");
     }
+
+    public override void Despawned(NetworkRunner runner, bool hasState)
+    {
+        if (Instance == this)
+            Instance = null;
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            Instance = null;
+    }
+
+    #region Victory 후처리
+
+    public void RequestNetworkReady()
+    {
+        if(HasStateAuthority && Runner.IsServer)
+        {
+            _playerReady1 = !_playerReady1;
+            CheckAllPlayerReady();
+        }
+
+        OnLocalPlayerReady?.Invoke();
+        RPC_RequestNetworkReady();
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.All, Channel = RpcChannel.Reliable, InvokeLocal = false)]
+    private void RPC_RequestNetworkReady()
+    {
+        if (HasStateAuthority && Runner.IsServer)
+        {
+            _playerReady2 = !_playerReady2;
+            CheckAllPlayerReady();
+        }
+
+        OnNetworkPlayerReady?.Invoke();
+    }
+
+    // 모든 플레이어가 다음 단계로 갈 준비가 되었음을 확인
+    private void CheckAllPlayerReady()
+    {
+        if(_playerReady1 && _playerReady2)
+        {
+            RPC_LoadNextScene();
+        }
+    }
+
+    // 우선은 게임 종료 -> 후에 스테이지 넘어가는 로직으로 변경
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All, Channel = RpcChannel.Reliable)]
+    private void RPC_LoadNextScene()
+    {
+        // 게임 종료
+        InterfaceManager.Instance.FocusMainMenu();
+        MatchMaker.Instance.QuitGame();
+    }
+
+    #endregion
 
     #region 테스트 모드 함수
 

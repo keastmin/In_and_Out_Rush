@@ -3,12 +3,27 @@ using Fusion.Sockets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.SceneManagement;
 
 public class MatchMaker : MonoBehaviour, INetworkRunnerCallbacks
 {
+    private enum LocalShutdownIntent
+    {
+        None,
+        LeaveRoom,
+        QuitGame
+    }
+
+    private const string HostLeftLobbyMessage = "Host left lobby";
+    private const string HostDisconnectedMessage = "Disconnected from host";
+    private const string TeammateQuitGameMessage = "Teammate quit game";
+    private const string TeammateDisconnectedMessage = "Disconnected from teammate";
+    private const string LobbySceneName = "LobbyScene";
+    private const string GameSceneName = "GameScene";
+
     public static MatchMaker Instance { get; private set; } // 싱글턴 인스턴스
 
     [Header("Prefab")]
@@ -26,6 +41,13 @@ public class MatchMaker : MonoBehaviour, INetworkRunnerCallbacks
 
     private int _roomCodeLength = 6; // 룸 코드 길이
     public int RoomCodeLength => _roomCodeLength; // 룸 코드 길이 프로퍼티
+
+    private LocalShutdownIntent _localShutdownIntent = LocalShutdownIntent.None;
+    private readonly HashSet<PlayerRef> _intentionalGameLeavers = new();
+    private bool _isShutdownInProgress;
+    private bool _hostShutdownWasIntentional;
+    private bool _hostShutdownWasGame;
+    private string _pendingRemoteShutdownMessage;
 
     private void Awake()
     {
@@ -120,12 +142,7 @@ public class MatchMaker : MonoBehaviour, INetworkRunnerCallbacks
     // 룸을 떠나는 메서드
     public async void LeaveRoom()
     {
-        // 러너가 있다면 종료 작업 수행
-        if (Runner)
-        {
-            Debug.Log("LeaveRoom Shutdown 진행");
-            await Runner.Shutdown();
-        }
+        await ShutdownRunnerAsync(LocalShutdownIntent.LeaveRoom);
     }
 
     // 룸 코드를 랜덤으로 생성하는 메서드
@@ -149,33 +166,153 @@ public class MatchMaker : MonoBehaviour, INetworkRunnerCallbacks
         await Runner.LoadScene(sceneRef, LoadSceneMode.Single);
     }
 
+    public async void QuitGame()
+    {
+        await ShutdownRunnerAsync(LocalShutdownIntent.QuitGame);
+    }
+
+    public void MarkPlayerGameShutdownIntent(PlayerRef player)
+    {
+        if (player != PlayerRef.None)
+            _intentionalGameLeavers.Add(player);
+    }
+
+    public void MarkHostShutdownIntent(bool wasGame)
+    {
+        _hostShutdownWasIntentional = true;
+        _hostShutdownWasGame = wasGame;
+    }
+
+    private async Task ShutdownRunnerAsync(LocalShutdownIntent intent)
+    {
+        if (!Runner || _isShutdownInProgress)
+            return;
+
+        _isShutdownInProgress = true;
+        _localShutdownIntent = intent;
+
+        bool wasGame = IsInGame();
+        NotifyShutdownIntent(wasGame);
+        await Task.Delay(100);
+
+        if (Runner)
+        {
+            Debug.Log(intent == LocalShutdownIntent.QuitGame ? "Game Shutdown" : "Leave Room Shutdown");
+            await Runner.Shutdown();
+        }
+    }
+
+    private void NotifyShutdownIntent(bool wasGame)
+    {
+        if (!Runner || NetworkManager.Instance == null || NetworkManager.Instance.Registry == null)
+            return;
+
+        if (Runner.IsServer)
+        {
+            NetworkManager.Instance.Registry.RPC_NotifyHostShutdown(wasGame);
+        }
+        else if (wasGame)
+        {
+            NetworkManager.Instance.Registry.RPC_NotifyPlayerGameShutdown(Runner.LocalPlayer);
+        }
+    }
+
+    private bool IsInGame()
+    {
+        Scene currentScene = SceneManager.GetActiveScene();
+        if (currentScene.name == LobbySceneName)
+            return false;
+        if (currentScene.name == GameSceneName)
+            return true;
+
+        return GameManager.Instance != null && GameManager.Instance.CurrentGameState == GameState.Game;
+    }
+
+    private void ShutdownBecauseRemotePlayerLeft(NetworkRunner runner, PlayerRef player)
+    {
+        if (_isShutdownInProgress)
+            return;
+
+        _isShutdownInProgress = true;
+        bool intentionalLeave = _intentionalGameLeavers.Contains(player);
+        _pendingRemoteShutdownMessage = intentionalLeave ? TeammateQuitGameMessage : TeammateDisconnectedMessage;
+        _ = runner.Shutdown();
+    }
+
+    #region Victory
+
+
+
+    #endregion
+
     #region INetworkRunnerCallbacks
 
     public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason)
     {
+        Debug.Log("Shutdown");
+
+        bool isLocalShutdown = _localShutdownIntent != LocalShutdownIntent.None;
+        string remoteShutdownMessage = isLocalShutdown ? null : _pendingRemoteShutdownMessage;
+
+        // 씬 이동
+        Scene currentScene = SceneManager.GetActiveScene();
+        string moveSceneName = LobbySceneName;
+        if (currentScene.name != moveSceneName)
+            SceneManager.LoadScene(moveSceneName);
+
         Runner = null;
-        if (shutdownReason == ShutdownReason.HostMigration)
+        if (GameManager.Instance != null)
+            GameManager.Instance.SetGameMode(GameState.Lobby);
+        if (InterfaceManager.Instance != null)
+            InterfaceManager.Instance.CloseInGameSettingUI();
+        OnRoomLeaved?.Invoke();
+
+        if (!string.IsNullOrEmpty(remoteShutdownMessage) && InterfaceManager.Instance != null)
         {
-            Debug.Log("호스트 마이그레이션으로 인한 종료");
-            return;
+            InterfaceManager.Instance.FocusMainMenu();
+            InterfaceManager.Instance.PopupNotificationWindow(remoteShutdownMessage);
         }
-        else
-        {
-            Debug.Log("네트워크 러너가 종료되었습니다. 이유: " + shutdownReason);
-            OnRoomLeaved?.Invoke();
-        }
+
+        _localShutdownIntent = LocalShutdownIntent.None;
+        _intentionalGameLeavers.Clear();
+        _isShutdownInProgress = false;
+        _hostShutdownWasIntentional = false;
+        _hostShutdownWasGame = false;
+        _pendingRemoteShutdownMessage = null;
     }
 
     public void OnSceneLoadDone(NetworkRunner runner)
     {
-        OnStartGame?.Invoke();
+        if (GameManager.Instance != null && SceneManager.GetActiveScene().name == GameSceneName)
+        {
+            GameManager.Instance.SetGameMode(GameState.Game);
+            OnStartGame?.Invoke();
+        }
     }
 
     public void OnPlayerJoined(NetworkRunner runner, PlayerRef player) {}
 
-    public void OnPlayerLeft(NetworkRunner runner, PlayerRef player) { }
+    public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
+    {
+        if (runner.IsServer && player != runner.LocalPlayer && IsInGame())
+            ShutdownBecauseRemotePlayerLeft(runner, player);
+    }
 
-    public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason){}
+    public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason)
+    {
+        Debug.Log("Disconnect");
+
+        if (_localShutdownIntent != LocalShutdownIntent.None || _isShutdownInProgress)
+            return;
+
+        bool wasGame = _hostShutdownWasIntentional ? _hostShutdownWasGame : IsInGame();
+        _pendingRemoteShutdownMessage = wasGame
+            ? (_hostShutdownWasIntentional ? TeammateQuitGameMessage : TeammateDisconnectedMessage)
+            : (_hostShutdownWasIntentional ? HostLeftLobbyMessage : HostDisconnectedMessage);
+
+        _isShutdownInProgress = true;
+        _ = runner.Shutdown();
+    }
 
     public void OnConnectedToServer(NetworkRunner runner){}
 

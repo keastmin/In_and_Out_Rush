@@ -71,6 +71,13 @@ namespace Dev.Network
         {
             OnGateEntered?.Invoke(runner, gate, this);
             _stageSystem.Victory();
+
+            //// RPC를 통해 클라이언트에게 게임 승리/종료 팝업 띄우기
+            //if (InterfaceManager.Instance != null)
+            //{
+            //    InterfaceManager.Instance.SetVictoryUIActivation(true);
+            //}
         }
+
     }
 }

@@ -3,20 +3,26 @@ using UnityEngine;
 
 public class InfiniteGridVisualController
 {
-    private const int MaxOccupiedCells = 512;
-    private const int MaxPreviewCells = 512;
-    private const int MaxBlockedPreviewCells = 512;
-    private const int MaxBuffCells = 512;
-    private const int MaxTerritoryVertices = 256;
+    private const int MaxOccupiedCells = 64;
+    private const int MaxPreviewCells = 64;
+    private const int MaxBlockedPreviewCells = 64;
+    private const int MaxBuffCells = 64;
+    private const int MaxTerritoryVertices = 64;
 
     private Renderer _groundRenderer;
     private MaterialPropertyBlock _propertyBlock;
-    private readonly Vector4[] _occupiedCellsBuffer = new Vector4[MaxOccupiedCells];
-    private readonly Vector4[] _previewCellsBuffer = new Vector4[MaxPreviewCells];
-    private readonly Vector4[] _blockedPreviewCellsBuffer = new Vector4[MaxBlockedPreviewCells];
-    private readonly Vector4[] _buffCellsBuffer = new Vector4[MaxBuffCells];
-    private readonly Vector4[] _buffColorsBuffer = new Vector4[MaxBuffCells];
-    private readonly Vector4[] _territoryVerticesBuffer = new Vector4[MaxTerritoryVertices];
+    private readonly Color[] _occupiedCellsBuffer = new Color[MaxOccupiedCells];
+    private readonly Color[] _previewCellsBuffer = new Color[MaxPreviewCells];
+    private readonly Color[] _blockedPreviewCellsBuffer = new Color[MaxBlockedPreviewCells];
+    private readonly Color[] _buffCellsBuffer = new Color[MaxBuffCells];
+    private readonly Color[] _buffColorsBuffer = new Color[MaxBuffCells];
+    private readonly Color[] _territoryVerticesBuffer = new Color[MaxTerritoryVertices];
+    private Texture2D _occupiedCellsTexture;
+    private Texture2D _previewCellsTexture;
+    private Texture2D _blockedPreviewCellsTexture;
+    private Texture2D _buffCellsTexture;
+    private Texture2D _buffColorsTexture;
+    private Texture2D _territoryVerticesTexture;
 
     public void Apply(
         GameObject owner,
@@ -105,12 +111,12 @@ public class InfiniteGridVisualController
             }
 
             Vector2Int axial = gridCalculator.GetAxialFromOffsetIndex(occupiedIndex);
-            _occupiedCellsBuffer[occupiedCount] = new Vector4(axial.x, axial.y, 0f, 0f);
+            _occupiedCellsBuffer[occupiedCount] = new Color(axial.x, axial.y, 0f, 0f);
             occupiedCount++;
         }
 
         _propertyBlock.SetFloat("_OccupiedCellCount", occupiedCount);
-        _propertyBlock.SetVectorArray("_OccupiedCells", _occupiedCellsBuffer);
+        SetDataTexture("_OccupiedCellsTex", _occupiedCellsBuffer, ref _occupiedCellsTexture, MaxOccupiedCells);
     }
 
     private void ApplyPreviewCells(
@@ -131,7 +137,7 @@ public class InfiniteGridVisualController
                 }
 
                 Vector2Int axial = gridCalculator.GetAxialFromOffsetIndex(previewIndex);
-                _previewCellsBuffer[previewCount] = new Vector4(axial.x, axial.y, 0f, 0f);
+                _previewCellsBuffer[previewCount] = new Color(axial.x, axial.y, 0f, 0f);
                 previewCount++;
             }
         }
@@ -146,15 +152,15 @@ public class InfiniteGridVisualController
                 }
 
                 Vector2Int axial = gridCalculator.GetAxialFromOffsetIndex(previewIndex);
-                _blockedPreviewCellsBuffer[blockedPreviewCount] = new Vector4(axial.x, axial.y, 0f, 0f);
+                _blockedPreviewCellsBuffer[blockedPreviewCount] = new Color(axial.x, axial.y, 0f, 0f);
                 blockedPreviewCount++;
             }
         }
 
         _propertyBlock.SetFloat("_PreviewCellCount", previewCount);
-        _propertyBlock.SetVectorArray("_PreviewCells", _previewCellsBuffer);
+        SetDataTexture("_PreviewCellsTex", _previewCellsBuffer, ref _previewCellsTexture, MaxPreviewCells);
         _propertyBlock.SetFloat("_BlockedPreviewCellCount", blockedPreviewCount);
-        _propertyBlock.SetVectorArray("_BlockedPreviewCells", _blockedPreviewCellsBuffer);
+        SetDataTexture("_BlockedPreviewCellsTex", _blockedPreviewCellsBuffer, ref _blockedPreviewCellsTexture, MaxBlockedPreviewCells);
     }
 
     private void ApplyBuffCells(
@@ -174,20 +180,20 @@ public class InfiniteGridVisualController
                 }
 
                 Vector2Int axial = gridCalculator.GetAxialFromOffsetIndex(pair.Key);
-                _buffCellsBuffer[buffCount] = new Vector4(axial.x, axial.y, 0f, 0f);
+                _buffCellsBuffer[buffCount] = new Color(axial.x, axial.y, 0f, 0f);
 
                 Color sumColor = buffCellColorSum != null && buffCellColorSum.TryGetValue(pair.Key, out Color cachedColor)
                     ? cachedColor
                     : Color.clear;
                 Color mixedColor = sumColor / Mathf.Max(1, pair.Value);
-                _buffColorsBuffer[buffCount] = new Vector4(mixedColor.r, mixedColor.g, mixedColor.b, mixedColor.a);
+                _buffColorsBuffer[buffCount] = mixedColor;
                 buffCount++;
             }
         }
 
         _propertyBlock.SetFloat("_BuffCellCount", buffCount);
-        _propertyBlock.SetVectorArray("_BuffCells", _buffCellsBuffer);
-        _propertyBlock.SetVectorArray("_BuffCellColors", _buffColorsBuffer);
+        SetDataTexture("_BuffCellsTex", _buffCellsBuffer, ref _buffCellsTexture, MaxBuffCells);
+        SetDataTexture("_BuffCellColorsTex", _buffColorsBuffer, ref _buffColorsTexture, MaxBuffCells);
     }
 
     private void ApplyTerritoryVertices(Territory territory)
@@ -200,12 +206,66 @@ public class InfiniteGridVisualController
             for (int i = 0; i < count; i++)
             {
                 Vector2 vertex = territory.Vertices[i];
-                _territoryVerticesBuffer[i] = new Vector4(vertex.x, vertex.y, 0f, 0f);
+                _territoryVerticesBuffer[i] = new Color(vertex.x, vertex.y, 0f, 0f);
                 territoryVertexCount++;
             }
         }
 
         _propertyBlock.SetFloat("_TerritoryVertexCount", territoryVertexCount);
-        _propertyBlock.SetVectorArray("_TerritoryVertices", _territoryVerticesBuffer);
+        SetDataTexture("_TerritoryVerticesTex", _territoryVerticesBuffer, ref _territoryVerticesTexture, MaxTerritoryVertices);
+    }
+
+    private void SetDataTexture(string propertyName, Color[] data, ref Texture2D texture, int capacity)
+    {
+        if (texture == null || texture.width != capacity || texture.height != 1)
+        {
+            ReleaseTexture(ref texture);
+            texture = new Texture2D(capacity, 1, GetDataTextureFormat(), false, true)
+            {
+                name = propertyName,
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp
+            };
+        }
+
+        texture.SetPixels(data);
+        texture.Apply(false, false);
+        _propertyBlock.SetTexture(propertyName, texture);
+    }
+
+    public void Release()
+    {
+        ReleaseTexture(ref _occupiedCellsTexture);
+        ReleaseTexture(ref _previewCellsTexture);
+        ReleaseTexture(ref _blockedPreviewCellsTexture);
+        ReleaseTexture(ref _buffCellsTexture);
+        ReleaseTexture(ref _buffColorsTexture);
+        ReleaseTexture(ref _territoryVerticesTexture);
+    }
+
+    private static TextureFormat GetDataTextureFormat()
+    {
+        return SystemInfo.SupportsTextureFormat(TextureFormat.RGBAFloat)
+            ? TextureFormat.RGBAFloat
+            : TextureFormat.RGBAHalf;
+    }
+
+    private static void ReleaseTexture(ref Texture2D texture)
+    {
+        if (texture == null)
+        {
+            return;
+        }
+
+        if (Application.isPlaying)
+        {
+            UnityEngine.Object.Destroy(texture);
+        }
+        else
+        {
+            UnityEngine.Object.DestroyImmediate(texture);
+        }
+
+        texture = null;
     }
 }

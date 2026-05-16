@@ -1,6 +1,9 @@
 using Fusion;
 using UnityEngine;
 using System;
+using System.Collections;
+using UnityEngine.EventSystems;
+using Dev.Network;
 
 public class Laboratory : GridPlaceable, ICanClickObject
 {
@@ -13,7 +16,7 @@ public class Laboratory : GridPlaceable, ICanClickObject
 
     protected override bool RequireTerritoryOnSpawn => !_ignoreTerritoryOnSpawn && _requireTerritory;
 
-    public event Action<bool> OnClickLaboratoryObjectAction;
+    private PlayerBuilderUI _builderUI;
 
     private void Awake()
     {
@@ -26,16 +29,35 @@ public class Laboratory : GridPlaceable, ICanClickObject
     public override void Spawned()
     {
         base.Spawned();
+        RegisterToStageBootstrapper();
+    }
+
+    private void RegisterToStageBootstrapper()
+    {
+        if (StageBootstrapper.Instance != null)
+        {
+            StageBootstrapper.Instance.OnSpawnedLaboratory(this);
+            return;
+        }
+
+        StartCoroutine(RegisterToStageBootstrapperWhenReady());
+    }
+
+    private IEnumerator RegisterToStageBootstrapperWhenReady()
+    {
+        yield return new WaitUntil(() => StageBootstrapper.Instance != null);
+        StageBootstrapper.Instance.OnSpawnedLaboratory(this);
     }
 
     public void OnLeftMouseDownThisObject()
     {
+
     }
 
     // 빌더가 연구소를 통해 강화 UI를 띄우기
     public void OnLeftMouseUpThisObject()
     {
-        OnClickLaboratoryObjectAction?.Invoke(true);
+        StageBootstrapper.Instance?.TryOpenLaboratoryUI(this);
     }
 
     public void OnCancelClickThisObject()
@@ -56,5 +78,16 @@ public class Laboratory : GridPlaceable, ICanClickObject
     private void CinemachinePriorityDown()
     {
         // 연구소를 바라보는 시네머신의 Priority를 내림
+    }
+
+    public void InjectBuilderUI(PlayerBuilderUI builderUI)
+    {
+        _builderUI = builderUI;
+    }
+
+    public bool TryGetBuilderUI(out PlayerBuilderUI builderUI)
+    {
+        builderUI = _builderUI;
+        return builderUI != null;
     }
 }

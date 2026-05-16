@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using Dev.Local;
 using Fusion;
@@ -74,6 +75,7 @@ namespace Dev.Network
             InitUIController();
             LaboratoryUIInjectionPlayerRunner(UIController.BuilderUI, PlayerRunner);
             BuilderReferenceBind(PlayerBuilder, UIController.BuilderUI);
+            TryInjectSpawnedLaboratory();
 
             Debug.Log("StageBootstrapper init complete");
             _initialized = true;

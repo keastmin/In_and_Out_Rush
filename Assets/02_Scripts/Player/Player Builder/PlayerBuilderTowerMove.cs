@@ -586,7 +586,7 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
     {
         if (tower.TryGetComponent(out TeleportTower teleportTower))
         {
-            teleportTower.SetCoolDown();
+            teleportTower.SetPairCoolDown();
         }
     }
 }

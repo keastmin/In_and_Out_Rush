@@ -4,6 +4,7 @@ using UnityEngine;
 public class TeleportTower : SupportTower, IRunnerInteractableTower
 {
     [SerializeField] private float _moveCoolDown = 30f;
+    [SerializeField] private float _teleportExitDistance = 2f;
 
     public TeleportTower OtherTeleportTower;
 
@@ -19,6 +20,10 @@ public class TeleportTower : SupportTower, IRunnerInteractableTower
     {
         TowerManager.Instance.AddTowerID(TowerID);
         TeleportTowerPairManager.Instance.AddTeleportTower(this); // 텔레포트 타워 등록
+        if (OtherTeleportTower == null && TeleportTowerPairManager.Instance.RegisteredTowerCount >= TeleportTowerPairManager.MaxTeleportTowerCount && HasStateAuthority)
+        {
+            Runner.Despawn(Object);
+        }
     }
 
     protected override void TowerDespawned()
@@ -29,22 +34,43 @@ public class TeleportTower : SupportTower, IRunnerInteractableTower
 
     public void Interact(PlayerRunner runner)
     {
-        if(OtherTeleportTower != null)
-        {
-            if (CoolDown.ExpiredOrNotRunning(Runner) && OtherTeleportTower.CoolDown.ExpiredOrNotRunning(Runner))
-            {
-                Vector3 position = OtherTeleportTower.transform.position + Vector3.forward * 2f;
+        if (runner == null || OtherTeleportTower == null)
+            return;
 
-                Debug.Log("텔레포트 요청");
-                runner.TeleportTo(position);
-            }
-        }
+        if (!CoolDown.ExpiredOrNotRunning(Runner) || !OtherTeleportTower.CoolDown.ExpiredOrNotRunning(Runner))
+            return;
+
+        runner.TeleportTo(GetExitPosition());
     }
 
     // 쿨타임을 적용하는 함수
     public void SetCoolDown()
     {
         RPC_SetCoolDown();
+    }
+
+    public void SetPairCoolDown()
+    {
+        SetCoolDown();
+        if (OtherTeleportTower != null)
+        {
+            OtherTeleportTower.SetCoolDown();
+        }
+    }
+
+    private Vector3 GetExitPosition()
+    {
+        Vector3 exitDirection = OtherTeleportTower.transform.position - transform.position;
+        exitDirection.y = 0f;
+
+        if (exitDirection.sqrMagnitude <= Mathf.Epsilon)
+        {
+            exitDirection = OtherTeleportTower.transform.forward;
+        }
+
+        Vector3 exitPosition = OtherTeleportTower.transform.position + exitDirection.normalized * _teleportExitDistance;
+        exitPosition.y = OtherTeleportTower.transform.position.y;
+        return exitPosition;
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]

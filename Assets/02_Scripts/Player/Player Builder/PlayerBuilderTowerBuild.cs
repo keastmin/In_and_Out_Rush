@@ -31,6 +31,14 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
 
     public bool TowerBuildConditionChecker(string towerId)
     {
+        if (towerId == TowerIDContainer.TELEPORT_TOWER_ID)
+        {
+            if (TowerManager.Instance == null)
+                return false;
+
+            return TowerManager.Instance.GetTowerCount(towerId) < TeleportTowerPairManager.MaxTeleportTowerCount;
+        }
+
         return true;
     }
 
@@ -89,7 +97,7 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
     {
         if (_towerRef != default && _tower != null)
         {
-            RPC_BuildTower(_towerRef, _buildCost, index, BuildRange);
+            RPC_BuildTower(_towerRef, _buildCost, index, BuildRange, TowerID == TowerIDContainer.TELEPORT_TOWER_ID);
         }
     }
 
@@ -145,12 +153,15 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
     }
 
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-    private void RPC_BuildTower(NetworkPrefabRef towerRef, Cost cost, Vector2Int index, int buildRange)
+    private void RPC_BuildTower(NetworkPrefabRef towerRef, Cost cost, Vector2Int index, int buildRange, bool isTeleportTower)
     {
         if (!HasStateAuthority)
             return;
 
         if (InfiniteGrid.Instance == null)
+            return;
+
+        if (isTeleportTower && !TowerBuildConditionChecker(TowerIDContainer.TELEPORT_TOWER_ID))
             return;
 
         if (ResourceSystem.Instance.Mineral < cost.Mineral || ResourceSystem.Instance.Gas < cost.Gas)

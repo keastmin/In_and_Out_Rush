@@ -12,7 +12,7 @@ public class PlayerRunnerTumbleHandler
         if (_isTumbling) return;
 
         _isTumbling = true;
-        rigidbody.linearVelocity = runner.MovementSpeed * runner.transform.forward;
+        rigidbody.linearVelocity = runner.EffectiveMovementSpeed * runner.transform.forward;
 
         Transform rootTransform = runner.transform.Find("Root");
         rootTransform.DOLocalMoveY(2f, 0.5f)

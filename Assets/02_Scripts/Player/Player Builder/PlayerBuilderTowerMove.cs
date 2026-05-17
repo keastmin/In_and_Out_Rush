@@ -335,10 +335,6 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
                 continue;
 
             ghost.InitializePreview();
-            if (tower.HasBuffRange)
-            {
-                ghost.SetGhostBuffRange(tower.BuffRange);
-            }
 
             _ghosts.Add(ghost);
             _ghostToTowerDic.Add(ghost, tower);
@@ -586,7 +582,7 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
     {
         if (tower.TryGetComponent(out TeleportTower teleportTower))
         {
-            teleportTower.SetCoolDown();
+            teleportTower.SetPairCoolDown();
         }
     }
 }

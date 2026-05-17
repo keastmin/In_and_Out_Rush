@@ -11,12 +11,11 @@ namespace Dev.Network
             targetTransform.TryGetComponent(out _targetRigidbody);
         }
 
-        public void UpdateMovement(bool isDashing, Vector3 direction)
+        public void UpdateMovement(float movementSpeed, bool isDashing, Vector3 direction)
         {
             if (_targetRigidbody == null) return;
             if (Globals.Store == null) return; // 임시
 
-            var movementSpeed = Globals.Store.PlayerRunnerMovementSpeed;
             var dashScaler = Globals.Store.PlayerRunnerDashScaler;
             var actualMovementSpeed = isDashing ? movementSpeed * dashScaler : movementSpeed;
             _targetRigidbody.linearVelocity = actualMovementSpeed * direction;

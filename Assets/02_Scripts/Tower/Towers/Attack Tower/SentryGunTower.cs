@@ -15,8 +15,10 @@ public sealed class SentryGunTower : AttackTower
     [Networked, OnChangedRender(nameof(OnShotChanged))]
     private int _shotSeq { get; set; }
 
-    protected override void TowerSpawned()
+    public override void Spawned()
     {
+        base.Spawned();
+
         Debug.Log("Tower 스폰됨");
         if (HasStateAuthority)
         {

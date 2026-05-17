@@ -63,7 +63,7 @@ public class PlayerRunnerOutOfBodyController : NetworkBehaviour
         _outOfBodySpiritObject.GetComponent<NetworkRigidbody3D>()
             .Teleport(transform.position + transform.forward * 1f);
         _outOfBodySpiritObject.GetComponent<Rigidbody>().linearVelocity =
-            transform.forward * _playerRunner.MovementSpeed;
+            transform.forward * _playerRunner.EffectiveMovementSpeed;
         _currentTargetTransform = _outOfBodySpiritObject.transform;
     }
 

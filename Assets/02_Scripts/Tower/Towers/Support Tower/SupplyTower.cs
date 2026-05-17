@@ -9,8 +9,10 @@ public class SupplyTower : SupportTower, IRunnerInteractableTower
     [Networked, Capacity(_maxSlots), OnChangedRender(nameof(OnEmptySupplies))]
     private NetworkLinkedList<int> Supplies => default;
 
-    protected override void TowerSpawned()
+    public override void Spawned()
     {
+        base.Spawned();
+
         // 빌더만 실행
         if (NetworkManager.Instance.Registry.RefToPosition[Runner.LocalPlayer] == PlayerPosition.Builder)
         {

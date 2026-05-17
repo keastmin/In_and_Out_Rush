@@ -1,104 +1,92 @@
 using Fusion;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class RegenerationTower : SupportTower
 {
-    private static readonly Color RegenerationBuffCellColor = new Color(0.2f, 1f, 0.35f, 0.35f);
-
+    [Header("Heal")]
+    [SerializeField] private LayerMask _detectLayer;
+    [SerializeField] private float _healRange = 25f;
     [SerializeField] private float _armor = 100f;
     [SerializeField] private float _maxHeal = 100f;
     [SerializeField] private float _healPerSec = 5f;
 
-    protected override bool EmitBuffCells => true;
-    protected override Color BuffCellColor => RegenerationBuffCellColor;
+    private Collider[] _detectedHealReceivers;
+    private HashSet<IHeal> _armorReceivedHeals;
+    private HashSet<IHeal> _currentFrameHeals;
+    private float _remainingHeal;
 
-    private bool _receiveArmor = false;
-    private IHeal _detectedRunner;
-    private IHeal _enteringRunner;
+    protected override void TowerAwake()
+    {
+        _detectedHealReceivers = new Collider[100];
+        _armorReceivedHeals = new HashSet<IHeal>();
+        _currentFrameHeals = new HashSet<IHeal>();
+    }
 
-    private float _healTimer = 1f;
-    private float _currentTimer = 0f;
+    public override void Spawned()
+    {
+        base.Spawned();
+        _remainingHeal = _maxHeal;
+    }
 
     protected override void TowerFixedUpdateNetwork()
     {
-        SyncBuffCellSource();
-
         if (!HasStateAuthority)
         {
             return;
         }
 
-        if (!TryGetGrid(out InfiniteGrid gm))
+        if (_remainingHeal <= 0f)
         {
-            _detectedRunner = null;
-            _enteringRunner = null;
-            _receiveArmor = false;
-            _currentTimer = 0f;
+            DespawnRegenerationTower();
             return;
         }
 
-        _detectedRunner = null;
-        var entries = BuffReceiverRegistry.Snapshot;
-        for (int i = 0; i < entries.Count; i++)
+        int detectedCount = Physics.OverlapSphereNonAlloc(transform.position, _healRange, _detectedHealReceivers, _detectLayer);
+        _currentFrameHeals.Clear();
+        for (int i = 0; i < detectedCount; i++)
         {
-            var entry = entries[i];
-            if ((entry.TargetType & BuffTargetType.Runner) == 0) continue;
-            if (entry.Transform == null) continue;
-            if (!gm.IsWorldPositionInBuffSource(BuffSourceId, entry.Transform.position)) continue;
-
-            if (entry.Receiver is IHeal healReceiver)
+            if (!_detectedHealReceivers[i].TryGetComponent(out IHeal heal))
             {
-                _detectedRunner = healReceiver;
+                continue;
+            }
+
+            if (!_currentFrameHeals.Add(heal))
+            {
+                continue;
+            }
+
+            if (_armorReceivedHeals.Add(heal))
+            {
+                heal.ReceiveArmor(_armor);
+            }
+
+            float healAmount = Mathf.Min(_healPerSec * Runner.DeltaTime, _remainingHeal);
+            float actualHealedAmount = heal.Heal(healAmount);
+            if (actualHealedAmount <= 0f)
+            {
+                continue;
+            }
+
+            _remainingHeal = Mathf.Max(0f, _remainingHeal - actualHealedAmount);
+            if (_remainingHeal <= 0f)
+            {
+                DespawnRegenerationTower();
                 break;
             }
-        }
-
-        if (_detectedRunner == null)
-        {
-            _enteringRunner = null;
-            _receiveArmor = false;
-            _currentTimer = 0f;
-            return;
-        }
-
-        if (_detectedRunner != _enteringRunner)
-        {
-            _enteringRunner = _detectedRunner;
-            _currentTimer = 0f;
-
-            if (!_receiveArmor)
-            {
-                _enteringRunner.ReceiveArmor(_armor);
-                _receiveArmor = true;
-            }
-        }
-
-        if (_enteringRunner == null || _maxHeal <= 0f)
-        {
-            return;
-        }
-
-        _currentTimer += Runner.DeltaTime;
-        if (_currentTimer < _healTimer)
-        {
-            return;
-        }
-
-        _currentTimer = 0f;
-
-        float request = Mathf.Min(_healPerSec, _maxHeal);
-        float healed = _enteringRunner.Heal(request);
-        _maxHeal -= healed;
-        if (_maxHeal < 0f)
-        {
-            _maxHeal = 0f;
         }
     }
 
     protected override void TowerDespawned()
     {
         base.TowerDespawned();
-        ReleaseBuffCellSource();
+        _armorReceivedHeals?.Clear();
+    }
+
+    private void DespawnRegenerationTower()
+    {
+        ReleaseGridOccupation();
+        Runner.Despawn(Object);
     }
 }
 

@@ -16,19 +16,11 @@ public class Tower : GridPlaceable, ICanClickObject
     [SerializeField] protected GameObject _selectedChecker; // 타워 선택 시 표시 오브젝트
     [SerializeField] protected Image _selectedImage; // 타워 선택 시 UI에 표시될 이미지
 
-    [Header("버프")]
-    [SerializeField] protected float _buffRange = 25f; // 버프 범위
-    [SerializeField] protected Transform _buffRangeTransform; // 버프 범위 표시 오브젝트의 Transform
-
     public Cost Cost => _cost;
     public TowerGhost Ghost => _ghost;
     public bool IsCenter => (_type == TowerType.Center);
     public TowerType Type => _type;
-    public bool HasBuffRange => (_buffRangeTransform != null); // 버프 범위가 있으면 true 아니면 false
-    public float BuffRange => _buffRange;
     public string TowerID => _towerId;
-
-    [Networked, OnChangedRender(nameof(OnChangeBuffScale))] protected float NetBuffRange { get; set; }
 
     private void Awake()
     {
@@ -42,12 +34,8 @@ public class Tower : GridPlaceable, ICanClickObject
 
         if (HasStateAuthority)
         {
-            NetBuffRange = _buffRange;
             InfiniteGrid.Instance?.HostOnlyReadTowers.Add(this);
         }
-
-        OnChangeBuffScale();
-        TowerSpawned();
     }
 
     public override void FixedUpdateNetwork()
@@ -73,10 +61,6 @@ public class Tower : GridPlaceable, ICanClickObject
         Debug.Log("Tower Awake");
     }
 
-    protected virtual void TowerSpawned()
-    {
-    }
-
     protected virtual void TowerFixedUpdateNetwork()
     {
     }
@@ -88,20 +72,6 @@ public class Tower : GridPlaceable, ICanClickObject
     protected void SetId(string id)
     {
         _towerId = id;
-    }
-
-    /// <summary>
-    /// 버프 범위를 설정하는 함수
-    /// </summary>
-    /// <param name="range">버프 범위</param>
-    public void SetBuffRange(float range)
-    {
-        if (_buffRangeTransform == null) return;
-
-        if (HasStateAuthority)
-        {
-            NetBuffRange = range;
-        }
     }
 
     public void OnLeftMouseDownThisObject()
@@ -121,15 +91,6 @@ public class Tower : GridPlaceable, ICanClickObject
     public void OnCancelClickThisObject()
     {
         _selectedChecker.SetActive(false);
-    }
-
-    private void OnChangeBuffScale()
-    {
-        if (_buffRangeTransform != null)
-        {
-            Vector3 scale = new Vector3(NetBuffRange, NetBuffRange, NetBuffRange);
-            _buffRangeTransform.localScale = scale;
-        }
     }
 
     private void NotifyBuilderTowerDespawned()

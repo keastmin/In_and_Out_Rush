@@ -83,10 +83,6 @@ public class PlayerBuilderTowerBuildState : IPlayerState
     private void CreateTowerGhost()
     {
         _towerGhost = _player.BuilderTowerBuild.CreateTowerGhostInstance();
-        if (_towerGhost != null && _player.BuilderTowerBuild.HasBuffRange)
-        {
-            _towerGhost.SetGhostBuffRange(_player.BuilderTowerBuild.BuffRange);
-        }
     }
 
     private bool TryGetMouseWorldPositionOnGrid(out Vector3 mousePosition)

@@ -43,7 +43,7 @@ public class PlayerRegistry : NetworkBehaviour
     public void RPC_NotifyHostShutdown(bool wasGame)
     {
         if (!HasStateAuthority)
-            MatchMaker.Instance?.MarkHostShutdownIntent(wasGame);
+            MatchMaker.Instance?.HandleHostShutdownNotice(wasGame);
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]

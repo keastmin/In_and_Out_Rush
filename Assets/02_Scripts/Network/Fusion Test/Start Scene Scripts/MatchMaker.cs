@@ -183,6 +183,18 @@ public class MatchMaker : MonoBehaviour, INetworkRunnerCallbacks
         _hostShutdownWasGame = wasGame;
     }
 
+    public void HandleHostShutdownNotice(bool wasGame)
+    {
+        MarkHostShutdownIntent(wasGame);
+
+        if (!Runner || Runner.IsServer || _localShutdownIntent != LocalShutdownIntent.None || _isShutdownInProgress)
+            return;
+
+        _pendingRemoteShutdownMessage = wasGame ? TeammateQuitGameMessage : HostLeftLobbyMessage;
+        _isShutdownInProgress = true;
+        _ = Runner.Shutdown();
+    }
+
     private async Task ShutdownRunnerAsync(LocalShutdownIntent intent)
     {
         if (!Runner || _isShutdownInProgress)

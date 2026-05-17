@@ -14,6 +14,7 @@ namespace Dev.Network
 
         public InfiniteGrid Grid => _grid;
         [HideInInspector] [Networked] public Laboratory NetworkLaboratory { get; private set; }
+        private Laboratory _localLaboratory;
 
         private void KIMInitializeHost()
         {
@@ -48,6 +49,51 @@ namespace Dev.Network
                 Vector3 labSpawnPos = Grid.GetCellCenterPosition(Vector3.zero);
                 NetworkLaboratory = Runner.Spawn(_laboratoryPrefab, labSpawnPos, Quaternion.identity);
             }
+        }
+
+        public void OnSpawnedLaboratory(Laboratory laboratory)
+        {
+            _localLaboratory = laboratory;
+            TryInjectBuilderUI(laboratory);
+        }
+
+        public bool TryOpenLaboratoryUI(Laboratory laboratory)
+        {
+            if (!TryInjectBuilderUI(laboratory))
+                return false;
+
+            if (!laboratory.TryGetBuilderUI(out var builderUI))
+                return false;
+
+            builderUI.OnClickLaboratoryButton(true);
+            return true;
+        }
+
+        public bool TryInjectBuilderUI(Laboratory laboratory)
+        {
+            if (laboratory == null || !IsLocalPlayerBuilder())
+                return false;
+
+            if (UIController == null || UIController.BuilderUI == null)
+                return false;
+
+            laboratory.InjectBuilderUI(UIController.BuilderUI);
+            return true;
+        }
+
+        private void TryInjectSpawnedLaboratory()
+        {
+            TryInjectBuilderUI(_localLaboratory);
+        }
+
+        private bool IsLocalPlayerBuilder()
+        {
+            if (Runner == null || NetworkManager.Instance == null || NetworkManager.Instance.Registry == null)
+                return false;
+
+            var registry = NetworkManager.Instance.Registry;
+            return registry.RefToPosition.ContainsKey(Runner.LocalPlayer) &&
+                   registry.IsPlayerBuilder(Runner.LocalPlayer);
         }
     }
 }

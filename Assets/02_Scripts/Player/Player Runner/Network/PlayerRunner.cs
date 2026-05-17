@@ -50,6 +50,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
     public event Action<PlayerRunner, object> OnDied;
     public event Action<PlayerRunner, object> OnLaboratoryLookStarted;
     public event Action<PlayerRunner, object> OnLaboratoryLookEnded;
+    public float EffectiveMovementSpeed => _buffHandler.GetMovementSpeed(this);
 
     public void OnHealthChanged()
     {
@@ -80,6 +81,11 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
         if (HasStateAuthority)
         {
             Health = MaxHealth;
+            if (Globals.Store != null)
+            {
+                MovementSpeed = Globals.Store.PlayerRunnerMovementSpeed;
+            }
+
             IsDead = false;
         }
         BuffReceiverRegistry.Register(this, transform, BuffTargetType.Runner);
@@ -87,6 +93,11 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
 
     public override void FixedUpdateNetwork()
     {
+        if (HasStateAuthority)
+        {
+            _buffHandler.Tick(Runner.DeltaTime);
+        }
+
         if (!GetInput(out NetworkInputData data)) return;
 
         HandleMovementInput(data);
@@ -135,7 +146,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
         if (_slideHandler.IsSliding || _tumbleHandler.IsTumbling) return;
         bool isDashing = data.DashInput.IsSet(NetworkInputData.DASH_INPUT);
         Vector3 direction = data.PlayerRunnerDirection.normalized;
-        _movement.UpdateMovement(isDashing, direction);
+        _movement.UpdateMovement(EffectiveMovementSpeed, isDashing, direction);
     }
 
     private void HandleSlideInput(NetworkInputData data)

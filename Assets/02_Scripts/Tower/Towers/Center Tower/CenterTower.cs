@@ -54,11 +54,13 @@ public class CenterTower : Tower
         _effects.Add(TowerPropertiesType.Biochemical, _bioPropertiesEffect);
     }
 
-    protected override void TowerSpawned()
+    public override void Spawned()
     {
+        base.Spawned();
+
         // 호스트만 수행
         if (!HasStateAuthority) return;
-        
+
         // 발사 타이머 초기화
         _fireTickTimer = TickTimer.CreateFromSeconds(Runner, _fireRate);
     }

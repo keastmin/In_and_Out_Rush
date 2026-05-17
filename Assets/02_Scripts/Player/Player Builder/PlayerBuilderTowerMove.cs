@@ -335,10 +335,6 @@ public class PlayerBuilderTowerMove : NetworkBehaviour
                 continue;
 
             ghost.InitializePreview();
-            if (tower.HasBuffRange)
-            {
-                ghost.SetGhostBuffRange(tower.BuffRange);
-            }
 
             _ghosts.Add(ghost);
             _ghostToTowerDic.Add(ghost, tower);

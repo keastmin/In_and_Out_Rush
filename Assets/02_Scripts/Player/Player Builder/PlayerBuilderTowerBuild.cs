@@ -15,8 +15,6 @@ public sealed class PlayerBuilderTowerBuild : NetworkBehaviour
     public Cost BuildCost => _buildCost;
     public bool IsStandByBuild => _isStandByBuild;
     public bool IsCenterTower => _tower != null && _tower.IsCenter;
-    public bool HasBuffRange => _tower != null && _tower.HasBuffRange;
-    public float BuffRange => (_tower != null) ? _tower.BuffRange : 0f;
     public string TowerID => (_tower != null) ? _tower.TowerID : string.Empty;
     public int BuildRange => (_tower != null) ? _tower.BuildRange : 0;
 

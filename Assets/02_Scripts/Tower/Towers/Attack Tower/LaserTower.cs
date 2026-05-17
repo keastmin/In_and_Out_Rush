@@ -17,8 +17,10 @@ public class LaserTower : AttackTower
     [Networked, OnChangedRender(nameof(OnShotChanged))]
     private int _shotSeq { get; set; }
 
-    protected override void TowerSpawned()
+    public override void Spawned()
     {
+        base.Spawned();
+
         if (HasStateAuthority)
         {
             InitHostLaserTower();

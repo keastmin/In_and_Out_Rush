@@ -16,8 +16,10 @@ public class TeleportTower : SupportTower, IRunnerInteractableTower
         SetId(TowerIDContainer.TELEPORT_TOWER_ID);
     }
 
-    protected override void TowerSpawned()
+    public override void Spawned()
     {
+        base.Spawned();
+
         TowerManager.Instance.AddTowerID(TowerID);
         TeleportTowerPairManager.Instance.AddTeleportTower(this); // 텔레포트 타워 등록
         if (OtherTeleportTower == null && TeleportTowerPairManager.Instance.RegisteredTowerCount >= TeleportTowerPairManager.MaxTeleportTowerCount && HasStateAuthority)

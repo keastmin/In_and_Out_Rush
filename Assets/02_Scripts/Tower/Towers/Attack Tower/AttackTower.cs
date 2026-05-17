@@ -49,6 +49,11 @@ public class AttackTower : Tower, ICanClickObject, ICanDragObject
         _bioEffect.SetActive(false);
     }
 
+    public override void Spawned()
+    {
+        base.Spawned();
+    }
+
     // 타겟 설정 메서드
     protected virtual Collider SetTarget()
     {

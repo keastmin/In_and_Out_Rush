@@ -10,9 +10,6 @@ public sealed class AmplificationTower : SupportTower, ICanDragObject
     [SerializeField] private Transform _buffObject;
     [SerializeField] private LayerMask _detectLayer;
     [SerializeField] private float _buffRange = 25f;
-    [SerializeField] private float _speedBonus = 10f;
-    [SerializeField] private float _attackBonus = 10f;
-    [SerializeField] private float _towerAttackSpeedBonus = 20f;
 
     private Collider[] _detectedBuffReceivers;
     private HashSet<IBuffReceiver> _receivers;
@@ -35,10 +32,6 @@ public sealed class AmplificationTower : SupportTower, ICanDragObject
         {
             SetBuffObjectSize();
         }
-
-        _buffParam.AttackBonus = _attackBonus;
-        _buffParam.SpeedBonus = _speedBonus;
-        _buffParam.TowerAttackSpeedBonus = _towerAttackSpeedBonus;
     }
 
     protected override void TowerFixedUpdateNetwork()

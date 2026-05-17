@@ -201,13 +201,8 @@ MonoBehaviour:
     TowerAttackSpeedBonus: 20
     AttackBonus: 10
     SpeedBonus: 10
-  _targetTypes: 1
-  _affectSelf: 0
   _buffObject: {fileID: 6981587791884122296}
   _detectLayer:
     serializedVersion: 2
     m_Bits: 1280
   _buffRange: 25
-  _speedBonus: 10
-  _attackBonus: 10
-  _towerAttackSpeedBonus: 20

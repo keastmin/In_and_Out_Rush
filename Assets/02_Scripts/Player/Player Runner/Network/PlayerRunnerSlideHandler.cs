@@ -18,7 +18,7 @@ public class PlayerRunnerSlideHandler
         Debug.Log("슬라이드 시작");
         _isSliding = true;
         rigidbody.linearVelocity = Vector3.zero;
-        rigidbody.AddForce(3f * runner.MovementSpeed * runner.transform.forward, ForceMode.Impulse);
+        rigidbody.AddForce(3f * runner.EffectiveMovementSpeed * runner.transform.forward, ForceMode.Impulse);
 
         float originalLinearDamping = rigidbody.linearDamping;
         rigidbody.linearDamping = 2f;

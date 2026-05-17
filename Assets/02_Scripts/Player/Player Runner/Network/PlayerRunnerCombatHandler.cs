@@ -15,15 +15,15 @@ public class PlayerRunnerCombatHandler
         if (runner.IsDead) return;
         if (_isInvincible) return;
 
-        runner.Health -= damage;
-        StageBootstrapper.Instance.UIController.RunnerUI.Display.Player
-            .SetHealthBarRatio(runner.Health / PlayerRunner.MaxHealth);
+        runner.Health = Mathf.Max(0f, runner.Health - damage);
 
         if (runner.Health <= 0f)
         {
             runner.IsDead = true;
             runner.InvokeDiedEvent(runner, runner);
         }
+
+        UpdateHealthUI(runner);
     }
 
     public float Heal(PlayerRunner runner, float amount)
@@ -32,8 +32,7 @@ public class PlayerRunnerCombatHandler
 
         float healedAmount = Mathf.Min(amount, PlayerRunner.MaxHealth - runner.Health);
         runner.Health += healedAmount;
-        StageBootstrapper.Instance.UIController.RunnerUI.Display.Player
-            .SetHealthBarRatio(runner.Health / PlayerRunner.MaxHealth);
+        UpdateHealthUI(runner);
         return healedAmount;
     }
 
@@ -58,5 +57,13 @@ public class PlayerRunnerCombatHandler
         if (runner.HasStateAuthority)
             _isInvincible = false;
         Debug.Log("무적 상태 종료");
+    }
+
+    private void UpdateHealthUI(PlayerRunner runner)
+    {
+        var playerUI = StageBootstrapper.Instance?.UIController?.RunnerUI?.Display?.Player;
+        if (playerUI == null) return;
+
+        playerUI.SetHealthBarRatio(runner.Health / PlayerRunner.MaxHealth);
     }
 }

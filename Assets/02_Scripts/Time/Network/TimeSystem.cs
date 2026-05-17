@@ -1,68 +1,116 @@
 using System;
-using Dev.Local;
 using Fusion;
 using UnityEngine;
 
 namespace Dev.Network
 {
+    public enum RoundPhase
+    {
+        Maintenance,
+        Combat
+    }
+
     public class TimeSystem : System
     {
-        #region Temporary
-        [Header("Wave Settings")]
-        [SerializeField] private float[] _waveThresholds;
+        [Header("Round Settings")]
+        [SerializeField] private float _maintenanceDuration = 30f;
+        [SerializeField] private float _roundDuration = 180f;
+        [SerializeField] private int _defaultRoundCount = 10;
 
-        [Header("Track Settings")]
-        [SerializeField] private float[] _trackLevelThresholds;
-        #endregion
+        [Networked] public float ElapsedTime { get; private set; }
+        [Networked] public int RoundNumber { get; private set; }
+        [Networked] public RoundPhase Phase { get; private set; }
+        [Networked] public float PhaseElapsedTime { get; private set; }
+        [Networked] public NetworkBool IsBerserk { get; private set; }
 
-        [Networked] public float ElapsedTime { get; set; } // 클라이언트 측에 동기화되는 경과 시간(단순 표시 용도)
+        private bool _isRunning;
 
-        private float _elapsedTime; // 서버 측에서 실제로 계산되는 경과 시간(클라이언트에는 동기화되지 않음)
-        private RangeEvaluator _waveRangeEvaluator;
-        private RangeEvaluator _trackLevelRangeEvaluator;
-
-        public event Action<int, TimeSystem, object> OnNextWaveReached;
-        public event Action<int, TimeSystem, object> OnNextTrackLevelReached;
+        public event Action<int, TimeSystem, object> OnRoundStarting;
+        public event Action<int, TimeSystem, object> OnRoundEnded;
+        public event Action<int, TimeSystem, object> OnMaintenanceStarting;
+        public event Action<TimeSystem, object> OnBerserkStarted;
 
         protected override void OnInitialize()
         {
-            ElapsedTime = 0f;
-            _elapsedTime = 0f;
-
-            _waveRangeEvaluator = new RangeEvaluator(_waveThresholds);
-            _waveRangeEvaluator.OnNextRangeReached += HandleNextWaveRangeReached;
-            _trackLevelRangeEvaluator = new RangeEvaluator(_trackLevelThresholds);
-            _trackLevelRangeEvaluator.OnNextRangeReached += HandleNextTrackLevelRangeReached;
+            ResetRoundState();
         }
 
-        private void HandleNextWaveRangeReached(int waveIndex, RangeEvaluator waveRangeEvaluator, object sender)
+        protected override void OnSetUp()
         {
-            StageInstance.Instance.WaveIndex = waveIndex;
-            OnNextWaveReached?.Invoke(waveIndex, this, sender);
-        }
-
-        private void HandleNextTrackLevelRangeReached(int trackLevelIndex, RangeEvaluator trackLevelRangeEvaluator, object sender)
-        {
-            StageInstance.Instance.TrackLevelIndex = trackLevelIndex;
-            OnNextTrackLevelReached?.Invoke(trackLevelIndex, this, sender);
-        }
-
-        private void Update()
-        {
-            if (Object.HasStateAuthority)
+            if (Object == null)
             {
-                _elapsedTime += Time.deltaTime;
-                _waveRangeEvaluator.Evaluate(_elapsedTime);
-                _trackLevelRangeEvaluator.Evaluate(_elapsedTime);
+                Debug.LogWarning("TimeSystem needs a NetworkObject to run round progression.");
+                return;
             }
+
+            if (!Object.HasStateAuthority)
+                return;
+
+            ResetRoundState();
+            _isRunning = true;
+
+            Debug.Log($"Round maintenance started. Next round: {RoundNumber}");
+            OnMaintenanceStarting?.Invoke(RoundNumber, this, this);
+        }
+
+        protected override void OnTearDown()
+        {
+            _isRunning = false;
         }
 
         public override void FixedUpdateNetwork()
         {
-            if (Object.HasStateAuthority)
+            if (Object == null || !Object.HasStateAuthority || !_isRunning)
+                return;
+
+            float deltaTime = Runner != null ? Runner.DeltaTime : Time.deltaTime;
+            ElapsedTime += deltaTime;
+            PhaseElapsedTime += deltaTime;
+
+            if (Phase == RoundPhase.Maintenance && PhaseElapsedTime >= _maintenanceDuration)
+                StartRound();
+            else if (Phase == RoundPhase.Combat && PhaseElapsedTime >= _roundDuration)
+                EndRound();
+        }
+
+        private void ResetRoundState()
+        {
+            ElapsedTime = 0f;
+            RoundNumber = 1;
+            Phase = RoundPhase.Maintenance;
+            PhaseElapsedTime = 0f;
+            IsBerserk = false;
+            _isRunning = false;
+        }
+
+        private void StartRound()
+        {
+            Phase = RoundPhase.Combat;
+            PhaseElapsedTime = 0f;
+
+            Debug.Log($"Round {RoundNumber} started.");
+            OnRoundStarting?.Invoke(RoundNumber, this, this);
+        }
+
+        private void EndRound()
+        {
+            int endedRound = RoundNumber;
+            Debug.Log($"Round {endedRound} ended.");
+            OnRoundEnded?.Invoke(endedRound, this, this);
+
+            if (!IsBerserk && endedRound >= _defaultRoundCount)
             {
-                ElapsedTime = _elapsedTime;
+                IsBerserk = true;
+                Debug.Log("Berserk mode started.");
+                OnBerserkStarted?.Invoke(this, this);
             }
+
+            RoundNumber++;
+            Phase = RoundPhase.Maintenance;
+            PhaseElapsedTime = 0f;
+
+            Debug.Log($"Round maintenance started. Next round: {RoundNumber}");
+            OnMaintenanceStarting?.Invoke(RoundNumber, this, this);
         }
     }
 }

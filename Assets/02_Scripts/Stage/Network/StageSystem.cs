@@ -35,11 +35,17 @@ namespace Dev.Network
                 Debug.LogError("인터페이스 매니저가 없음");
         }
 
-        [Rpc(RpcSources.StateAuthority, RpcTargets.All, Channel = RpcChannel.Reliable)]
+        [Rpc(RpcSources.All, RpcTargets.All, Channel = RpcChannel.Reliable)]
         private void RPC_ShowStageResult()
         {
             if (_isGameOverPresented)
                 return;
+
+            if (_stageResultView == null)
+            {
+                Debug.LogError("StageResultView is missing. Cannot show stage result.");
+                return;
+            }
 
             _isGameOverPresented = true;
             _stageResultView.ClearNextButtonListener();
@@ -90,8 +96,8 @@ namespace Dev.Network
 
         public void Defeat()
         {
-            if (Object.HasStateAuthority)
-                RPC_ShowStageResult();
+            Debug.Log("Stage defeat requested.");
+            RPC_ShowStageResult();
         }
     }
 }

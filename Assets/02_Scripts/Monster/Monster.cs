@@ -9,6 +9,7 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
     [SerializeField] protected float arrivalThreshold = 0.1f;
 
     [Networked] protected float Health { get; private set; }
+    protected float maxHealth;
 
     protected Territory territory;
     [SerializeField] protected Transform playerTransform;
@@ -19,7 +20,8 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
         base.Spawned();
         if (Object.HasStateAuthority)
         {
-            Health = health;
+            maxHealth = health;
+            Health = maxHealth;
             rigidBody = GetComponent<Rigidbody>();
             Initialize();
         }
@@ -30,6 +32,17 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
     public Transform GetAttackTargetTransform() => attackTargetTransform;
 
     public virtual void Initialize() { }
+
+    public virtual void ApplyStatMultiplier(float multiplier)
+    {
+        if (!Object.HasStateAuthority)
+            return;
+
+        float previousMaxHealth = maxHealth > 0f ? maxHealth : health;
+        maxHealth = previousMaxHealth * multiplier;
+        Health *= multiplier;
+        movementSpeed *= multiplier;
+    }
 
     public void TakeDamage(float damage)
     {

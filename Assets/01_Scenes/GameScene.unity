@@ -345,6 +345,7 @@ GameObject:
   m_Component:
   - component: {fileID: 266549076}
   - component: {fileID: 266549078}
+  - component: {fileID: 266549079}
   - component: {fileID: 266549077}
   m_Layer: 0
   m_Name: Track Monster Spawn
@@ -386,6 +387,7 @@ MonoBehaviour:
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 266549078}
+  - {fileID: 266549079}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &266549078
 MonoBehaviour:
@@ -404,6 +406,28 @@ MonoBehaviour:
   monsterPrefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
   spawnInterval: 1
   spawnCount: 20
+  strengthenMultiplier: 1.2
+--- !u!114 &266549079
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 266549075}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e75d0def00e49d42aedc38b458933a3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _maintenanceDuration: 3
+  _roundDuration: 30
+  _defaultRoundCount: 10
+  _ElapsedTime: 0
+  _RoundNumber: 0
+  _Phase: 0
+  _PhaseElapsedTime: 0
+  _IsBerserk:
+    _value: 0
 --- !u!1 &272488528
 GameObject:
   m_ObjectHideFlags: 0
@@ -1353,10 +1377,6 @@ PrefabInstance:
     - target: {fileID: 1449402962173481578, guid: b883eea035898d4468cc3083e7711e41, type: 3}
       propertyPath: m_Name
       value: Gate Canvas
-      objectReference: {fileID: 0}
-    - target: {fileID: 1449402962173481578, guid: b883eea035898d4468cc3083e7711e41, type: 3}
-      propertyPath: m_IsActive
-      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8135281985651564824, guid: b883eea035898d4468cc3083e7711e41, type: 3}
       propertyPath: m_IsActive

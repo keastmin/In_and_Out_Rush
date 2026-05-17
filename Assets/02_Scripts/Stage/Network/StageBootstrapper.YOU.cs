@@ -8,6 +8,9 @@ namespace Dev.Network
         [SerializeField] private Store _store;
         [SerializeField] private StageSystem _stageSystem;
         [SerializeField] private ResourceSpawnSystem _resourceSpawnSystem;
+        [SerializeField] private TimeSystem timeSystem;
+        [SerializeField] private TrackSystem roundTrackSystem;
+        [SerializeField] private TrackMonsterSpawnSystem trackMonsterSpawnSystem;
 
         [Header("Gate")]
         [SerializeField] private Gate _gatePrefab;
@@ -24,6 +27,121 @@ namespace Dev.Network
             // Debug.Log("StageBootstrapper: initialize host complete");
         }
 
+        private void YOUSetUpRoundSystems(NetworkSystemBase[] systems)
+        {
+            ResolveRoundSystemReferences(systems);
+            BindRoundSystemEvents();
+            timeSystem?.SetUp();
+        }
+
+        private void YOUDisposeRoundSystems()
+        {
+            UnbindRoundSystemEvents();
+        }
+
+        private void ResolveRoundSystemReferences(NetworkSystemBase[] systems)
+        {
+            if (roundTrackSystem == null)
+                roundTrackSystem = FindNetworkSystem<TrackSystem>(systems);
+
+            if (trackMonsterSpawnSystem == null)
+                trackMonsterSpawnSystem = FindNetworkSystem<TrackMonsterSpawnSystem>(systems);
+
+            if (timeSystem == null)
+                timeSystem = UnityEngine.Object.FindFirstObjectByType<TimeSystem>();
+        }
+
+        private T FindNetworkSystem<T>(NetworkSystemBase[] systems) where T : NetworkSystemBase
+        {
+            foreach (var system in systems)
+            {
+                if (system is T typedSystem)
+                    return typedSystem;
+            }
+
+            return UnityEngine.Object.FindFirstObjectByType<T>();
+        }
+
+        private void BindRoundSystemEvents()
+        {
+            if (timeSystem == null)
+            {
+                Debug.LogWarning("StageBootstrapper could not find TimeSystem. Round progression will not run.");
+                return;
+            }
+
+            timeSystem.OnRoundStarting -= HandleRoundStarting;
+            timeSystem.OnRoundEnded -= HandleRoundEnded;
+            timeSystem.OnBerserkStarted -= HandleBerserkStarted;
+
+            timeSystem.OnRoundStarting += HandleRoundStarting;
+            timeSystem.OnRoundEnded += HandleRoundEnded;
+            timeSystem.OnBerserkStarted += HandleBerserkStarted;
+        }
+
+        private void UnbindRoundSystemEvents()
+        {
+            if (timeSystem == null)
+                return;
+
+            timeSystem.OnRoundStarting -= HandleRoundStarting;
+            timeSystem.OnRoundEnded -= HandleRoundEnded;
+            timeSystem.OnBerserkStarted -= HandleBerserkStarted;
+        }
+
+        private void HandleRoundStarting(int round, TimeSystem sender, object context)
+        {
+            if (!HasStateAuthority)
+                return;
+
+            if (trackMonsterSpawnSystem == null)
+            {
+                Debug.LogWarning("TrackMonsterSpawnSystem is missing. Track monster spawn skipped.");
+                return;
+            }
+
+            if (round == 5 || round == 8 || round >= 11)
+            {
+                trackMonsterSpawnSystem.StrengthenTrackMonsters();
+                Debug.Log($"New track monsters strengthened before round {round}.");
+            }
+
+            if (roundTrackSystem == null)
+            {
+                Debug.LogWarning("TrackSystem is missing. Track monster spawn skipped.");
+                return;
+            }
+
+            trackMonsterSpawnSystem.SpawnMonsters(roundTrackSystem.Track);
+            Debug.Log($"Track monsters spawned for round {round}.");
+        }
+
+        private void HandleRoundEnded(int round, TimeSystem sender, object context)
+        {
+            if (!HasStateAuthority)
+                return;
+
+            if (round == 3 || round == 7 || round == 9)
+            {
+                if (roundTrackSystem == null)
+                {
+                    Debug.LogWarning("TrackSystem is missing. Track expansion skipped.");
+                    return;
+                }
+
+                roundTrackSystem.ExpandTrack();
+                Debug.Log($"Track expanded after round {round}.");
+            }
+        }
+
+        private void HandleBerserkStarted(TimeSystem sender, object context)
+        {
+            if (!HasStateAuthority)
+                return;
+
+            Debug.Log("StageBootstrapper received berserk start.");
+        }
+
         private void YOUCreateObjects()
         {
 
@@ -36,6 +154,8 @@ namespace Dev.Network
 
             _resourceSpawnSystem.SetUp();
             _stageResultView.Hide();
+
+            YOUSetUpRoundSystems(systems);
         }
 
         private void YOUBindObjects()
@@ -64,6 +184,7 @@ namespace Dev.Network
 
         private void HandlePlayerDied(PlayerRunner runner, object sender)
         {
+            Debug.Log($"PlayerRunner died. Health: {runner.Health}");
             _stageSystem.Defeat();
         }
 

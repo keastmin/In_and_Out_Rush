@@ -96,9 +96,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   attackTargetTransform: {fileID: 3680100859485328221}
   health: 10
-  movementSpeed: 5
+  movementSpeed: 20
   arrivalThreshold: 0.1
   playerTransform: {fileID: 0}
+  _completionDamage: 10
 --- !u!4 &3680100859485328221 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4398705182232736182, guid: 1f07dcc6068889e46ba5ca7a07d5f118, type: 3}

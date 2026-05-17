@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 
@@ -44,8 +45,6 @@ public class LaboratoryUI : MonoBehaviour
     private const string _weaponText = "weapon"; // 무기 텍스트
     private const string _skillText = "skill"; // 스킬 텍스트
     private const string _itemText = "item"; // 아이템 텍스트
-
-    // 그리드에 설치된 타워들 정보를 모으고 Grid 참조를 받아와 강화에 적용할 예정
 
     private void Awake()
     {

@@ -2,91 +2,93 @@ using Fusion;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class RegenerationTower : SupportTower
+namespace KIM.Dev
 {
-    [Header("Heal")]
-    [SerializeField] private LayerMask _detectLayer;
-    [SerializeField] private float _healRange = 25f;
-    [SerializeField] private float _armor = 100f;
-    [SerializeField] private float _maxHeal = 100f;
-    [SerializeField] private float _healPerSec = 5f;
-
-    private Collider[] _detectedHealReceivers;
-    private HashSet<IHeal> _armorReceivedHeals;
-    private HashSet<IHeal> _currentFrameHeals;
-    private float _remainingHeal;
-
-    protected override void TowerAwake()
+    public class RegenerationTower : SupportTower
     {
-        _detectedHealReceivers = new Collider[100];
-        _armorReceivedHeals = new HashSet<IHeal>();
-        _currentFrameHeals = new HashSet<IHeal>();
-    }
+        [Header("Heal")]
+        [SerializeField] private LayerMask _detectLayer;
+        [SerializeField] private float _healRange = 25f;
+        [SerializeField] private float _armor = 100f;
+        [SerializeField] private float _maxHeal = 100f;
+        [SerializeField] private float _healPerSec = 5f;
 
-    public override void Spawned()
-    {
-        base.Spawned();
-        _remainingHeal = _maxHeal;
-    }
+        private Collider[] _detectedHealReceivers;
+        private HashSet<IHeal> _armorReceivedHeals;
+        private HashSet<IHeal> _currentFrameHeals;
+        private float _remainingHeal;
 
-    protected override void TowerFixedUpdateNetwork()
-    {
-        if (!HasStateAuthority)
+        protected override void TowerAwake()
         {
-            return;
+            _detectedHealReceivers = new Collider[100];
+            _armorReceivedHeals = new HashSet<IHeal>();
+            _currentFrameHeals = new HashSet<IHeal>();
         }
 
-        if (_remainingHeal <= 0f)
+        public override void Spawned()
         {
-            DespawnRegenerationTower();
-            return;
+            base.Spawned();
+            _remainingHeal = _maxHeal;
         }
 
-        int detectedCount = Physics.OverlapSphereNonAlloc(transform.position, _healRange, _detectedHealReceivers, _detectLayer);
-        _currentFrameHeals.Clear();
-        for (int i = 0; i < detectedCount; i++)
+        protected override void TowerFixedUpdateNetwork()
         {
-            if (!_detectedHealReceivers[i].TryGetComponent(out IHeal heal))
+            if (!HasStateAuthority)
             {
-                continue;
+                return;
             }
 
-            if (!_currentFrameHeals.Add(heal))
-            {
-                continue;
-            }
-
-            if (_armorReceivedHeals.Add(heal))
-            {
-                heal.ReceiveArmor(_armor);
-            }
-
-            float healAmount = Mathf.Min(_healPerSec * Runner.DeltaTime, _remainingHeal);
-            float actualHealedAmount = heal.Heal(healAmount);
-            if (actualHealedAmount <= 0f)
-            {
-                continue;
-            }
-
-            _remainingHeal = Mathf.Max(0f, _remainingHeal - actualHealedAmount);
             if (_remainingHeal <= 0f)
             {
                 DespawnRegenerationTower();
-                break;
+                return;
+            }
+
+            int detectedCount = Physics.OverlapSphereNonAlloc(transform.position, _healRange, _detectedHealReceivers, _detectLayer);
+            _currentFrameHeals.Clear();
+            for (int i = 0; i < detectedCount; i++)
+            {
+                if (!_detectedHealReceivers[i].TryGetComponent(out IHeal heal))
+                {
+                    continue;
+                }
+
+                if (!_currentFrameHeals.Add(heal))
+                {
+                    continue;
+                }
+
+                if (_armorReceivedHeals.Add(heal))
+                {
+                    heal.ReceiveArmor(_armor);
+                }
+
+                float healAmount = Mathf.Min(_healPerSec * Runner.DeltaTime, _remainingHeal);
+                float actualHealedAmount = heal.Heal(healAmount);
+                if (actualHealedAmount <= 0f)
+                {
+                    continue;
+                }
+
+                _remainingHeal = Mathf.Max(0f, _remainingHeal - actualHealedAmount);
+                if (_remainingHeal <= 0f)
+                {
+                    DespawnRegenerationTower();
+                    break;
+                }
             }
         }
-    }
 
-    protected override void TowerDespawned()
-    {
-        base.TowerDespawned();
-        _armorReceivedHeals?.Clear();
-    }
+        protected override void TowerDespawned()
+        {
+            base.TowerDespawned();
+            _armorReceivedHeals?.Clear();
+        }
 
-    private void DespawnRegenerationTower()
-    {
-        ReleaseGridOccupation();
-        Runner.Despawn(Object);
+        private void DespawnRegenerationTower()
+        {
+            ReleaseGridOccupation();
+            Runner.Despawn(Object);
+        }
     }
 }
-

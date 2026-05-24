@@ -1,60 +1,63 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class PlayerBuilderTowerSelectState : IPlayerState
+namespace KIM.Dev
 {
-    private PlayerBuilder _player;
-
-    public PlayerBuilderTowerSelectState(PlayerBuilder player)
+    public class PlayerBuilderTowerSelectState : IPlayerState
     {
-        _player = player;
-    }
+        private PlayerBuilder _player;
 
-    public void Enter()
-    {
-        Debug.Log("Tower Select 상태 진입");
-
-        TowerType type = TowerType.Attack;
-        foreach (var tower in _player.SelectedTowers)
+        public PlayerBuilderTowerSelectState(PlayerBuilder player)
         {
-            if (tower == null)
-                continue;
+            _player = player;
+        }
 
-            if (tower.Type == TowerType.Center || tower.Type == TowerType.Support)
+        public void Enter()
+        {
+            Debug.Log("Tower Select 상태 진입");
+
+            TowerType type = TowerType.Attack;
+            foreach (var tower in _player.SelectedTowers)
             {
-                type = tower.Type;
-                break;
+                if (tower == null)
+                    continue;
+
+                if (tower.Type == TowerType.Center || tower.Type == TowerType.Support)
+                {
+                    type = tower.Type;
+                    break;
+                }
             }
+
+            _player.BuilderUI.ActivationTowerSelectUI(true, type);
         }
 
-        _player.BuilderUI.ActivationTowerSelectUI(true, type);
-    }
-
-    public void Update()
-    {
-        if (Input.GetMouseButtonDown(0) && !EventSystem.current.IsPointerOverGameObject())
+        public void Update()
         {
-            _player.ClickLeftMouseDownOnWorld();
-            _player.SetClickValue(true);
+            if (Input.GetMouseButtonDown(0) && !EventSystem.current.IsPointerOverGameObject())
+            {
+                _player.ClickLeftMouseDownOnWorld();
+                _player.SetClickValue(true);
+            }
+
+            TransitionTo();
         }
 
-        TransitionTo();
-    }
-
-    public void LateUpdate()
-    {
-    }
-
-    public void Exit()
-    {
-        _player.BuilderUI.ActivationTowerSelectUI(false);
-    }
-
-    private void TransitionTo()
-    {
-        if (_player.SelectedTowersCount <= 0)
+        public void LateUpdate()
         {
-            _player.StateMachine.TransitionToState(_player.StateMachine.OriginState);
+        }
+
+        public void Exit()
+        {
+            _player.BuilderUI.ActivationTowerSelectUI(false);
+        }
+
+        private void TransitionTo()
+        {
+            if (_player.SelectedTowersCount <= 0)
+            {
+                _player.StateMachine.TransitionToState(_player.StateMachine.OriginState);
+            }
         }
     }
 }

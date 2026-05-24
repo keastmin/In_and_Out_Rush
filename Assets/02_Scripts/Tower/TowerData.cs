@@ -1,10 +1,13 @@
 using Fusion;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "TowerData", menuName = "Scriptable Objects/TowerData")]
-public class TowerData : ScriptableObject
+namespace KIM.Dev
 {
-    public Tower Tower;
-    public TowerGhost TowerGhost;
-    public NetworkPrefabRef TowerPrefabRef;
+    [CreateAssetMenu(fileName = "TowerData", menuName = "Scriptable Objects/TowerData")]
+    public class TowerData : ScriptableObject
+    {
+        public Tower Tower;
+        public TowerGhost TowerGhost;
+        public NetworkPrefabRef TowerPrefabRef;
+    }
 }

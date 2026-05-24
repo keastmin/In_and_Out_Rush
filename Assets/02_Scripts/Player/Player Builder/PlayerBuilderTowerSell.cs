@@ -2,82 +2,85 @@ using Fusion;
 using System;
 using System.Collections.Generic;
 
-public class PlayerBuilderTowerSell : NetworkBehaviour
+namespace KIM.Dev
 {
-    private PlayerBuilderTowerSystem _towerSystem;
-
-    #region API
-
-    public void InitTowerSell(PlayerBuilderTowerSystem towerSystem)
+    public class PlayerBuilderTowerSell : NetworkBehaviour
     {
-        _towerSystem = towerSystem;
-    }
+        private PlayerBuilderTowerSystem _towerSystem;
 
-    public void SellTower(HashSet<Tower> towers, PlayerBuilder builder)
-    {
-        if (towers == null || towers.Count == 0) return;
+        #region API
 
-        NetworkId[] ids = new NetworkId[towers.Count];
-        Cost[] costs = new Cost[towers.Count];
-        int n = 0;
-
-        foreach (var t in towers)
+        public void InitTowerSell(PlayerBuilderTowerSystem towerSystem)
         {
-            if (t == null) continue;
+            _towerSystem = towerSystem;
+        }
 
-            NetworkObject no = t.Object;
-            if (no == null) continue;
+        public void SellTower(HashSet<Tower> towers, PlayerBuilder builder)
+        {
+            if (towers == null || towers.Count == 0) return;
 
-            costs[n] = t.Cost;
-            ids[n++] = no.Id;
+            NetworkId[] ids = new NetworkId[towers.Count];
+            Cost[] costs = new Cost[towers.Count];
+            int n = 0;
 
-            if (t.IsCenter)
+            foreach (var t in towers)
             {
-                if (t.TryGetComponent(out CenterTower centerTower))
+                if (t == null) continue;
+
+                NetworkObject no = t.Object;
+                if (no == null) continue;
+
+                costs[n] = t.Cost;
+                ids[n++] = no.Id;
+
+                if (t.IsCenter)
                 {
-                    builder.SetCenterTowerCount(builder.CenterTowerCount - 1);
+                    if (t.TryGetComponent(out CenterTower centerTower))
+                    {
+                        builder.SetCenterTowerCount(builder.CenterTowerCount - 1);
+                    }
                 }
             }
-        }
 
-        if (n == 0) return;
+            if (n == 0) return;
 
-        if (n != ids.Length)
-        {
-            Array.Resize(ref ids, n);
-            Array.Resize(ref costs, n);
-        }
-
-        towers.Clear();
-        RPC_SellTower(ids, costs);
-    }
-
-    #endregion
-
-    #region Core
-
-    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-    private void RPC_SellTower(NetworkId[] towerIds, Cost[] costs)
-    {
-        foreach (var id in towerIds)
-        {
-            if (!Runner.TryFindObject(id, out NetworkObject obj))
-                continue;
-
-            if (obj.TryGetComponent(out Tower tower))
+            if (n != ids.Length)
             {
-                tower.ReleaseGridOccupation();
+                Array.Resize(ref ids, n);
+                Array.Resize(ref costs, n);
             }
 
-            Runner.Despawn(obj);
+            towers.Clear();
+            RPC_SellTower(ids, costs);
         }
 
-        foreach (var cost in costs)
+        #endregion
+
+        #region Core
+
+        [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+        private void RPC_SellTower(NetworkId[] towerIds, Cost[] costs)
         {
-            ResourceSystem.Instance.Mineral += (int)(cost.Mineral * 0.5f);
-            ResourceSystem.Instance.Gas += (int)(cost.Gas * 0.5f);
-        }
-    }
+            foreach (var id in towerIds)
+            {
+                if (!Runner.TryFindObject(id, out NetworkObject obj))
+                    continue;
 
-    #endregion
+                if (obj.TryGetComponent(out Tower tower))
+                {
+                    tower.ReleaseGridOccupation();
+                }
+
+                Runner.Despawn(obj);
+            }
+
+            foreach (var cost in costs)
+            {
+                ResourceSystem.Instance.Mineral += (int)(cost.Mineral * 0.5f);
+                ResourceSystem.Instance.Gas += (int)(cost.Gas * 0.5f);
+            }
+        }
+
+        #endregion
+    }
 }

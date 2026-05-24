@@ -185,12 +185,12 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 3104967173947594314}
-        m_TargetAssemblyTypeName: PlayerBuilderUI, Assembly-CSharp
+        m_TargetAssemblyTypeName: KIM.Dev.PlayerBuilderUI, Assembly-CSharp
         m_MethodName: OnClickTowerButton
         m_Mode: 2
         m_Arguments:
           m_ObjectArgument: {fileID: 11400000, guid: 49d30b8405b8c3948b50b7fcb3c99841, type: 2}
-          m_ObjectArgumentAssemblyTypeName: TowerData, Assembly-CSharp
+          m_ObjectArgumentAssemblyTypeName: KIM.Dev.TowerData, Assembly-CSharp
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
@@ -2273,12 +2273,12 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 3104967173947594314}
-        m_TargetAssemblyTypeName: PlayerBuilderUI, Assembly-CSharp
+        m_TargetAssemblyTypeName: KIM.Dev.PlayerBuilderUI, Assembly-CSharp
         m_MethodName: OnClickTowerButton
         m_Mode: 2
         m_Arguments:
           m_ObjectArgument: {fileID: 11400000, guid: 1a1808b8196b9354ba5ec7bf8096eebf, type: 2}
-          m_ObjectArgumentAssemblyTypeName: TowerData, Assembly-CSharp
+          m_ObjectArgumentAssemblyTypeName: KIM.Dev.TowerData, Assembly-CSharp
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
@@ -2636,6 +2636,11 @@ MonoBehaviour:
   _weaponUpgradeCost:
     Mineral: 0
     Gas: 100
+  _hpUpgradeAmount: 10
+  _speedUpgradeAmount: 1
+  _staminaUpgradeAmount: 10
+  _staminaRecoveryUpgradeAmount: 1
+  _weaponUpgradeAmount: 0.1
   _hpUpText: {fileID: 7285014428929292741}
   _speedUpText: {fileID: 24653630286731801}
   _staminaUpText: {fileID: 695292543619765106}
@@ -3748,12 +3753,12 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 3104967173947594314}
-        m_TargetAssemblyTypeName: PlayerBuilderUI, Assembly-CSharp
+        m_TargetAssemblyTypeName: KIM.Dev.PlayerBuilderUI, Assembly-CSharp
         m_MethodName: OnClickTowerButton
         m_Mode: 2
         m_Arguments:
           m_ObjectArgument: {fileID: 11400000, guid: 53472092c7cf6b641bffa347c2b0aebe, type: 2}
-          m_ObjectArgumentAssemblyTypeName: TowerData, Assembly-CSharp
+          m_ObjectArgumentAssemblyTypeName: KIM.Dev.TowerData, Assembly-CSharp
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
@@ -4965,12 +4970,12 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 3104967173947594314}
-        m_TargetAssemblyTypeName: PlayerBuilderUI, Assembly-CSharp
+        m_TargetAssemblyTypeName: KIM.Dev.PlayerBuilderUI, Assembly-CSharp
         m_MethodName: OnClickTowerButton
         m_Mode: 2
         m_Arguments:
           m_ObjectArgument: {fileID: 11400000, guid: 33d7c79d07f70564b9616a3ab561d39a, type: 2}
-          m_ObjectArgumentAssemblyTypeName: TowerData, Assembly-CSharp
+          m_ObjectArgumentAssemblyTypeName: KIM.Dev.TowerData, Assembly-CSharp
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
@@ -6296,12 +6301,12 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 3104967173947594314}
-        m_TargetAssemblyTypeName: PlayerBuilderUI, Assembly-CSharp
+        m_TargetAssemblyTypeName: KIM.Dev.PlayerBuilderUI, Assembly-CSharp
         m_MethodName: OnClickTowerButton
         m_Mode: 2
         m_Arguments:
           m_ObjectArgument: {fileID: 11400000, guid: 667ae52e196b1254e945b81290e9b5a7, type: 2}
-          m_ObjectArgumentAssemblyTypeName: TowerData, Assembly-CSharp
+          m_ObjectArgumentAssemblyTypeName: KIM.Dev.TowerData, Assembly-CSharp
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
@@ -7542,12 +7547,12 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 3104967173947594314}
-        m_TargetAssemblyTypeName: PlayerBuilderUI, Assembly-CSharp
+        m_TargetAssemblyTypeName: KIM.Dev.PlayerBuilderUI, Assembly-CSharp
         m_MethodName: OnClickTowerButton
         m_Mode: 2
         m_Arguments:
           m_ObjectArgument: {fileID: 11400000, guid: 2815eca9bd5493a45a87f45082ec0d34, type: 2}
-          m_ObjectArgumentAssemblyTypeName: TowerData, Assembly-CSharp
+          m_ObjectArgumentAssemblyTypeName: KIM.Dev.TowerData, Assembly-CSharp
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
@@ -7977,7 +7982,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &182327087933826819
 RectTransform:
   m_ObjectHideFlags: 0
@@ -8016,7 +8021,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _builderMainUI: {fileID: 7008068853445702745}
   _towerBuildUI: {fileID: 4589902658214131887}
-  _laboratoryUI: {fileID: 1968794882479907652}
+  _laboratoryUI: {fileID: 6756664035251413602}
   _towerSelectUI: {fileID: 8685751147036127707}
   _dragSystem: {fileID: 716620184751753786}
   _buildUIText: {fileID: 7424491665900692501}
@@ -9506,12 +9511,12 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 3104967173947594314}
-        m_TargetAssemblyTypeName: PlayerBuilderUI, Assembly-CSharp
+        m_TargetAssemblyTypeName: KIM.Dev.PlayerBuilderUI, Assembly-CSharp
         m_MethodName: OnClickTowerButton
         m_Mode: 2
         m_Arguments:
           m_ObjectArgument: {fileID: 11400000, guid: e69e6d4a543ff234f8a71c5e105035f7, type: 2}
-          m_ObjectArgumentAssemblyTypeName: TowerData, Assembly-CSharp
+          m_ObjectArgumentAssemblyTypeName: KIM.Dev.TowerData, Assembly-CSharp
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
@@ -10046,12 +10051,12 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 3104967173947594314}
-        m_TargetAssemblyTypeName: PlayerBuilderUI, Assembly-CSharp
+        m_TargetAssemblyTypeName: KIM.Dev.PlayerBuilderUI, Assembly-CSharp
         m_MethodName: OnClickTowerButton
         m_Mode: 2
         m_Arguments:
           m_ObjectArgument: {fileID: 11400000, guid: 46f23635e688428499161e53df3fe856, type: 2}
-          m_ObjectArgumentAssemblyTypeName: TowerData, Assembly-CSharp
+          m_ObjectArgumentAssemblyTypeName: KIM.Dev.TowerData, Assembly-CSharp
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
@@ -11685,12 +11690,12 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 3104967173947594314}
-        m_TargetAssemblyTypeName: PlayerBuilderUI, Assembly-CSharp
+        m_TargetAssemblyTypeName: KIM.Dev.PlayerBuilderUI, Assembly-CSharp
         m_MethodName: OnClickTowerButton
         m_Mode: 2
         m_Arguments:
           m_ObjectArgument: {fileID: 11400000, guid: e23ec3638d46d88488cae72bf9ab941c, type: 2}
-          m_ObjectArgumentAssemblyTypeName: TowerData, Assembly-CSharp
+          m_ObjectArgumentAssemblyTypeName: KIM.Dev.TowerData, Assembly-CSharp
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
@@ -11955,12 +11960,12 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 3104967173947594314}
-        m_TargetAssemblyTypeName: PlayerBuilderUI, Assembly-CSharp
+        m_TargetAssemblyTypeName: KIM.Dev.PlayerBuilderUI, Assembly-CSharp
         m_MethodName: OnClickTowerButton
         m_Mode: 2
         m_Arguments:
           m_ObjectArgument: {fileID: 11400000, guid: bb39d7284242c904cbad1ec42fad3e7e, type: 2}
-          m_ObjectArgumentAssemblyTypeName: TowerData, Assembly-CSharp
+          m_ObjectArgumentAssemblyTypeName: KIM.Dev.TowerData, Assembly-CSharp
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 

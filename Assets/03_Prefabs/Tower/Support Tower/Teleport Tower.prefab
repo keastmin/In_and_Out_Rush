@@ -102,39 +102,18 @@ MonoBehaviour:
   _requireTerritory: 1
   _BuiltIndex: {x: 0, y: 0}
   _cost:
-    Mineral: 0
-    Gas: 0
+    Mineral: 200
+    Gas: 150
   _ghost: {fileID: 7027487623602185182, guid: f6c233ec6bac0774da0edd035c211e7f, type: 3}
   _type: 2
   _towerId: Teleport Tower
   _selectedChecker: {fileID: 4747944615274685271}
   _selectedImage: {fileID: 0}
-  _buffRange: 25
-  _buffRangeTransform: {fileID: 0}
-  _towerPreviewDebug: 0
-  _buildEnabled: 0
-  _meshRenderers:
-  - {fileID: 8284139056906938707}
-  - {fileID: 4791637674911554520}
-  _enabledMaterial: {fileID: 0}
-  _disableMaterial: {fileID: 0}
-  _buffCellRange: 1
-  _showLegacyBuffRangeCircle: 0
-  _buffCellColor: {r: 1, g: 0.85, b: 0.15, a: 0.35}
   _moveCoolDown: 30
+  _teleportExitDistance: 2
   OtherTeleportTower: {fileID: 0}
 --- !u!1 &4747944615274685271 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 971639999673581450, guid: 3302635113343d046a4921212bd4e79a, type: 3}
-  m_PrefabInstance: {fileID: 5521381353028295901}
-  m_PrefabAsset: {fileID: 0}
---- !u!23 &4791637674911554520 stripped
-MeshRenderer:
-  m_CorrespondingSourceObject: {fileID: 1072052434212013829, guid: 3302635113343d046a4921212bd4e79a, type: 3}
-  m_PrefabInstance: {fileID: 5521381353028295901}
-  m_PrefabAsset: {fileID: 0}
---- !u!23 &8284139056906938707 stripped
-MeshRenderer:
-  m_CorrespondingSourceObject: {fileID: 4497072389281494414, guid: 3302635113343d046a4921212bd4e79a, type: 3}
   m_PrefabInstance: {fileID: 5521381353028295901}
   m_PrefabAsset: {fileID: 0}

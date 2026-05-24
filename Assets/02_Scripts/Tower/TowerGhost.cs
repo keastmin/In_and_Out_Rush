@@ -1,104 +1,107 @@
 using UnityEngine;
 
-public class TowerGhost : MonoBehaviour
+namespace KIM.Dev
 {
-    [SerializeField] private MeshRenderer[] _meshRenderers;
-    [SerializeField] private Material _enableMat;
-    [SerializeField] private Material _disableMat;
-    [SerializeField] private Transform _buffTransform;
-    [SerializeField] private bool _showLegacyBuffRangeCircle = false;
-
-    private void Awake()
+    public class TowerGhost : MonoBehaviour
     {
-        CacheMeshRenderers();
-    }
+        [SerializeField] private MeshRenderer[] _meshRenderers;
+        [SerializeField] private Material _enableMat;
+        [SerializeField] private Material _disableMat;
+        [SerializeField] private Transform _buffTransform;
+        [SerializeField] private bool _showLegacyBuffRangeCircle = false;
 
-    private void OnValidate()
-    {
-        CacheMeshRenderers();
-    }
-
-    public void InitializePreview()
-    {
-        CacheMeshRenderers();
-
-        if (TryGetComponent(out Tower tower))
+        private void Awake()
         {
-            tower.OnCancelClickThisObject();
+            CacheMeshRenderers();
         }
 
-        Behaviour[] behaviours = GetComponentsInChildren<Behaviour>(true);
-        for (int i = 0; i < behaviours.Length; i++)
+        private void OnValidate()
         {
-            Behaviour behaviour = behaviours[i];
-            if (behaviour == null || behaviour == this)
-                continue;
-
-            behaviour.enabled = false;
+            CacheMeshRenderers();
         }
 
-        Collider[] colliders = GetComponentsInChildren<Collider>(true);
-        for (int i = 0; i < colliders.Length; i++)
+        public void InitializePreview()
         {
-            colliders[i].enabled = false;
-        }
+            CacheMeshRenderers();
 
-        if (_buffTransform != null)
-        {
-            _buffTransform.gameObject.SetActive(_showLegacyBuffRangeCircle);
-        }
-
-        DisableTower();
-    }
-
-    public void EnableTower()
-    {
-        ApplyMaterial(_enableMat);
-    }
-
-    public void DisableTower()
-    {
-        ApplyMaterial(_disableMat);
-    }
-
-    public void SetGhostBuffRange(float range)
-    {
-        if (_buffTransform != null && _showLegacyBuffRangeCircle)
-        {
-            Vector3 localScale = new Vector3(range, range, range);
-            _buffTransform.localScale = localScale;
-        }
-    }
-
-    private void CacheMeshRenderers()
-    {
-        _meshRenderers = GetComponentsInChildren<MeshRenderer>(true);
-    }
-
-    private void ApplyMaterial(Material material)
-    {
-        if (material == null || _meshRenderers == null)
-            return;
-
-        for (int i = 0; i < _meshRenderers.Length; i++)
-        {
-            MeshRenderer meshRenderer = _meshRenderers[i];
-            if (meshRenderer == null)
-                continue;
-
-            Material[] materials = meshRenderer.materials;
-            if (materials == null || materials.Length == 0)
+            if (TryGetComponent(out Tower tower))
             {
-                meshRenderer.material = material;
-                continue;
+                tower.OnCancelClickThisObject();
             }
 
-            for (int j = 0; j < materials.Length; j++)
+            Behaviour[] behaviours = GetComponentsInChildren<Behaviour>(true);
+            for (int i = 0; i < behaviours.Length; i++)
             {
-                materials[j] = material;
+                Behaviour behaviour = behaviours[i];
+                if (behaviour == null || behaviour == this)
+                    continue;
+
+                behaviour.enabled = false;
             }
 
-            meshRenderer.materials = materials;
+            Collider[] colliders = GetComponentsInChildren<Collider>(true);
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                colliders[i].enabled = false;
+            }
+
+            if (_buffTransform != null)
+            {
+                _buffTransform.gameObject.SetActive(_showLegacyBuffRangeCircle);
+            }
+
+            DisableTower();
+        }
+
+        public void EnableTower()
+        {
+            ApplyMaterial(_enableMat);
+        }
+
+        public void DisableTower()
+        {
+            ApplyMaterial(_disableMat);
+        }
+
+        public void SetGhostBuffRange(float range)
+        {
+            if (_buffTransform != null && _showLegacyBuffRangeCircle)
+            {
+                Vector3 localScale = new Vector3(range, range, range);
+                _buffTransform.localScale = localScale;
+            }
+        }
+
+        private void CacheMeshRenderers()
+        {
+            _meshRenderers = GetComponentsInChildren<MeshRenderer>(true);
+        }
+
+        private void ApplyMaterial(Material material)
+        {
+            if (material == null || _meshRenderers == null)
+                return;
+
+            for (int i = 0; i < _meshRenderers.Length; i++)
+            {
+                MeshRenderer meshRenderer = _meshRenderers[i];
+                if (meshRenderer == null)
+                    continue;
+
+                Material[] materials = meshRenderer.materials;
+                if (materials == null || materials.Length == 0)
+                {
+                    meshRenderer.material = material;
+                    continue;
+                }
+
+                for (int j = 0; j < materials.Length; j++)
+                {
+                    materials[j] = material;
+                }
+
+                meshRenderer.materials = materials;
+            }
         }
     }
 }

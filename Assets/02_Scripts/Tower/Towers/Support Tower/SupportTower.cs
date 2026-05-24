@@ -1,37 +1,39 @@
 using UnityEngine;
 
-public class SupportTower : Tower
+namespace KIM.Dev
 {
-    public override void Spawned()
+    public class SupportTower : Tower
     {
-        base.Spawned();
-    }
-
-    protected override void TowerDespawned()
-    {
-        base.TowerDespawned();
-    }
-
-    public override void Render()
-    {
-        base.Render();
-    }
-
-
-    private void OnDestroy()
-    {
-
-    }
-
-    protected bool TryGetGrid(out InfiniteGrid gridManager)
-    {
-        gridManager = InfiniteGrid.Instance;
-        if (gridManager == null)
+        public override void Spawned()
         {
-            gridManager = UnityEngine.Object.FindFirstObjectByType<InfiniteGrid>();
+            base.Spawned();
         }
 
-        return gridManager != null;
+        protected override void TowerDespawned()
+        {
+            base.TowerDespawned();
+        }
+
+        public override void Render()
+        {
+            base.Render();
+        }
+
+
+        private void OnDestroy()
+        {
+
+        }
+
+        protected bool TryGetGrid(out InfiniteGrid gridManager)
+        {
+            gridManager = InfiniteGrid.Instance;
+            if (gridManager == null)
+            {
+                gridManager = UnityEngine.Object.FindFirstObjectByType<InfiniteGrid>();
+            }
+
+            return gridManager != null;
+        }
     }
 }
-

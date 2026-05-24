@@ -1,50 +1,53 @@
 using UnityEngine;
 
-public class PlayerBuilderStateMachine
+namespace KIM.Dev
 {
-    private IPlayerState _currentState;
-    public IPlayerState CurrentState => _currentState;
-
-    public PlayerBuilderOriginState OriginState;
-    public PlayerBuilderDragState DragState;
-    public PlayerBuilderTowerBuildState TowerBuildState;
-    public PlayerBuilderLaboratoryState LaboratoryState;
-    public PlayerBuilderTowerSelectState TowerSelectState;
-    public PlayerBuilderTowerMoveState TowerMoveState;
-
-    public PlayerBuilderStateMachine(PlayerBuilder player)
+    public class PlayerBuilderStateMachine
     {
-        OriginState = new PlayerBuilderOriginState(player);
-        DragState = new PlayerBuilderDragState(player);
-        TowerBuildState = new PlayerBuilderTowerBuildState(player);
-        LaboratoryState = new PlayerBuilderLaboratoryState(player);
-        TowerSelectState = new PlayerBuilderTowerSelectState(player);
-        TowerMoveState = new PlayerBuilderTowerMoveState(player);
-    }
+        private IPlayerState _currentState;
+        public IPlayerState CurrentState => _currentState;
 
-    public void InitStateMachine()
-    {
-        _currentState = OriginState;
-        _currentState.Enter();
-    }
+        public PlayerBuilderOriginState OriginState;
+        public PlayerBuilderDragState DragState;
+        public PlayerBuilderTowerBuildState TowerBuildState;
+        public PlayerBuilderLaboratoryState LaboratoryState;
+        public PlayerBuilderTowerSelectState TowerSelectState;
+        public PlayerBuilderTowerMoveState TowerMoveState;
 
-    public void Update()
-    {
-        _currentState.Update();
-    }
+        public PlayerBuilderStateMachine(PlayerBuilder player)
+        {
+            OriginState = new PlayerBuilderOriginState(player);
+            DragState = new PlayerBuilderDragState(player);
+            TowerBuildState = new PlayerBuilderTowerBuildState(player);
+            LaboratoryState = new PlayerBuilderLaboratoryState(player);
+            TowerSelectState = new PlayerBuilderTowerSelectState(player);
+            TowerMoveState = new PlayerBuilderTowerMoveState(player);
+        }
 
-    public void LateUpdate()
-    {
-        _currentState.LateUpdate();
-    }
+        public void InitStateMachine()
+        {
+            _currentState = OriginState;
+            _currentState.Enter();
+        }
 
-    public void TransitionToState(IPlayerState next)
-    {
-        if (next == null || ReferenceEquals(_currentState, next))
-            return;
+        public void Update()
+        {
+            _currentState.Update();
+        }
 
-        _currentState.Exit();
-        _currentState = next;
-        _currentState.Enter();
+        public void LateUpdate()
+        {
+            _currentState.LateUpdate();
+        }
+
+        public void TransitionToState(IPlayerState next)
+        {
+            if (next == null || ReferenceEquals(_currentState, next))
+                return;
+
+            _currentState.Exit();
+            _currentState = next;
+            _currentState.Enter();
+        }
     }
 }

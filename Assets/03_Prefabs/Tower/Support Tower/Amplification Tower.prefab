@@ -190,8 +190,8 @@ MonoBehaviour:
   _requireTerritory: 1
   _BuiltIndex: {x: 0, y: 0}
   _cost:
-    Mineral: 0
-    Gas: 0
+    Mineral: 200
+    Gas: 50
   _ghost: {fileID: 4419506441653720354, guid: 492d204235216354ba9eef5c105451e6, type: 3}
   _type: 2
   _towerId: Amplification Tower

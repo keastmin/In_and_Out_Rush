@@ -1,6 +1,7 @@
 using Fusion;
 using Unity.Cinemachine;
 using UnityEngine;
+using KIM.Dev;
 
 namespace Dev.Network
 {
@@ -33,12 +34,24 @@ namespace Dev.Network
 
         private void KIMBindObjects()
         {
-
+            if (timeSystem != null)
+            {
+                timeSystem.OnRoundStarting -= HandleKimRoundStarting;
+                timeSystem.OnRoundStarting += HandleKimRoundStarting;
+            }
         }
 
         private void KIMSetUpObjects()
         {
 
+        }
+
+        private void HandleKimRoundStarting(int round, TimeSystem sender, object context)
+        {
+            if (!HasStateAuthority)
+                return;
+
+            Grid?.DestroyTowersBlockedByTrack();
         }
 
         // 연구소 스폰

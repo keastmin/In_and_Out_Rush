@@ -27,6 +27,9 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
     [Networked] public float WeaponReloadSpeedScaler { get; set; } = 1f;
     [Networked] public NetworkBool IsDead { get; set; }
 
+    [Header("Weapon")]
+    [SerializeField] private MonoBehaviour _weaponBehaviour;
+
     [SerializeField] private ParticleSystem _swiftnessParticleEffect;
     public Sprite[] skillIcons;
 
@@ -36,6 +39,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
     private RunnerSkillCaster _skillCaster;
     private PlayerRunnerOutOfBodyController _outOfBodyController;
     private PlayerRunnerTeleporter _teleporter;
+    private IRunnerWeapon _weapon;
 
     private PlayerRunnerCombatHandler _combatHandler;
     private PlayerRunnerSlideHandler _slideHandler;
@@ -64,6 +68,10 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
         _movement = GetComponent<PlayerRunnerMovement>();
         _outOfBodyController = GetComponent<PlayerRunnerOutOfBodyController>();
         _teleporter = GetComponent<PlayerRunnerTeleporter>();
+        _weapon = _weaponBehaviour as IRunnerWeapon;
+        if (_weaponBehaviour != null && _weapon == null)
+            Debug.LogWarning($"{nameof(_weaponBehaviour)} must implement {nameof(IRunnerWeapon)}.", this);
+
         _itemConsumer = new RunnerItemConsumer();
         _skillCaster = new RunnerSkillCaster();
         _combatHandler = new PlayerRunnerCombatHandler();
@@ -106,6 +114,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
         HandleSkillInput(data);
         HandleInteractInput(data);
         HandleLaboratoryInput(data);
+        HandleWeaponInput(data);
     }
 
     public override void Render()
@@ -186,6 +195,14 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
         if (StageBootstrapper.Instance.CinemachineSystem == null) return;
         if (!data.LaboratoryInput.IsSet(NetworkInputData.LABORATORY_INPUT))
             StageBootstrapper.Instance.CinemachineSystem.SetTrackingTarget(transform);
+    }
+
+    private void HandleWeaponInput(NetworkInputData data)
+    {
+        if (!HasStateAuthority) return;
+        if (!data.WeaponInput.IsSet(NetworkInputData.WEAPON_INPUT)) return;
+
+        _weapon?.TryFire(this, data.MousePosition);
     }
 
     private void UpdateSkillIcon(int skillIndex)

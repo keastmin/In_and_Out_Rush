@@ -148,7 +148,39 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8355381677218973595}
+  - {fileID: 5455947531722268542}
   m_Father: {fileID: 5948079281826790062}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2419436783449513935
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5455947531722268542}
+  m_Layer: 0
+  m_Name: Muzzle
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5455947531722268542
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2419436783449513935}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.8, z: 0.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5782809305708921265}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4491999164792154452
 GameObject:
@@ -5119,6 +5151,7 @@ GameObject:
   - component: {fileID: 9208446726996137561}
   - component: {fileID: 1669351244208117714}
   - component: {fileID: 373271162909325404}
+  - component: {fileID: -3321396743853381275}
   m_Layer: 10
   m_Name: Player Runner
   m_TagString: Untagged
@@ -5168,6 +5201,7 @@ MonoBehaviour:
   _WeaponReloadSpeedScaler: 1
   _IsDead:
     _value: 0
+  _weaponBehaviour: {fileID: -3321396743853381275}
   _swiftnessParticleEffect: {fileID: 6092269608685176354}
   skillIcons:
   - {fileID: 1471596959, guid: e1a81109ab95c0344a014a0e72fa1378, type: 3}
@@ -5306,3 +5340,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2463961c24eae1b4ca4ba8a8fe3422bb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &-3321396743853381275
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9008013758366610681}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad6d06dacd9bec44b9b7a619cfa3e908, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _projectilePrefab: {fileID: 2082090766327459836, guid: 65b489919c650d84c8b159cacd9c949a, type: 3}
+  _muzzle: {fileID: 5455947531722268542}
+  _damageableMask:
+    serializedVersion: 2
+    m_Bits: 64
+  _damage: 1
+  _projectileSpeed: 18
+  _cooldown: 0.25
+  _projectileLifetime: 3

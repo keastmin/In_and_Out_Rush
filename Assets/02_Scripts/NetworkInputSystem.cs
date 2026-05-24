@@ -100,7 +100,7 @@ public class NetworkInputSystem : NetworkBehaviour, INetworkRunnerCallbacks
         data.LaboratoryInput.Set(NetworkInputData.LABORATORY_INPUT, Input.GetKey(KeyCode.Space));
 
         // 무기 사용
-        data.WeaponInput.Set(NetworkInputData.WEAPON_INPUT, Input.GetMouseButtonDown(0));
+        data.WeaponInput.Set(NetworkInputData.WEAPON_INPUT, Input.GetMouseButton(0));
 
         // ---------------------------------------------------------------------------------------
 

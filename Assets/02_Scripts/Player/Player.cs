@@ -3,6 +3,7 @@ using Fusion;
 using Fusion.Addons.FSM;
 using System.Collections.Generic;
 using Unity.Cinemachine;
+using KIM.Dev;
 
 public class Player : NetworkBehaviour
 {

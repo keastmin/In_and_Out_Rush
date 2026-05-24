@@ -177,8 +177,8 @@ MonoBehaviour:
   _requireTerritory: 1
   _BuiltIndex: {x: 0, y: 0}
   _cost:
-    Mineral: 0
-    Gas: 0
+    Mineral: 50
+    Gas: 200
   _ghost: {fileID: 8744631464877653142, guid: 2ec9a71eec4a7044390268b585ebd20b, type: 3}
   _type: 2
   _towerId: Regeneration Tower

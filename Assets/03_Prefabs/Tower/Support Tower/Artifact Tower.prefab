@@ -21,6 +21,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 4712250449522736509, guid: 763291e856d437d4789bf69e314f12ab, type: 3}
     - target: {fileID: 1522401907864096044, guid: 3302635113343d046a4921212bd4e79a, type: 3}
+      propertyPath: _cost.Mineral
+      value: 50
+      objectReference: {fileID: 0}
+    - target: {fileID: 1522401907864096044, guid: 3302635113343d046a4921212bd4e79a, type: 3}
       propertyPath: _buffCellRange
       value: 1
       objectReference: {fileID: 0}

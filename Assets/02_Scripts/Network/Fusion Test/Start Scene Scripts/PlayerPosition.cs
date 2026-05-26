@@ -1,5 +1,9 @@
-public enum PlayerPosition
+namespace KIM.Dev
 {
-    Builder,
-    Runner
+	public enum PlayerPosition
+	{
+		Builder,
+		Runner
+	}
+
 }

@@ -1,7 +1,11 @@
-public enum TowerPropertiesType
+namespace KIM.Dev
 {
-    None,
-    Flame,
-    Blitz,
-    Biochemical
+    public enum TowerPropertiesType
+    {
+        None,
+        Flame,
+        Blitz,
+        Biochemical
+    }
+
 }

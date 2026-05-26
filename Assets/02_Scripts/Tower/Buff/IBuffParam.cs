@@ -1,3 +1,6 @@
-public interface IBuffParam
+namespace KIM.Dev
 {
+	public interface IBuffParam
+	{
+	} 
 }

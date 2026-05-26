@@ -2,42 +2,46 @@ using Fusion;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class TowerManager : MonoBehaviour
+namespace KIM.Dev
 {
-    public static TowerManager Instance { get; private set; }
-    
-    public Dictionary<string, int> TowerCount; // 타워 ID로 타워의 개수를 반환
-
-    private void Awake()
+    public class TowerManager : MonoBehaviour
     {
-        Instance = this;
-        TowerCount = new Dictionary<string, int>();
-    }
+        public static TowerManager Instance { get; private set; }
 
-    public void AddTowerID(string id)
-    {
-        if (!TowerCount.ContainsKey(id))
+        public Dictionary<string, int> TowerCount; // 타워 ID로 타워의 개수를 반환
+
+        private void Awake()
         {
-            TowerCount.Add(id, 1);
+            Instance = this;
+            TowerCount = new Dictionary<string, int>();
         }
-        else
+
+        public void AddTowerID(string id)
         {
-            TowerCount[id]++;
+            if (!TowerCount.ContainsKey(id))
+            {
+                TowerCount.Add(id, 1);
+            }
+            else
+            {
+                TowerCount[id]++;
+            }
+        }
+
+        public void RemoveTowerID(string id)
+        {
+            if (TowerCount.ContainsKey(id))
+            {
+                TowerCount[id]--;
+            }
+        }
+
+        public int GetTowerCount(string id)
+        {
+            if (TowerCount.ContainsKey(id))
+                return TowerCount[id];
+            return 0;
         }
     }
 
-    public void RemoveTowerID(string id)
-    {
-        if (TowerCount.ContainsKey(id))
-        {
-            TowerCount[id]--;
-        }
-    }
-
-    public int GetTowerCount(string id)
-    {
-        if (TowerCount.ContainsKey(id))
-            return TowerCount[id];
-        return 0;
-    }
 }

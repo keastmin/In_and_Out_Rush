@@ -1,6 +1,10 @@
 using UnityEngine;
 
-public interface IRunnerInteractableTower
+namespace KIM.Dev
 {
-    public void Interact(PlayerRunner runner);
+	public interface IRunnerInteractableTower
+	{
+		public void Interact(PlayerRunner runner);
+	}
+
 }

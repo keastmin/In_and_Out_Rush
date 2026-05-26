@@ -1,10 +1,12 @@
-﻿using System;
+using System;
 
-[Flags]
-public enum BuffTargetType
+namespace KIM.Dev
 {
-    None = 0,
-    Runner = 1 << 0,
-    Tower = 1 << 1,
+    [Flags]
+    public enum BuffTargetType
+    {
+        None = 0,
+        Runner = 1 << 0,
+        Tower = 1 << 1,
+    } 
 }
-

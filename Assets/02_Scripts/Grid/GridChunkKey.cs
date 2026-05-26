@@ -1,12 +1,15 @@
 using UnityEngine;
 
-public readonly struct GridChunkKey
+namespace KIM.Dev
 {
-    public readonly int X;
-    public readonly int Y;
-    public GridChunkKey(int x, int y)
+    public readonly struct GridChunkKey
     {
-        this.X = x;
-        this.Y = y;
+        public readonly int X;
+        public readonly int Y;
+        public GridChunkKey(int x, int y)
+        {
+            this.X = x;
+            this.Y = y;
+        }
     }
 }

@@ -1,9 +1,13 @@
 using System;
 using UnityEngine;
 
-[Serializable]
-public struct UIShortcutLongPressInfo
+namespace KIM.Dev
 {
-    public KeyCode ShortcutKey;
-    public LongPressButton ShortcutLongPressButton;
+	[Serializable]
+	public struct UIShortcutLongPressInfo
+	{
+		public KeyCode ShortcutKey;
+		public LongPressButton ShortcutLongPressButton;
+	}
+
 }

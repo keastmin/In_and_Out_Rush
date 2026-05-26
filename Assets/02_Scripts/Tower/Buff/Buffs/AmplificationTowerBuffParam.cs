@@ -1,9 +1,12 @@
 using System;
 
-[Serializable]
-public class AmplificationTowerBuffParam : IBuffParam
+namespace KIM.Dev
 {
-    public float TowerAttackSpeedBonus;
-    public float AttackBonus;
-    public float SpeedBonus;
+    [Serializable]
+    public class AmplificationTowerBuffParam : IBuffParam
+    {
+        public float TowerAttackSpeedBonus;
+        public float AttackBonus;
+        public float SpeedBonus;
+    } 
 }

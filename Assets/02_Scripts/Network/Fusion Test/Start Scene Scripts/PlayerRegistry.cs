@@ -5,65 +5,69 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-public class PlayerRegistry : NetworkBehaviour
+namespace KIM.Dev
 {
-    [Networked, Capacity(2)]
-    public NetworkDictionary<PlayerRef, PlayerPosition> RefToPosition { get; } // PlayerRef로 역할군 찾기
-
-    public bool IsPlayerBuilder(PlayerRef playerRef) => RefToPosition[playerRef] == PlayerPosition.Builder;
-    public bool IsPlayerRunneer(PlayerRef playerRef) => RefToPosition[playerRef] == PlayerPosition.Runner;
-
-    // 플레이어 딕셔너리에 추가
-    public void AddPlayer(PlayerRef player, PlayerPosition position)
+    public class PlayerRegistry : NetworkBehaviour
     {
-        RefToPosition.Add(player, position);
-    }
+        [Networked, Capacity(2)]
+        public NetworkDictionary<PlayerRef, PlayerPosition> RefToPosition { get; } // PlayerRef로 역할군 찾기
 
-    // 플레이어 딕셔너리에서 제거
-    public void RemovePlayer(PlayerRef player)
-    {
-        if (RefToPosition.ContainsKey(player))
+        public bool IsPlayerBuilder(PlayerRef playerRef) => RefToPosition[playerRef] == PlayerPosition.Builder;
+        public bool IsPlayerRunneer(PlayerRef playerRef) => RefToPosition[playerRef] == PlayerPosition.Runner;
+
+        // 플레이어 딕셔너리에 추가
+        public void AddPlayer(PlayerRef player, PlayerPosition position)
         {
-            RefToPosition.Remove(player);
+            RefToPosition.Add(player, position);
         }
-    }
 
-    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    public void RPC_ChangeRole(PlayerRef player)
-    {
-        if (HasStateAuthority && RefToPosition.ContainsKey(player))
+        // 플레이어 딕셔너리에서 제거
+        public void RemovePlayer(PlayerRef player)
         {
-            var currentRole = RefToPosition.Get(player);
-            var newRole = currentRole == PlayerPosition.Builder ? PlayerPosition.Runner : PlayerPosition.Builder;
-            RefToPosition.Set(player, newRole);
-        }
-    }
-
-    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-    public void RPC_NotifyHostShutdown(bool wasGame)
-    {
-        if (!HasStateAuthority)
-            MatchMaker.Instance?.HandleHostShutdownNotice(wasGame);
-    }
-
-    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    public void RPC_NotifyPlayerGameShutdown(PlayerRef player)
-    {
-        if (HasStateAuthority)
-            MatchMaker.Instance?.MarkPlayerGameShutdownIntent(player);
-    }
-
-    public PlayerRef GetPlayerRefFromPosition(PlayerPosition position)
-    {
-        foreach(var player in RefToPosition)
-        {
-            var playerPosition = player.Value;
-            if(position == playerPosition)
+            if (RefToPosition.ContainsKey(player))
             {
-                return player.Key;
+                RefToPosition.Remove(player);
             }
         }
 
-        return PlayerRef.None;
+        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+        public void RPC_ChangeRole(PlayerRef player)
+        {
+            if (HasStateAuthority && RefToPosition.ContainsKey(player))
+            {
+                var currentRole = RefToPosition.Get(player);
+                var newRole = currentRole == PlayerPosition.Builder ? PlayerPosition.Runner : PlayerPosition.Builder;
+                RefToPosition.Set(player, newRole);
+            }
+        }
+
+        [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+        public void RPC_NotifyHostShutdown(bool wasGame)
+        {
+            if (!HasStateAuthority)
+                MatchMaker.Instance?.HandleHostShutdownNotice(wasGame);
+        }
+
+        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+        public void RPC_NotifyPlayerGameShutdown(PlayerRef player)
+        {
+            if (HasStateAuthority)
+                MatchMaker.Instance?.MarkPlayerGameShutdownIntent(player);
+        }
+
+        public PlayerRef GetPlayerRefFromPosition(PlayerPosition position)
+        {
+            foreach (var player in RefToPosition)
+            {
+                var playerPosition = player.Value;
+                if (position == playerPosition)
+                {
+                    return player.Key;
+                }
+            }
+
+            return PlayerRef.None;
+        }
     }
+
 }

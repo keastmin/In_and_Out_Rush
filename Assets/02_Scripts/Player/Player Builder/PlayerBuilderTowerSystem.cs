@@ -1,7 +1,11 @@
 using Fusion;
 using UnityEngine;
 
-public class PlayerBuilderTowerSystem : NetworkBehaviour
+namespace KIM.Dev
 {
+	public class PlayerBuilderTowerSystem : NetworkBehaviour
+	{
+
+	}
 
 }

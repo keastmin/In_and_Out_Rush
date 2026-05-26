@@ -1,12 +1,15 @@
 using UnityEngine;
 
-public class InGameSettingUI : MonoBehaviour
+namespace KIM.Dev
 {
-    // 게임 안에서 누르는 게임 종료 버튼 로직
-    public void OnClickQuitButton()
+    public class InGameSettingUI : MonoBehaviour
     {
-        Debug.Log("게임 종료");
-        gameObject.SetActive(false);
-        MatchMaker.Instance.QuitGame();
+        // 게임 안에서 누르는 게임 종료 버튼 로직
+        public void OnClickQuitButton()
+        {
+            Debug.Log("게임 종료");
+            gameObject.SetActive(false);
+            MatchMaker.Instance.QuitGame();
+        }
     }
 }

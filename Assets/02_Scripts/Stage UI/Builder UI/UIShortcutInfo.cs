@@ -3,9 +3,13 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
-[Serializable]
-public struct UIShortcutInfo
+namespace KIM.Dev
 {
-    public KeyCode ShortcutKey;
-    public Button ShortcutButton;
+	[Serializable]
+	public struct UIShortcutInfo
+	{
+		public KeyCode ShortcutKey;
+		public Button ShortcutButton;
+	}
+
 }

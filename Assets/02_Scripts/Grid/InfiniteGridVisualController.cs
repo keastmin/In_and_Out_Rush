@@ -8,7 +8,7 @@ namespace KIM.Dev
         private const int MaxOccupiedCells = 64;
         private const int MaxPreviewCells = 64;
         private const int MaxBlockedPreviewCells = 64;
-        private const int MaxBuffCells = 64;
+        private const int MaxBuffCells = 256;
         private const int MaxTerritoryVertices = 64;
 
         private Renderer _groundRenderer;

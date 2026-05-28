@@ -28,8 +28,9 @@ namespace KIM.Dev
             {
                 _currTarget = SetTarget();
                 LookAtTarget(_currTarget);
-                if (CheckTargetInAttackRange())
+                if (CheckTargetInAttackRange() && _attackTick.ExpiredOrNotRunning(Runner))
                 {
+                    _attackTick = TickTimer.CreateFromSeconds(Runner, EffectiveAttackInterval);
                     AttackTarget();
                 }
                 foreach (var col in NewlyCollidedSet)

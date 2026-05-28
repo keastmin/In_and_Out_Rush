@@ -41,6 +41,7 @@ namespace KIM.Dev
         private readonly HashSet<Vector2Int> _previewBlockedCellIndices = new();
         private readonly HashSet<Vector2Int> _trackBlockedCellIndices = new();
         private readonly Dictionary<int, BuffSourceState> _buffSources = new();
+        private readonly Dictionary<int, BuffSourceState> _buffPreviewSources = new();
         private readonly Dictionary<Vector2Int, int> _buffCellRefCount = new();
         private readonly Dictionary<Vector2Int, Color> _buffCellColorSum = new();
         private bool _hasSpawned;
@@ -406,6 +407,62 @@ namespace KIM.Dev
 
             RemoveBuffCells(state.Cells, state.Color);
             _buffSources.Remove(sourceId);
+            RefreshVisuals();
+        }
+
+        public void RegisterOrUpdateBuffPreviewSource(int sourceId, Vector2Int centerIndex, int range, Color color)
+        {
+            if (sourceId == 0)
+                return;
+
+            int normalizedRange = Mathf.Max(0, range);
+            if (_buffPreviewSources.TryGetValue(sourceId, out BuffSourceState oldState))
+            {
+                if (oldState.CenterIndex == centerIndex &&
+                    oldState.Range == normalizedRange &&
+                    oldState.Color == color)
+                {
+                    return;
+                }
+
+                RemoveBuffCells(oldState.Cells, oldState.Color);
+            }
+
+            var cells = new HashSet<Vector2Int>(GetCellIndicesInRange(centerIndex, normalizedRange, includeCenter: true));
+            AddBuffCells(cells, color);
+
+            _buffPreviewSources[sourceId] = new BuffSourceState
+            {
+                CenterIndex = centerIndex,
+                Range = normalizedRange,
+                Color = color,
+                Cells = cells
+            };
+
+            RefreshVisuals();
+        }
+
+        public void ClearBuffPreviewSources()
+        {
+            if (_buffPreviewSources.Count == 0)
+                return;
+
+            foreach (BuffSourceState state in _buffPreviewSources.Values)
+            {
+                RemoveBuffCells(state.Cells, state.Color);
+            }
+
+            _buffPreviewSources.Clear();
+            RefreshVisuals();
+        }
+
+        public void RemoveBuffPreviewSource(int sourceId)
+        {
+            if (sourceId == 0 || !_buffPreviewSources.TryGetValue(sourceId, out BuffSourceState state))
+                return;
+
+            RemoveBuffCells(state.Cells, state.Color);
+            _buffPreviewSources.Remove(sourceId);
             RefreshVisuals();
         }
 

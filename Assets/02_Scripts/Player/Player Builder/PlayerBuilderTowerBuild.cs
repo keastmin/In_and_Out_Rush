@@ -93,6 +93,26 @@ namespace KIM.Dev
             }
         }
 
+        public void UpdateBuffCellPreview(TowerGhost towerGhost, Vector2Int centerIndex)
+        {
+            if (towerGhost == null || InfiniteGrid.Instance == null)
+                return;
+
+            if (_tower is CellBuffSupportTower buffTower)
+            {
+                InfiniteGrid.Instance.RegisterOrUpdateBuffPreviewSource(
+                    towerGhost.GetInstanceID(),
+                    centerIndex,
+                    buffTower.BuffCellRange,
+                    buffTower.BuffCellColor);
+            }
+        }
+
+        public void ClearBuffCellPreview()
+        {
+            InfiniteGrid.Instance?.ClearBuffPreviewSources();
+        }
+
         public void BuildTower(Vector2Int index)
         {
             if (_towerRef != default && _tower != null)

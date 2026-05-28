@@ -82,7 +82,7 @@ Shader "GridVisualize/InfiniteHexGuide"
             #define MAX_OCCUPIED_CELLS 64
             #define MAX_PREVIEW_CELLS 64
             #define MAX_BLOCKED_PREVIEW_CELLS 64
-            #define MAX_BUFF_CELLS 64
+            #define MAX_BUFF_CELLS 256
             #define MAX_TERRITORY_VERTICES 64
 
             CBUFFER_START(UnityPerMaterial)
@@ -392,6 +392,7 @@ Shader "GridVisualize/InfiniteHexGuide"
                 float innerEnabled = step(1e-4, innerSize);
                 float innerMask = IsInsideFlatTopHex(localPosition, innerSize) * innerEnabled;
                 float guideMask = outerMask * (1.0 - innerMask) * saturate(_StateOverlayEnabled);
+                float buffMask = outerMask * (1.0 - guideMask);
 
                 float2 cellCenterWS = centerXZ + _GridOriginWS.xz;
                 float territoryMask = IsCellCenterInTerritory(cellCenterWS);
@@ -404,7 +405,7 @@ Shader "GridVisualize/InfiniteHexGuide"
                 half3 mixedAlbedo = lerp(baseColor.rgb, guideColor.rgb, guideColor.a * guideMask);
                 mixedAlbedo = lerp(mixedAlbedo, _PreviewValidGuideColor.rgb, _PreviewValidGuideColor.a * outerMask * previewValidMask);
                 mixedAlbedo = lerp(mixedAlbedo, _PreviewBlockedGuideColor.rgb, _PreviewBlockedGuideColor.a * outerMask * previewBlockedMask);
-                mixedAlbedo = lerp(mixedAlbedo, buffColor.rgb, buffColor.a * guideMask);
+                mixedAlbedo = lerp(mixedAlbedo, buffColor.rgb, buffColor.a * buffMask);
 
                 SurfaceData surfaceData;
                 BuildSurfaceData(materialUV, mixedAlbedo, baseColor.a, surfaceData);

@@ -5,92 +5,104 @@ using UnityEngine;
 
 namespace KIM.Dev
 {
-    public sealed class AmplificationTower : SupportTower, ICanDragObject
+    public sealed class AmplificationTower : CellBuffSupportTower, ICanDragObject
     {
         [Header("버프")]
         [SerializeField] private AmplificationTowerBuffParam _buffParam = new();
-        [SerializeField] private Transform _buffObject;
-        [SerializeField] private LayerMask _detectLayer;
-        [SerializeField] private float _buffRange = 25f;
+        [SerializeField] private Color _buffCellColor = new(1f, 0.85f, 0.15f, 0.38f);
 
-        private Collider[] _detectedBuffReceivers;
         private HashSet<IBuffReceiver> _receivers;
         private HashSet<IBuffReceiver> _detectedReceivers;
         private List<IBuffReceiver> _exitCandidates;
 
+        public override Color BuffCellColor => _buffCellColor;
+
         protected override void TowerAwake()
         {
+            base.TowerAwake();
             _receivers = new HashSet<IBuffReceiver>();
             _detectedReceivers = new HashSet<IBuffReceiver>();
             _exitCandidates = new List<IBuffReceiver>();
-            _detectedBuffReceivers = new Collider[100];
-        }
-
-        public override void Spawned()
-        {
-            base.Spawned();
-
-            if (_buffObject != null)
-            {
-                SetBuffObjectSize();
-            }
         }
 
         protected override void TowerFixedUpdateNetwork()
         {
-            // 호스트라면 버프 받는 사람들 감지 후 버프 주기
-            if (HasStateAuthority && Runner.IsServer)
+            RefreshBuffCellSource();
+
+            if (!HasStateAuthority || !Runner.IsServer)
             {
-                _detectedReceivers.Clear();
+                return;
+            }
 
-                int detectedCount = Physics.OverlapSphereNonAlloc(transform.position, _buffRange / 2f, _detectedBuffReceivers, _detectLayer);
-                for (int i = 0; i < detectedCount; i++)
+            _detectedReceivers.Clear();
+            IReadOnlyList<BuffReceiverRegistry.Entry> snapshot = BuffReceiverRegistry.Snapshot;
+            for (int i = 0; i < snapshot.Count; i++)
+            {
+                BuffReceiverRegistry.Entry entry = snapshot[i];
+                if ((entry.TargetType & (BuffTargetType.Runner | BuffTargetType.Tower)) == 0 ||
+                    !IsInsideBuffCells(entry.Transform))
                 {
-                    if (_detectedBuffReceivers[i].TryGetComponent(out IBuffReceiver receiver))
-                    {
-                        if (!_detectedReceivers.Add(receiver))
-                        {
-                            continue;
-                        }
-
-                        if (_receivers.Contains(receiver))
-                        {
-                            receiver.BuffStay(_buffParam);
-                        }
-                        else
-                        {
-                            receiver.BuffEnter(_buffParam);
-                            _receivers.Add(receiver);
-                        }
-                    }
+                    continue;
                 }
 
-                _exitCandidates.Clear();
-                foreach (var receiver in _receivers)
+                IBuffReceiver receiver = entry.Receiver;
+                if (!_detectedReceivers.Add(receiver))
                 {
-                    if (!_detectedReceivers.Contains(receiver))
-                    {
-                        _exitCandidates.Add(receiver);
-                    }
+                    continue;
                 }
 
-                for (int i = 0; i < _exitCandidates.Count; i++)
+                if (_receivers.Contains(receiver))
                 {
-                    IBuffReceiver receiver = _exitCandidates[i];
-                    receiver.BuffExit(_buffParam);
-                    _receivers.Remove(receiver);
+                    receiver.BuffStay(_buffParam);
+                }
+                else
+                {
+                    receiver.BuffEnter(_buffParam);
+                    _receivers.Add(receiver);
                 }
             }
+
+            ExitUndetectedReceivers();
         }
 
         protected override void TowerDespawned()
         {
+            ExitAllReceivers();
             base.TowerDespawned();
         }
 
-        private void SetBuffObjectSize()
+        private void ExitUndetectedReceivers()
         {
-            _buffObject.transform.localScale = new Vector3(_buffRange, _buffRange, _buffRange);
+            _exitCandidates.Clear();
+            foreach (IBuffReceiver receiver in _receivers)
+            {
+                if (!_detectedReceivers.Contains(receiver))
+                {
+                    _exitCandidates.Add(receiver);
+                }
+            }
+
+            for (int i = 0; i < _exitCandidates.Count; i++)
+            {
+                IBuffReceiver receiver = _exitCandidates[i];
+                receiver.BuffExit(_buffParam);
+                _receivers.Remove(receiver);
+            }
+        }
+
+        private void ExitAllReceivers()
+        {
+            if (_receivers == null)
+            {
+                return;
+            }
+
+            foreach (IBuffReceiver receiver in _receivers)
+            {
+                receiver.BuffExit(_buffParam);
+            }
+
+            _receivers.Clear();
         }
 
         #region ICanDragObject

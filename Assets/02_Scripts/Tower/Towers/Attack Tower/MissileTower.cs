@@ -27,7 +27,7 @@ namespace KIM.Dev
         {
             if (_attackTick.ExpiredOrNotRunning(Runner) && _currTarget != null)
             {
-                _attackTick = TickTimer.CreateFromSeconds(Runner, _attackSpeed);
+                _attackTick = TickTimer.CreateFromSeconds(Runner, EffectiveAttackInterval);
                 // 데미지는 미사일 탄 자체가 넣음
                 var missile = Runner.Spawn(_missliePrefab, _attackPosition.position, _attackPosition.rotation);
                 missile.InitMissile(_missileDamage, _explosionRange, _missileSpeed, _currTarget);

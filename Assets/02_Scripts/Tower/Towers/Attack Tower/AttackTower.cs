@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace KIM.Dev
 {
-    public class AttackTower : Tower, ICanClickObject, ICanDragObject
+    public class AttackTower : Tower, ICanClickObject, ICanDragObject, IBuffReceiver
     {
         #region 필드
 
@@ -41,6 +41,11 @@ namespace KIM.Dev
         // 디버그용 타겟 확인
         [SerializeField] protected Collider _currTarget; // 현재 타겟
 
+        private readonly HashSet<AmplificationTowerBuffParam> _amplificationBuffSources = new();
+        private float _maxAttackSpeedBonusRate;
+
+        protected float EffectiveAttackInterval => _attackSpeed / (1f + _maxAttackSpeedBonusRate);
+
         #endregion
 
         protected override void TowerAwake()
@@ -54,6 +59,23 @@ namespace KIM.Dev
         public override void Spawned()
         {
             base.Spawned();
+
+            if (HasStateAuthority)
+            {
+                BuffReceiverRegistry.Register(this, transform, BuffTargetType.Tower);
+            }
+        }
+
+        protected override void TowerDespawned()
+        {
+            if (HasStateAuthority)
+            {
+                BuffReceiverRegistry.Unregister(this);
+            }
+
+            _amplificationBuffSources.Clear();
+            _maxAttackSpeedBonusRate = 0f;
+            base.TowerDespawned();
         }
 
         // 타겟 설정 메서드
@@ -182,6 +204,47 @@ namespace KIM.Dev
             {
                 // 빌더의 타워 선택을 함수를 호출하여 자신을 선택된 타워로 넘겨줌
                 manager.PlayerBuilder.TowerSelected(this);
+            }
+        }
+
+        #endregion
+
+        #region 버프
+
+        public void BuffEnter(IBuffParam buffParam)
+        {
+            if (buffParam is not AmplificationTowerBuffParam amplificationParam)
+            {
+                return;
+            }
+
+            _amplificationBuffSources.Add(amplificationParam);
+            RefreshAttackSpeedBonus();
+        }
+
+        public void BuffStay(IBuffParam buffParam)
+        {
+        }
+
+        public void BuffExit(IBuffParam buffParam)
+        {
+            if (buffParam is not AmplificationTowerBuffParam amplificationParam ||
+                !_amplificationBuffSources.Remove(amplificationParam))
+            {
+                return;
+            }
+
+            RefreshAttackSpeedBonus();
+        }
+
+        private void RefreshAttackSpeedBonus()
+        {
+            _maxAttackSpeedBonusRate = 0f;
+            foreach (AmplificationTowerBuffParam source in _amplificationBuffSources)
+            {
+                _maxAttackSpeedBonusRate = Mathf.Max(
+                    _maxAttackSpeedBonusRate,
+                    Mathf.Max(0f, source.TowerAttackSpeedBonus) * 0.01f);
             }
         }
 

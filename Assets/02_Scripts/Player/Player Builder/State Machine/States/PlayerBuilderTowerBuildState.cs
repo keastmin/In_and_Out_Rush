@@ -25,6 +25,7 @@ namespace KIM.Dev
             _player.BuilderUI.ActivationTowerBuildUI(true, "Left Mouse: Build, RightMouse: Cancel");
 
             InfiniteGrid.Instance.SetCellStateOverlayEnabled(true);
+            InfiniteGrid.Instance.ClearBuffPreviewSources();
             CreateTowerGhost();
         }
 
@@ -78,6 +79,7 @@ namespace KIM.Dev
             _previewValidIndices.Clear();
             _previewBlockedIndices.Clear();
             InfiniteGrid.Instance?.ClearBuildRangePreview();
+            _player.BuilderTowerBuild.ClearBuffCellPreview();
 
             _player.BuilderUI.ActivationTowerBuildUI(false);
         }
@@ -120,6 +122,7 @@ namespace KIM.Dev
                 _towerBuildIndex = InfiniteGrid.Instance.GetCellIndexFromWorldPosition(mouseHitPoint);
                 _towerBuildPosition = InfiniteGrid.Instance.GetCellCenterPositionFromCellIndex(_towerBuildIndex);
                 _towerGhost.transform.position = _towerBuildPosition;
+                _player.BuilderTowerBuild.UpdateBuffCellPreview(_towerGhost, _towerBuildIndex);
 
                 _player.BuilderTowerBuild.EvaluateBuildFootprint(_towerBuildIndex, _previewValidIndices, _previewBlockedIndices);
                 InfiniteGrid.Instance.SetBuildRangePreview(_previewValidIndices, _previewBlockedIndices);

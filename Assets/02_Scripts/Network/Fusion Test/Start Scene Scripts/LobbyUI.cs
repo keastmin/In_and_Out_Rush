@@ -110,6 +110,10 @@ namespace KIM.Dev
             var key = MatchMaker.Instance.Runner.LocalPlayer;
             NetworkManager.Instance.Registry.RPC_ChangeRole(key);
         }
-    }
 
+        public void OnClickSessionCodeCopyButton()
+        {
+            GUIUtility.systemCopyBuffer = _sessionName.text;
+        }
+    }
 }

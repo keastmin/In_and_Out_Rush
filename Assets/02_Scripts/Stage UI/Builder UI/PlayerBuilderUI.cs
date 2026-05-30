@@ -8,7 +8,7 @@ namespace KIM.Dev
 {
     public class PlayerBuilderUI : MonoBehaviour
     {
-        [SerializeField] private GameObject _builderMainUI;
+        [SerializeField] private BuilderMainUI _builderMainUI;
         [SerializeField] private GameObject _towerBuildUI;
         [SerializeField] private LaboratoryUI _laboratoryUI;
         [SerializeField] private GameObject _towerSelectUI;
@@ -40,10 +40,12 @@ namespace KIM.Dev
 
         private void Awake()
         {
-            _builderMainUI.SetActive(true);
-            _towerBuildUI.SetActive(false);
-            _laboratoryUI.gameObject.SetActive(false);
-            _towerSelectUI.SetActive(false);
+            DisableAll();
+        }
+
+        private void Start()
+        {
+            InitializeMainUI();
         }
 
         #region 클릭 이벤트 메서드
@@ -85,7 +87,7 @@ namespace KIM.Dev
         // 실험실 UI 활성화/비활성화
         public void ActivationLaboratoryUI(bool isActive)
         {
-            _builderMainUI.SetActive(!isActive);
+            _builderMainUI.gameObject.SetActive(!isActive);
             _laboratoryUI.gameObject.SetActive(isActive);
         }
 
@@ -97,14 +99,14 @@ namespace KIM.Dev
                 _buildUIText.text = towerBuildInfo;
             }
 
-            _builderMainUI.SetActive(!isActive);
+            _builderMainUI.gameObject.SetActive(!isActive);
             _towerBuildUI.SetActive(isActive);
         }
 
         // 타워 선택 UI 활성화/비활성화
         public void ActivationTowerSelectUI(bool isActive, TowerType type = TowerType.Attack)
         {
-            _builderMainUI.SetActive(!isActive);
+            _builderMainUI.gameObject.SetActive(!isActive);
             _towerSelectUI.SetActive(isActive);
 
             switch (type)
@@ -140,6 +142,19 @@ namespace KIM.Dev
         {
             if (_laboratoryUI != null)
                 _laboratoryUI.InjectionRunnerReference(runner);
+        }
+
+        private void DisableAll()
+        {
+            _builderMainUI.gameObject.SetActive(true);
+            _towerBuildUI.gameObject.SetActive(false);
+            _laboratoryUI.gameObject.SetActive(false);
+            _towerSelectUI.gameObject.SetActive(false);
+        }
+
+        private void InitializeMainUI()
+        {
+            _builderMainUI.gameObject.SetActive(true);
         }
     }
 }

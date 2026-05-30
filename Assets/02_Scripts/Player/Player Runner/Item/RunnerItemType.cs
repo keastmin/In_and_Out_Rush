@@ -1,9 +1,9 @@
 public enum RunnerItemType
 {
     None,
-    Return,
-    SpawnShield,
-    SpawnDrone,
+    Lifeline,
+    Barrier,
+    Incinerator,
     ElectricGrenade,
-    GasMine,
+    BiodecompositionDevice,
 }

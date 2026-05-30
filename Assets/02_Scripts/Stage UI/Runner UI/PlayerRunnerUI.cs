@@ -7,45 +7,55 @@ public class PlayerRunnerUI : MonoBehaviour
 
     [SerializeField] ItemSlotUI[] itemSlotViews;
 
-    int selectedItem;
+    int selectedItemSlotIndex;
+
+    private void Start()
+    {
+        SelectItemSlot(selectedItemSlotIndex);
+    }
 
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Alpha1))
         {
-            foreach (var itemSlotView in itemSlotViews)
-            {
-                itemSlotView.SetActiveSlot(false);
-            }
-            itemSlotViews[0].SetActiveSlot(true);
-            selectedItem = 0;
+            SelectItemSlot(0);
         }
         if (Input.GetKeyDown(KeyCode.Alpha2))
         {
-            foreach (var itemSlotView in itemSlotViews)
-            {
-                itemSlotView.SetActiveSlot(false);
-            }
-            itemSlotViews[1].SetActiveSlot(true);
-            selectedItem = 1;
+            SelectItemSlot(1);
         }
         if (Input.GetKeyDown(KeyCode.Alpha3))
         {
-            foreach (var itemSlotView in itemSlotViews)
-            {
-                itemSlotView.SetActiveSlot(false);
-            }
-            itemSlotViews[2].SetActiveSlot(true);
-            selectedItem = 2;
+            SelectItemSlot(2);
         }
         if (Input.GetKeyDown(KeyCode.Alpha4))
         {
-            foreach (var itemSlotView in itemSlotViews)
-            {
-                itemSlotView.SetActiveSlot(false);
-            }
-            itemSlotViews[3].SetActiveSlot(true);
-            selectedItem = 3;
+            SelectItemSlot(3);
         }
+        if (Input.GetKeyDown(KeyCode.Alpha5))
+        {
+            SelectItemSlot(4);
+        }
+    }
+
+    public void SelectItemSlot(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= itemSlotViews.Length)
+            return;
+
+        for (int i = 0; i < itemSlotViews.Length; i++)
+        {
+            itemSlotViews[i].SetActiveSlot(i == slotIndex);
+        }
+
+        selectedItemSlotIndex = slotIndex;
+    }
+
+    public void SetItemSlot(int slotIndex, RunnerItemType itemType, int count)
+    {
+        if (slotIndex < 0 || slotIndex >= itemSlotViews.Length)
+            return;
+
+        itemSlotViews[slotIndex].SetItem(itemType, count);
     }
 }

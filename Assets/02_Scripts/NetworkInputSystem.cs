@@ -14,7 +14,8 @@ public class NetworkInputSystem : NetworkBehaviour, INetworkRunnerCallbacks
     private bool _itemInput = false; // 러너 아이템 입력
     private bool _skillInput = false; // 러너 스킬 입력
     private bool _interactInput = false; // 러너 상호작용 입력
-    private int _selectedItem = 0; // 러너 아이템
+    private int _selectedItemSlotIndex = 0; // 러너 아이템 슬롯
+    private int _selectedSkill = 1; // 러너 스킬
     private bool _mouseButton0 = false; // 마우스 좌클릭
     private bool _mouseButton1 = false; // 마우스 우클릭
 
@@ -31,19 +32,23 @@ public class NetworkInputSystem : NetworkBehaviour, INetworkRunnerCallbacks
         _mouseButton1 = _mouseButton1 | Input.GetMouseButtonDown(1); // 마우스 우클릭 여부 검사
         if (Input.GetKeyDown(KeyCode.Alpha1))
         {
-            _selectedItem = 1;
+            _selectedItemSlotIndex = 0;
         }
         if (Input.GetKeyDown(KeyCode.Alpha2))
         {
-            _selectedItem = 2;
+            _selectedItemSlotIndex = 1;
         }
         if (Input.GetKeyDown(KeyCode.Alpha3))
         {
-            _selectedItem = 3;
+            _selectedItemSlotIndex = 2;
         }
         if (Input.GetKeyDown(KeyCode.Alpha4))
         {
-            _selectedItem = 4;
+            _selectedItemSlotIndex = 3;
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha5))
+        {
+            _selectedItemSlotIndex = 4;
         }
     }
 
@@ -85,12 +90,12 @@ public class NetworkInputSystem : NetworkBehaviour, INetworkRunnerCallbacks
         // 아이템 사용
         data.ItemInput.Set(NetworkInputData.ITEM_INPUT, _itemInput);
         _itemInput = false;
-        data.SelectedItem = _selectedItem;
+        data.SelectedItem = _selectedItemSlotIndex;
 
         // 스킬 사용
         data.SkillInput.Set(NetworkInputData.SKILL_INPUT, _skillInput);
         _skillInput = false;
-        data.SelectedSkill = _selectedItem;
+        data.SelectedSkill = _selectedSkill;
 
         // 타워 상호작용
         data.InteractInput.Set(NetworkInputData.INTERACT_INPUT, _interactInput);

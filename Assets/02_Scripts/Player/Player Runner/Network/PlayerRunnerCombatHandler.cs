@@ -30,7 +30,7 @@ public class PlayerRunnerCombatHandler
     {
         if (runner.IsDead) return 0f;
 
-        float healedAmount = Mathf.Min(amount, PlayerRunner.MaxHealth - runner.Health);
+        float healedAmount = Mathf.Min(amount, runner.MaxHealth - runner.Health);
         runner.Health += healedAmount;
         UpdateHealthUI(runner);
         return healedAmount;
@@ -64,6 +64,6 @@ public class PlayerRunnerCombatHandler
         var playerUI = StageBootstrapper.Instance?.UIController?.RunnerUI?.Display?.Player;
         if (playerUI == null) return;
 
-        playerUI.SetHealthBarRatio(runner.Health / PlayerRunner.MaxHealth);
+        playerUI.SetHealthBarRatio(runner.Health / runner.MaxHealth);
     }
 }

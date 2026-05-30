@@ -10,14 +10,21 @@ using KIM.Dev;
 [RequireComponent(typeof(PlayerRunnerMovement))]
 [RequireComponent(typeof(PlayerRunnerOutOfBodyController))]
 [RequireComponent(typeof(PlayerRunnerTeleporter))]
-public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
+public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLaboratoryUpgradeReceiver
 {
-    public const float MaxHealth = 100f;
+    private const float DefaultMaxHealth = 100f;
+    private const float DefaultMaxStamina = 100f;
+    private const float LifelineReturnRadius = 2f;
 
     [Header("Statistics")]
     [Networked, OnChangedRender(nameof(OnHealthChanged))]
     public float Health { get; set; } = 100f;
-    [Networked] public float Stamina { get; set; } = 100f;
+    [Networked, OnChangedRender(nameof(OnHealthChanged))]
+    public float MaxHealth { get; set; } = DefaultMaxHealth;
+    [Networked, OnChangedRender(nameof(OnStaminaChanged))]
+    public float Stamina { get; set; } = 100f;
+    [Networked, OnChangedRender(nameof(OnStaminaChanged))]
+    public float MaxStamina { get; set; } = DefaultMaxStamina;
     [Networked] public float StaminaRecoveryRate { get; set; } = 10f;
     [Networked] public float MovementSpeed { get; set; } = 6f;
     [Networked] public float WeaponDamage { get; set; } = 1f;
@@ -37,6 +44,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
     private Rigidbody _rigidbody;
     private PlayerRunnerMovement _movement;
     private RunnerItemConsumer _itemConsumer;
+    private RunnerItemInventory _itemInventory;
     private RunnerSkillCaster _skillCaster;
     private PlayerRunnerOutOfBodyController _outOfBodyController;
     private PlayerRunnerTeleporter _teleporter;
@@ -59,8 +67,18 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
 
     public void OnHealthChanged()
     {
+        if (MaxHealth <= 0f) return;
+
         StageBootstrapper.Instance.UIController.RunnerUI.Display.Player
             .SetHealthBarRatio(Health / MaxHealth);
+    }
+
+    public void OnStaminaChanged()
+    {
+        if (MaxStamina <= 0f) return;
+
+        StageBootstrapper.Instance.UIController.RunnerUI.Display.Player
+            .SetStaminaBarRatio(Stamina / MaxStamina);
     }
 
     private void Awake()
@@ -74,6 +92,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
             Debug.LogWarning($"{nameof(_weaponBehaviour)} must implement {nameof(IRunnerWeapon)}.", this);
 
         _itemConsumer = new RunnerItemConsumer();
+        _itemInventory = new RunnerItemInventory(_itemConsumer);
         _skillCaster = new RunnerSkillCaster();
         _combatHandler = new PlayerRunnerCombatHandler();
         _slideHandler = new PlayerRunnerSlideHandler();
@@ -89,7 +108,10 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
         _movement.SetTarget(transform);
         if (HasStateAuthority)
         {
+            MaxHealth = DefaultMaxHealth;
             Health = MaxHealth;
+            MaxStamina = DefaultMaxStamina;
+            Stamina = MaxStamina;
             if (Globals.Store != null)
             {
                 MovementSpeed = Globals.Store.PlayerRunnerMovementSpeed;
@@ -98,6 +120,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
             IsDead = false;
         }
         BuffReceiverRegistry.Register(this, transform, BuffTargetType.Runner);
+        RefreshItemSlots();
     }
 
     public override void FixedUpdateNetwork()
@@ -105,6 +128,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
         if (HasStateAuthority)
         {
             _buffHandler.Tick(Runner.DeltaTime);
+            RecoverStamina(Runner.DeltaTime);
         }
 
         if (!GetInput(out NetworkInputData data)) return;
@@ -159,6 +183,14 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
         _movement.UpdateMovement(EffectiveMovementSpeed, isDashing, direction);
     }
 
+    private void RecoverStamina(float deltaTime)
+    {
+        if (Stamina >= MaxStamina) return;
+
+        Stamina = Mathf.Min(MaxStamina, Stamina + StaminaRecoveryRate * deltaTime);
+        OnStaminaChanged();
+    }
+
     private void HandleSlideInput(NetworkInputData data)
     {
         if (!data.SlideInput.IsSet(NetworkInputData.SLIDE_INPUT)) return;
@@ -168,8 +200,11 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
 
     private void HandleItemInput(NetworkInputData data)
     {
+        UpdateSelectedItemSlot(data.SelectedItem);
         if (!data.ItemInput.IsSet(NetworkInputData.ITEM_INPUT)) return;
-        _itemConsumer.Use((RunnerItemType)data.SelectedItem, this);
+        if (!_itemInventory.TryUse(data.SelectedItem, this)) return;
+
+        RefreshItemSlots();
     }
 
     private void HandleSkillInput(NetworkInputData data)
@@ -213,10 +248,85 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
             .SetSkillIcon(skillIcons[skillIndex - 1]);
     }
 
+    private void UpdateSelectedItemSlot(int slotIndex)
+    {
+        if (!HasInputAuthority) return;
+
+        StageBootstrapper.Instance.UIController.RunnerUI.SelectItemSlot(slotIndex);
+    }
+
+    private void RefreshItemSlots()
+    {
+        for (int i = 0; i < RunnerItemInventory.SlotCount; i++)
+        {
+            RunnerItemSlot slot = _itemInventory.GetSlot(i);
+            if (HasInputAuthority)
+                SetItemSlotUI(i, slot.ItemType, slot.Count);
+            else if (HasStateAuthority)
+                RPC_SetItemSlot(i, (int)slot.ItemType, slot.Count);
+        }
+    }
+
+    public bool TryActivateLifeline(out Vector3 returnPosition)
+    {
+        returnPosition = Vector3.zero;
+
+        if (!HasStateAuthority)
+            return false;
+
+        if (!_itemInventory.TryConsume(RunnerItemType.Lifeline))
+            return false;
+
+        returnPosition = GetLifelineReturnPosition();
+        TeleportTo(returnPosition);
+        RefreshItemSlots();
+        return true;
+    }
+
+    private Vector3 GetLifelineReturnPosition()
+    {
+        Vector3 targetPosition = Vector3.zero;
+        var laboratory = StageBootstrapper.Instance != null
+            ? StageBootstrapper.Instance.NetworkLaboratory
+            : null;
+
+        if (laboratory != null)
+            targetPosition = laboratory.transform.position;
+
+        float angle = UnityEngine.Random.Range(0f, 2f * Mathf.PI);
+        Vector3 offset = new Vector3(
+            Mathf.Cos(angle) * LifelineReturnRadius,
+            0f,
+            Mathf.Sin(angle) * LifelineReturnRadius);
+
+        return targetPosition + offset;
+    }
+
+    private void SetItemSlotUI(int slotIndex, RunnerItemType itemType, int count)
+    {
+        StageBootstrapper.Instance.UIController.RunnerUI.SetItemSlot(slotIndex, itemType, count);
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
+    private void RPC_SetItemSlot(int slotIndex, int itemType, int count)
+    {
+        SetItemSlotUI(slotIndex, (RunnerItemType)itemType, count);
+    }
+
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
     private void RPC_DecreaseHealthTest(float amount)
     {
         if (HasStateAuthority) TakeDamage(amount);
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    private void RPC_RequestLaboratoryUpgrade(int upgradeType, int nextLevel, float amount)
+    {
+        if (!HasStateAuthority) return;
+        if (!Enum.IsDefined(typeof(RunnerLaboratoryUpgradeType), upgradeType)) return;
+        if (nextLevel <= 0 || amount <= 0f) return;
+
+        _upgradeHandler.ApplyLaboratoryUpgrade(this, (RunnerLaboratoryUpgradeType)upgradeType, amount);
     }
 
     // IDamageable
@@ -226,6 +336,18 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal
     // IHeal
     public float Heal(float amount) => _combatHandler.Heal(this, amount);
     public void ReceiveArmor(float amount) => _combatHandler.ReceiveArmor(this, amount);
+
+    // IRunnerLaboratoryUpgradeReceiver
+    public bool TryRequestLaboratoryUpgrade(RunnerLaboratoryUpgradeRequest request)
+    {
+        if (!Enum.IsDefined(typeof(RunnerLaboratoryUpgradeType), request.Type))
+            return false;
+        if (request.NextLevel <= 0 || request.Amount <= 0f)
+            return false;
+
+        RPC_RequestLaboratoryUpgrade((int)request.Type, request.NextLevel, request.Amount);
+        return true;
+    }
 
     // IBuffReceiver
     public void BuffEnter(IBuffParam buffParam) => _buffHandler.BuffEnter(this, buffParam);

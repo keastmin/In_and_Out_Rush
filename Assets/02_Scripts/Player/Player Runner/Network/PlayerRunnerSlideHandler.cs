@@ -30,9 +30,8 @@ public class PlayerRunnerSlideHandler
         }
         else
         {
-            runner.Stamina -= 10f;
-            StageBootstrapper.Instance.UIController.RunnerUI.Display.Player
-                .SetStaminaBarRatio(runner.Stamina / 100f);
+            runner.Stamina = Mathf.Max(0f, runner.Stamina - 10f);
+            runner.OnStaminaChanged();
         }
 
         await Task.Delay(1000);

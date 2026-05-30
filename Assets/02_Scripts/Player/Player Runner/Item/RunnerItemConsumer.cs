@@ -6,9 +6,8 @@ public class RunnerItemConsumer
 
     public RunnerItemConsumer()
     {
-        _consumptionStrategies[RunnerItemType.Return] = new ReturnToLaboratory();
-        // _consumptionStrategies[RunnerItemType.SpawnShield] = new SpawnShieldStrategy();
-        // _consumptionStrategies[RunnerItemType.SpawnDrone] = new SpawnDroneStrategy();
+        // _consumptionStrategies[RunnerItemType.Barrier] = new SpawnShieldStrategy();
+        // _consumptionStrategies[RunnerItemType.Incinerator] = new SpawnDroneStrategy();
         // _consumptionStrategies[RunnerItemType.ElectricGrenade] = new ElectricGrenadeStrategy();
     }
 
@@ -18,6 +17,15 @@ public class RunnerItemConsumer
             throw new KeyNotFoundException($"No consumption strategy found for item type: {itemType}");
 
         _consumptionStrategies[itemType].Use(parameters);
+    }
+
+    public bool TryUse(RunnerItemType itemType, object parameters = null)
+    {
+        if (!_consumptionStrategies.TryGetValue(itemType, out var consumptionStrategy))
+            return false;
+
+        consumptionStrategy.Use(parameters);
+        return true;
     }
 
     private void SpawnShield()

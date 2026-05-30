@@ -1,28 +1,25 @@
 using UnityEngine;
 
-public enum GameState
+namespace KIM.Dev
 {
-    Lobby,
-    Game
-}
-
-public class GameManager : MonoBehaviour
-{
-    public static GameManager Instance;
-
-    private GameState _currentGameState;
-
-    public GameState CurrentGameState => _currentGameState;
-
-    private void Awake()
+    public class GameManager : MonoBehaviour
     {
-        Instance = this;
-        DontDestroyOnLoad(this.gameObject);
-        _currentGameState = GameState.Lobby;
-    }
+        public static GameManager Instance;
 
-    public void SetGameMode(GameState state)
-    {
-        _currentGameState = state;
+        private GameState _currentGameState;
+
+        public GameState CurrentGameState => _currentGameState;
+
+        private void Awake()
+        {
+            Instance = this;
+            DontDestroyOnLoad(this.gameObject);
+            _currentGameState = GameState.Lobby;
+        }
+
+        public void SetGameMode(GameState state)
+        {
+            _currentGameState = state;
+        }
     }
 }

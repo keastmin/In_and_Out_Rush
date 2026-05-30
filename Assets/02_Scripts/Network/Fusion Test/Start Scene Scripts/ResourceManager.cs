@@ -1,26 +1,29 @@
 using UnityEngine;
-using KIM.Dev;
 
-public class ResourceManager : MonoBehaviour
+namespace KIM.Dev
 {
-    public static ResourceManager Instance { get; private set; }
-
-    public PlayerBuilder PlayerBuilderPrefab;
-    public PlayerRunner PlayerRunnerPrefab;
-    public Laboratory LaboratoryPrefab;
-
-    private void Awake()
+    public class ResourceManager : MonoBehaviour
     {
-        if (Instance != null)
+        public static ResourceManager Instance { get; private set; }
+
+        public PlayerBuilder PlayerBuilderPrefab;
+        public PlayerRunner PlayerRunnerPrefab;
+        public Laboratory LaboratoryPrefab;
+
+        private void Awake()
         {
-            Destroy(gameObject);
-            return;
+            if (Instance != null)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            Instance = this;
         }
-        Instance = this;
+
+        private void Start()
+        {
+            DontDestroyOnLoad(this);
+        }
     }
 
-    private void Start()
-    {
-        DontDestroyOnLoad(this);
-    }
 }

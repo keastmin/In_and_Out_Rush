@@ -1,6 +1,9 @@
-public enum BuffType
+namespace KIM.Dev
 {
-    None,
-    Amplification,
-    Regeneration
+    public enum BuffType
+    {
+        None,
+        Amplification,
+        Regeneration
+    }
 }

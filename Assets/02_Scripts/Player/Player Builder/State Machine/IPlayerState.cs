@@ -1,9 +1,13 @@
 using UnityEngine;
 
-public interface IPlayerState
+namespace KIM.Dev
 {
-    public void Enter();
-    public void Update();
-    public void LateUpdate();
-    public void Exit();
+    public interface IPlayerState
+    {
+        public void Enter();
+        public void Update();
+        public void LateUpdate();
+        public void Exit();
+    }
+
 }

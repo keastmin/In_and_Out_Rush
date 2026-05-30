@@ -1,14 +1,17 @@
 using Fusion;
 using UnityEngine;
 
-public struct BuffData : INetworkStruct
+namespace KIM.Dev
 {
-    public static BuffData Empty => new BuffData(0, BuffType.None);
-    public int BuffRange;
-    public BuffType Type;
-    public BuffData(int range, BuffType type)
+    public struct BuffData : INetworkStruct
     {
-        BuffRange = range;
-        Type = type;
+        public static BuffData Empty => new BuffData(0, BuffType.None);
+        public int BuffRange;
+        public BuffType Type;
+        public BuffData(int range, BuffType type)
+        {
+            BuffRange = range;
+            Type = type;
+        }
     }
 }

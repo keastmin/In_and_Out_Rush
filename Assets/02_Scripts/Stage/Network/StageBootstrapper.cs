@@ -26,7 +26,7 @@ namespace Dev.Network
         [Header("Network Systems")]
         [SerializeField] private NetworkInputSystem networkInputSystemPrefab;
         [SerializeField] private NetworkSystemBase[] systems;
-        public ResourceSystem ResourceSystem;
+        public KIM.Dev.ResourceSystem ResourceSystem;
 
         [Space(10)]
 

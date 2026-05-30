@@ -2,15 +2,19 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class JoinSessionPanel : MonoBehaviour
+namespace KIM.Dev
 {
-    [SerializeField] private TMP_InputField _inputField;
-    [SerializeField] private Button _joinButton;
-
-    public string RoomCode => _inputField.text;
-
-    public void OnButtonInteractable()
+    public class JoinSessionPanel : MonoBehaviour
     {
-        _joinButton.interactable = (_inputField.text.Length == MatchMaker.Instance.RoomCodeLength);
+        [SerializeField] private TMP_InputField _inputField;
+        [SerializeField] private Button _joinButton;
+
+        public string RoomCode => _inputField.text;
+
+        public void OnButtonInteractable()
+        {
+            _joinButton.interactable = (_inputField.text.Length == MatchMaker.Instance.RoomCodeLength);
+        }
     }
+
 }

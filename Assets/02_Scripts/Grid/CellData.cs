@@ -2,13 +2,16 @@ using Fusion;
 using System.Collections.Generic;
 using UnityEngine;
 
-public struct CellData : INetworkStruct
+namespace KIM.Dev
 {
-    public int ActiveRange;
-    public BuffData BuffData;
-    public CellData(int range, BuffData buffData)
+    public struct CellData : INetworkStruct
     {
-        ActiveRange = range;
-        BuffData = buffData;
+        public int ActiveRange;
+        public BuffData BuffData;
+        public CellData(int range, BuffData buffData)
+        {
+            ActiveRange = range;
+            BuffData = buffData;
+        }
     }
 }

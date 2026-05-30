@@ -1,8 +1,10 @@
-using UnityEngine;
-
-public enum TowerType
+namespace KIM.Dev
 {
-    Attack,
-    Center,
-    Support
+    public enum TowerType
+    {
+        Attack,
+        Center,
+        Support
+    }
+
 }

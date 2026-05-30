@@ -77,6 +77,15 @@ namespace KIM.Dev
                 ghost.transform.position = snapshotPos;
                 ghost.EnableTower();
 
+                if (targetTower is CellBuffSupportTower buffTower)
+                {
+                    gridManager.RegisterOrUpdateBuffPreviewSource(
+                        ghost.GetInstanceID(),
+                        snapshotIndex,
+                        buffTower.BuffCellRange,
+                        buffTower.BuffCellColor);
+                }
+
                 plannedMoves.Add(new PlannedTowerMove
                 {
                     Tower = targetTower,
@@ -231,6 +240,7 @@ namespace KIM.Dev
         public void TowerMoveClear()
         {
             InfiniteGrid.Instance?.ClearBuildRangePreview();
+            InfiniteGrid.Instance?.ClearBuffPreviewSources();
 
             if (_ghosts != null)
             {
@@ -282,6 +292,7 @@ namespace KIM.Dev
 
             if (removeGhost is not null)
             {
+                InfiniteGrid.Instance?.RemoveBuffPreviewSource(removeGhost.GetInstanceID());
                 Destroy(removeGhost.gameObject);
             }
 
@@ -315,6 +326,7 @@ namespace KIM.Dev
 
                 if (ghost is not null)
                 {
+                    InfiniteGrid.Instance?.RemoveBuffPreviewSource(ghost.GetInstanceID());
                     _ghostToTowerDic.Remove(ghost);
                     _ghosts?.Remove(ghost);
                     Destroy(ghost.gameObject);

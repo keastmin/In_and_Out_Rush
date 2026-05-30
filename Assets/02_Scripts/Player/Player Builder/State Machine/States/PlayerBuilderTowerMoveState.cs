@@ -15,6 +15,7 @@ namespace KIM.Dev
         {
             InfiniteGrid.Instance.SetCellStateOverlayEnabled(true);
             InfiniteGrid.Instance.ClearBuildRangePreview();
+            InfiniteGrid.Instance.ClearBuffPreviewSources();
 
             _player.BuilderUI.ActivationTowerBuildUI(true, "Left Mouse: Complete, RightMouse: Cancel");
             _player.BuilderTowerMove.TowerMoveSet(_player.SelectedTowers);

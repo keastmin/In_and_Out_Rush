@@ -1,15 +1,19 @@
 using Fusion;
 using System;
 
-[Serializable]
-public struct Cost : INetworkStruct
+namespace KIM.Dev
 {
-    public int Mineral;
-    public int Gas;
-
-    public Cost(int mineral, int gas)
+    [Serializable]
+    public struct Cost : INetworkStruct
     {
-        Mineral = mineral;
-        Gas = gas;
+        public int Mineral;
+        public int Gas;
+
+        public Cost(int mineral, int gas)
+        {
+            Mineral = mineral;
+            Gas = gas;
+        }
     }
+
 }

@@ -1,35 +1,38 @@
 using System;
 using UnityEngine;
 
-public class Blade : MonoBehaviour
+namespace KIM.Dev
 {
-    [SerializeField] Animator animator;
-    public float SpinSpeed = 1f;
-    public float Damage = 10f;
-    public bool CanHit;
-
-    public event Action<bool> OnSpinEvent;
-
-    void Awake()
+    public class Blade : MonoBehaviour
     {
-        CanHit = false;
-    }
+        [SerializeField] Animator animator;
+        public float SpinSpeed = 1f;
+        public float Damage = 10f;
+        public bool CanHit;
 
-    public void StartSpinAnimation()
-    {
-        animator.SetTrigger("Spin");
-    }
+        public event Action<bool> OnSpinEvent;
 
-    public void StartSpin()
-    {
-        animator.SetFloat("Blade Spin Speed", SpinSpeed);
-        CanHit = true;
-        OnSpinEvent?.Invoke(CanHit);
-    }
+        void Awake()
+        {
+            CanHit = false;
+        }
 
-    public void StopSpin()
-    {
-        CanHit = false;
-        OnSpinEvent?.Invoke(CanHit);
-    }
+        public void StartSpinAnimation()
+        {
+            animator.SetTrigger("Spin");
+        }
+
+        public void StartSpin()
+        {
+            animator.SetFloat("Blade Spin Speed", SpinSpeed);
+            CanHit = true;
+            OnSpinEvent?.Invoke(CanHit);
+        }
+
+        public void StopSpin()
+        {
+            CanHit = false;
+            OnSpinEvent?.Invoke(CanHit);
+        }
+    } 
 }

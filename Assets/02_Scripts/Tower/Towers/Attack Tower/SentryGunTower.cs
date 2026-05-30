@@ -30,6 +30,7 @@ namespace KIM.Dev
 
         protected override void TowerDespawned()
         {
+            base.TowerDespawned();
             Debug.Log("Tower 디스폰됨");
         }
 
@@ -47,7 +48,7 @@ namespace KIM.Dev
         {
             if (_attackTick.ExpiredOrNotRunning(Runner) && _currTarget != null)
             {
-                _attackTick = TickTimer.CreateFromSeconds(Runner, _attackSpeed);
+                _attackTick = TickTimer.CreateFromSeconds(Runner, EffectiveAttackInterval);
                 _shotSeq++;
 
                 // 데미지 넣기
@@ -70,7 +71,7 @@ namespace KIM.Dev
         private void InitSentryTower()
         {
             // 공격 타이머 초기화
-            _attackTick = TickTimer.CreateFromSeconds(Runner, _attackSpeed);
+            _attackTick = TickTimer.CreateFromSeconds(Runner, EffectiveAttackInterval);
         }
     }
 }

@@ -17,6 +17,7 @@ public class TerritorySystem : NetworkSystemBase
     [SerializeField] Vector2 previousPosition;
     [SerializeField] List<Vector2> playerPath;
     bool isIntersected = false;
+    bool isRecoveringFromLifeline = false;
 
     public Territory Territory;
     public TerritoryVisible TerritoryVisible;
@@ -90,6 +91,19 @@ public class TerritorySystem : NetworkSystemBase
         isExpanding = false;
     }
 
+    private void ResetExpansionState(Vector2 safePosition)
+    {
+        StopExpanding();
+        previousPosition = safePosition;
+        isIntersected = false;
+    }
+
+    private void StartLifelineRecovery(Vector2 safePosition)
+    {
+        ResetExpansionState(safePosition);
+        isRecoveringFromLifeline = true;
+    }
+
     private void AddExpandingPathPoint(Vector2 point)
     {
         playerPath.Add(point);
@@ -103,8 +117,20 @@ public class TerritorySystem : NetworkSystemBase
     public void HandlePlayerPositionChanged(Vector3 position, PlayerRunner playerRunner, object sender) // 러너만
     {
         var currentPosition = new Vector2(position.x, position.z);
+        bool isInTerritory = Territory.IsPointInPolygon(currentPosition);
 
-        if (Territory.IsPointInPolygon(currentPosition))
+        if (isRecoveringFromLifeline)
+        {
+            if (isInTerritory)
+            {
+                ResetExpansionState(currentPosition);
+                isRecoveringFromLifeline = false;
+            }
+
+            return;
+        }
+
+        if (isInTerritory)
         {
             if (isExpanding)
             {
@@ -145,7 +171,8 @@ public class TerritorySystem : NetworkSystemBase
                 }
 
                 // 러너가 자신이 지나온 길을 다시 밟으면 게임 오버
-                CheckPlayerRunnerCrossedOwnPath(currentPosition);
+                if (CheckPlayerRunnerCrossedOwnPath(currentPosition, playerRunner))
+                    return;
 
                 if (lineRenderer.positionCount > 0)
                 {
@@ -169,6 +196,12 @@ public class TerritorySystem : NetworkSystemBase
         playerPath.Clear();
         lineRenderer.positionCount = 0;
         isExpanding = false;
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All, Channel = RpcChannel.Reliable)]
+    public void RPC_ResetExpansionAfterLifeline(Vector2 safePosition)
+    {
+        StartLifelineRecovery(safePosition);
     }
 
     [Rpc(RpcSources.All, RpcTargets.All, Channel = RpcChannel.Reliable)]
@@ -197,15 +230,30 @@ public class TerritorySystem : NetworkSystemBase
     }
 
     // 플레이어 러너가 이전 경로를 밟았는지 확인하고 밟았다면 게임 오버 처리
-    private void CheckPlayerRunnerCrossedOwnPath(Vector2 currPos)
+    private bool CheckPlayerRunnerCrossedOwnPath(Vector2 currPos, PlayerRunner playerRunner)
     {
-        if (isIntersected) { return; }
+        if (isIntersected) { return true; }
         if (CheckCurrPathCrossPrevPath(currPos))
         {
+            if (!Object.HasStateAuthority)
+                return true;
+
+            if (playerRunner != null && playerRunner.TryActivateLifeline(out Vector3 returnPosition))
+            {
+                Vector2 safePosition = new Vector2(returnPosition.x, returnPosition.z);
+                StartLifelineRecovery(safePosition);
+                RPC_ResetExpansionAfterLifeline(safePosition);
+                Debug.Log("Lifeline activated. Player returned to laboratory.");
+                return true;
+            }
+
             // GameOver
             Debug.Log("Game Over! Player crossed own path.");
             isIntersected = true;
+            return true;
         }
+
+        return false;
     }
 
     // 플레이어 러너의 현재 경로가 이전 경로와 교차했는지 확인
@@ -213,7 +261,12 @@ public class TerritorySystem : NetworkSystemBase
     {
         int count = playerPath.Count;
 
-        Vector2 prevPos = playerPath[count - 1];
+        if (count < 3)
+            return false;
+
+        Vector2 prevPos = previousPosition;
+        if (Vector2.SqrMagnitude(currPos - prevPos) <= 0.0001f)
+            return false;
 
         for (int i = 0; i < count - 2; i++) // 마지막 두 점은 현재 경로이므로 제외
         {
@@ -228,16 +281,6 @@ public class TerritorySystem : NetworkSystemBase
         }
 
         // 마지막 선분
-        {
-            Vector2 pos1 = playerPath[^2];
-            Vector2 pos2 = playerPath[^1];
-            if (Geometry.SegmentIntersection(currPos, prevPos, pos1, pos2, false, out Vector2 intersection))
-            {
-                Debug.Log($"Intersection at: {intersection}");
-                return true;
-            }
-        }
-
         return false;
     }
 }

@@ -58,12 +58,17 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     private PlayerRunnerUpgradeHandler _upgradeHandler;
 
     private float _elapsedTime = 0f;
-
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    private bool _testModeInvincibleEnabled;
+#endif
     public event Action<Vector3, PlayerRunner, object> OnPositionChanged;
     public event Action<PlayerRunner, object> OnDied;
     public event Action<PlayerRunner, object> OnLaboratoryLookStarted;
     public event Action<PlayerRunner, object> OnLaboratoryLookEnded;
     public float EffectiveMovementSpeed => _buffHandler.GetMovementSpeed(this);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    public bool IsTestModeInvincible => _testModeInvincibleEnabled;
+#endif
 
     public void OnHealthChanged()
     {
@@ -121,6 +126,9 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
         }
         BuffReceiverRegistry.Register(this, transform, BuffTargetType.Runner);
         RefreshItemSlots();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        AttachTestModeGUI();
+#endif
     }
 
     public override void FixedUpdateNetwork()
@@ -281,6 +289,16 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
         }
     }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    private void AttachTestModeGUI()
+    {
+        if (!HasInputAuthority) return;
+        if (TryGetComponent<PlayerRunnerTestModeGUI>(out _)) return;
+
+        gameObject.AddComponent<PlayerRunnerTestModeGUI>().Initialize(this);
+    }
+#endif
+
     public bool TryActivateLifeline(out Vector3 returnPosition)
     {
         returnPosition = Vector3.zero;
@@ -333,6 +351,17 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
         if (HasStateAuthority) TakeDamage(amount);
     }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    private void RPC_SetTestModeInvincible(bool enabled)
+    {
+        if (!HasStateAuthority) return;
+
+        _testModeInvincibleEnabled = enabled;
+        _combatHandler.SetTestModeInvincible(this, enabled);
+    }
+#endif
+
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
     private void RPC_RequestLaboratoryUpgrade(int upgradeType, int nextLevel, float amount)
     {
@@ -346,6 +375,18 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     // IDamageable
     public void TakeDamage(float damage) => _combatHandler.TakeDamage(this, damage);
     public void InvokeDiedEvent(PlayerRunner runner, object sender) => OnDied?.Invoke(runner, sender);
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    public void SetTestModeInvincible(bool enabled)
+    {
+        _testModeInvincibleEnabled = enabled;
+
+        if (HasStateAuthority)
+            _combatHandler.SetTestModeInvincible(this, enabled);
+        else
+            RPC_SetTestModeInvincible(enabled);
+    }
+#endif
 
     // IHeal
     public float Heal(float amount) => _combatHandler.Heal(this, amount);

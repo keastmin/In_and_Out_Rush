@@ -229,7 +229,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     {
         if (!data.SlideInput.IsSet(NetworkInputData.SLIDE_INPUT)) return;
         _ = _slideHandler.StartSlide(this, _rigidbody, _swiftnessHandler);
-        RPC_DecreaseHealthTest(50f);
+        // RPC_DecreaseHealthTest(50f);
     }
 
     private void HandleItemInput(NetworkInputData data)

@@ -10,7 +10,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2894567192362922144, guid: 3f204e3d39da8664e820553faf1f691e, type: 3}
       propertyPath: m_Name
-      value: Stalker 1
+      value: Stalker
       objectReference: {fileID: 0}
     - target: {fileID: 6102025025699949262, guid: 3f204e3d39da8664e820553faf1f691e, type: 3}
       propertyPath: SortKey
@@ -109,9 +109,9 @@ MonoBehaviour:
   playerTransform: {fileID: 0}
   patrolMinimumRadius: 5
   patrolMaximumRadius: 10
-  sensingRange: 3
-  attackRange: 2
-  attackSpeed: 1
+  _sensingRange: 5
+  _attackRange: 2
+  _attackSpeed: 3
 --- !u!114 &9203883776642333302 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 6282168818028803302, guid: 3f204e3d39da8664e820553faf1f691e, type: 3}

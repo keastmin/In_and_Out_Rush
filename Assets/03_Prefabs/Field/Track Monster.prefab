@@ -96,7 +96,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   attackTargetTransform: {fileID: 3680100859485328221}
   health: 10
-  movementSpeed: 20
+  movementSpeed: 5
   arrivalThreshold: 0.1
   playerTransform: {fileID: 0}
   _completionDamage: 10

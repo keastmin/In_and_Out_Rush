@@ -180,7 +180,21 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
         if (_slideHandler.IsSliding || _tumbleHandler.IsTumbling) return;
         bool isDashing = data.DashInput.IsSet(NetworkInputData.DASH_INPUT);
         Vector3 direction = data.PlayerRunnerDirection.normalized;
+        isDashing = TryConsumeDashStamina(isDashing, direction, Runner.DeltaTime);
         _movement.UpdateMovement(EffectiveMovementSpeed, isDashing, direction);
+    }
+
+    private bool TryConsumeDashStamina(bool isDashing, Vector3 direction, float deltaTime)
+    {
+        if (!isDashing) return false;
+        if (direction == Vector3.zero) return false;
+        if (Stamina <= 0f) return false;
+
+        if (!HasStateAuthority) return true;
+
+        Stamina = Mathf.Max(0f, Stamina - RunningPower * deltaTime);
+        OnStaminaChanged();
+        return Stamina > 0f;
     }
 
     private void RecoverStamina(float deltaTime)

@@ -188,5 +188,17 @@ namespace Dev.Network
             YOUSetUpObjects();
             KIMSetUpObjects();
         }
+
+        // 플레이어 러너가 스폰되고나면 호출되는 함수
+        public void LocalPlayerRunnerSpawned(PlayerRunner playerRunner)
+        {
+            PlayerRunnerReferenceInjectToUI(playerRunner);
+        }
+
+        // 플레이어 러너 참조를 UI 컨트롤러에 전달하는 함수
+        private void PlayerRunnerReferenceInjectToUI(PlayerRunner playerRunner)
+        {
+            UIController.GetPlayerRunnerReference(playerRunner);
+        }
     }
 }

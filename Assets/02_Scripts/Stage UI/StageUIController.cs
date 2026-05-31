@@ -7,6 +7,8 @@ public class StageUIController : MonoBehaviour
     public PlayerBuilderUI BuilderUI; // 플레이어 빌더가 보게 될 UI 오브젝트
     public PlayerRunnerUI RunnerUI; // 플레이어 러너가 보게 될 UI 오브젝트
 
+    private PlayerRunner _playerRunner; // 플레이어 러너 참조
+
     private void Awake()
     {
         SetDisableAllUI(); // 시작할 때 모든 UI 비활성화
@@ -36,5 +38,15 @@ public class StageUIController : MonoBehaviour
     {
         BuilderUI.gameObject.SetActive(false);
         RunnerUI.gameObject.SetActive(false);
+    }
+
+    /// <summary>
+    /// 플레이어 러너 참조를 받아서 저장하는 함수
+    /// </summary>
+    /// <param name="playerRunner">플레이어 러너 참조</param>
+    public void GetPlayerRunnerReference(PlayerRunner playerRunner)
+    {
+        _playerRunner = playerRunner;
+        BuilderUI.GetPlayerRunnerReference(playerRunner);
     }
 }

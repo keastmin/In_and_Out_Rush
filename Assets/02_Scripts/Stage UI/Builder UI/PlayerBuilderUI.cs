@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace KIM.Dev
 {
@@ -13,6 +14,7 @@ namespace KIM.Dev
         [SerializeField] private LaboratoryUI _laboratoryUI;
         [SerializeField] private GameObject _towerSelectUI;
         [SerializeField] private DragSystem _dragSystem;
+        [SerializeField] private Slider _runnerHPSlider;
 
         [SerializeField] private TextMeshProUGUI _buildUIText;
 
@@ -21,6 +23,8 @@ namespace KIM.Dev
         [SerializeField] private GameObject[] _selectPropertiesUI;
 
         public bool IsLaboratoryUIActive => _laboratoryUI.gameObject.activeSelf;
+
+        private PlayerRunner _playerRunner;
 
         #region Action
 
@@ -41,6 +45,24 @@ namespace KIM.Dev
         private void Awake()
         {
             DisableAll();
+            _runnerHPSlider.value = 1f;
+        }
+
+        private void OnEnable()
+        {
+            if(_playerRunner != null)
+            {
+                _playerRunner.OnHPValueChanged -= ChangeHPSlider;
+                _playerRunner.OnHPValueChanged += ChangeHPSlider;
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (_playerRunner != null)
+            {
+                _playerRunner.OnHPValueChanged -= ChangeHPSlider;
+            }
         }
 
         private void Start()
@@ -155,6 +177,22 @@ namespace KIM.Dev
         private void InitializeMainUI()
         {
             _builderMainUI.gameObject.SetActive(true);
+        }
+
+        /// <summary>
+        /// 플레이어 러너 참조 받기
+        /// </summary>
+        /// <param name="playerRunner">플레이어 러너 참조</param>
+        public void GetPlayerRunnerReference(PlayerRunner playerRunner)
+        {
+            _playerRunner = playerRunner;
+            _playerRunner.OnHPValueChanged += ChangeHPSlider;
+        }
+
+        // 체력 슬라이더 업데이트
+        private void ChangeHPSlider(float maxHP, float currentHP)
+        {
+            _runnerHPSlider.value = currentHP / maxHP;
         }
     }
 }

@@ -44,6 +44,7 @@ namespace KIM.Dev
 
         public void LateUpdate()
         {
+            _player.CamMover.Move();
         }
 
         public void Exit()

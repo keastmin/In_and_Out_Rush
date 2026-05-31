@@ -1125,7 +1125,7 @@ MonoBehaviour:
   _requireTerritory: 1
   _BuiltIndex: {x: 0, y: 0}
   _cost:
-    Mineral: 0
+    Mineral: 150
     Gas: 0
   _ghost: {fileID: 7665473588800853303, guid: 162515771d3bb6042a6510821b3d1553, type: 3}
   _type: 0
@@ -1146,7 +1146,7 @@ MonoBehaviour:
   _currTarget: {fileID: 0}
   _bullet: {fileID: 4963649366916377928, guid: 022974b8ab27faa45b10e7989d5d7305, type: 3}
   _bulletSpeed: 20
-  _bulletDamage: 100
+  _bulletDamage: 10
 --- !u!114 &2502629201869543890
 MonoBehaviour:
   m_ObjectHideFlags: 0

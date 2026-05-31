@@ -54,7 +54,7 @@ MonoBehaviour:
   _cameraMover:
     _cineCam: {fileID: 0}
     _cameraBorderThickness: 10
-    _cameraMoveSpeed: 10
+    _cameraMoveSpeed: 25
     _cameraMaxZoomDistance: 11
     _cameraWheelPerZoomDistance: 10
     _zoomSmoothTime: 0.12

@@ -58,9 +58,13 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     private PlayerRunnerUpgradeHandler _upgradeHandler;
 
     private float _elapsedTime = 0f;
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     private bool _testModeInvincibleEnabled;
 #endif
+    // 체력 변화시 호출되는 액션
+    public event Action<float, float> OnHPValueChanged; // Max HP, Current HP
+
     public event Action<Vector3, PlayerRunner, object> OnPositionChanged;
     public event Action<PlayerRunner, object> OnDied;
     public event Action<PlayerRunner, object> OnLaboratoryLookStarted;
@@ -76,6 +80,9 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
 
         StageBootstrapper.Instance.UIController.RunnerUI.Display.Player
             .SetHealthBarRatio(Health / MaxHealth);
+
+        // 체력 변화시 호출되는 액션 트리거
+        OnHPValueChanged?.Invoke(MaxHealth, Health);
     }
 
     public void OnStaminaChanged()
@@ -126,9 +133,14 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
         }
         BuffReceiverRegistry.Register(this, transform, BuffTargetType.Runner);
         RefreshItemSlots();
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         AttachTestModeGUI();
 #endif
+
+        // 스폰 완료 후 각 클라이언트에서 호출되는 스폰 완료 트리거
+        if(StageBootstrapper.Instance != null)
+            StageBootstrapper.Instance.LocalPlayerRunnerSpawned(this);
     }
 
     public override void FixedUpdateNetwork()

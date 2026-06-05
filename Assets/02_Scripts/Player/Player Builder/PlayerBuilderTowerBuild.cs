@@ -39,6 +39,12 @@ namespace KIM.Dev
                 return TowerManager.Instance.GetTowerCount(towerId) < TeleportTowerPairManager.MaxTeleportTowerCount;
             }
 
+            if (towerId == TowerIDContainer.SUPPLY_TOWER_ID)
+            {
+                return SupplyTowerManager.Instance != null &&
+                       SupplyTowerManager.Instance.HasPendingSupplies;
+            }
+
             return true;
         }
 
@@ -117,7 +123,25 @@ namespace KIM.Dev
         {
             if (_towerRef != default && _tower != null)
             {
-                RPC_BuildTower(_towerRef, _buildCost, index, BuildRange, TowerID == TowerIDContainer.TELEPORT_TOWER_ID);
+                bool isSupplyTower = TowerID == TowerIDContainer.SUPPLY_TOWER_ID;
+                int[] supplyArray = new int[0];
+                if (isSupplyTower)
+                {
+                    if (SupplyTowerManager.Instance == null ||
+                        !SupplyTowerManager.Instance.TryConsumePendingSupplies(out supplyArray))
+                    {
+                        return;
+                    }
+                }
+
+                RPC_BuildTower(
+                    _towerRef,
+                    _buildCost,
+                    index,
+                    BuildRange,
+                    TowerID == TowerIDContainer.TELEPORT_TOWER_ID,
+                    isSupplyTower,
+                    supplyArray);
             }
         }
 
@@ -173,7 +197,7 @@ namespace KIM.Dev
         }
 
         [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-        private void RPC_BuildTower(NetworkPrefabRef towerRef, Cost cost, Vector2Int index, int buildRange, bool isTeleportTower)
+        private void RPC_BuildTower(NetworkPrefabRef towerRef, Cost cost, Vector2Int index, int buildRange, bool isTeleportTower, bool isSupplyTower, int[] supplyArray)
         {
             if (!HasStateAuthority)
                 return;
@@ -182,6 +206,9 @@ namespace KIM.Dev
                 return;
 
             if (isTeleportTower && !TowerBuildConditionChecker(TowerIDContainer.TELEPORT_TOWER_ID))
+                return;
+
+            if (isSupplyTower && (supplyArray == null || supplyArray.Length == 0))
                 return;
 
             if (ResourceSystem.Instance.Mineral < cost.Mineral || ResourceSystem.Instance.Gas < cost.Gas)
@@ -199,6 +226,16 @@ namespace KIM.Dev
             {
                 Runner.Despawn(towerObject);
                 return;
+            }
+
+            if (isSupplyTower)
+            {
+                if (!towerObject.TryGetComponent(out SupplyTower supplyTower) ||
+                    !supplyTower.TryLoadSupplies(supplyArray))
+                {
+                    Runner.Despawn(towerObject);
+                    return;
+                }
             }
 
             ResourceSystem.Instance.Mineral -= cost.Mineral;

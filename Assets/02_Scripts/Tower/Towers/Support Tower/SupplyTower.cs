@@ -6,25 +6,14 @@ namespace KIM.Dev
 {
     public class SupplyTower : SupportTower, IRunnerInteractableTower
     {
-        private const int _maxSlots = 10;
+        private const int MaxSlots = 10;
 
-        [Networked, Capacity(_maxSlots), OnChangedRender(nameof(OnEmptySupplies))]
+        [Networked, Capacity(MaxSlots), OnChangedRender(nameof(OnSuppliesChanged))]
         private NetworkLinkedList<int> Supplies => default;
 
-        public override void Spawned()
+        protected override void TowerAwake()
         {
-            base.Spawned();
-
-            // 빌더만 실행
-            if (NetworkManager.Instance.Registry.RefToPosition[Runner.LocalPlayer] == PlayerPosition.Builder)
-            {
-                // 러너에게 빌더가 가지고 있는 보급품 목록 전달 - RPC로 호스트가 공유 변수를 초기화 하도록 함
-                int[] supplyNumArray = SupplyTowerManager.Instance.GetSupplyNumArray();
-                RPC_SetSuppliesList(supplyNumArray);
-
-                // Laboratory UI의 보급 슬롯을 초기화하는 로직
-                SupplyTowerManager.Instance.RevertLaboratorySupplySlotRevert();
-            }
+            SetId(TowerIDContainer.SUPPLY_TOWER_ID);
         }
 
         /// <summary>
@@ -33,43 +22,67 @@ namespace KIM.Dev
         /// <param name="runner">전달 받을 플레이어 러너</param>
         public void Interact(PlayerRunner runner)
         {
+            if (runner == null || Supplies.Count == 0)
+                return;
+
+            var supplyManager = SupplyTowerManager.Instance;
+            if (supplyManager == null)
+                return;
+
             foreach (var suppliesNum in Supplies)
             {
-                if (SupplyTowerManager.Instance.NumToSupplies.TryGetValue(suppliesNum, out var supply))
+                if (supplyManager.NumToSupplies.TryGetValue(suppliesNum, out var supply))
+                {
                     runner.Supply(supply());
+                }
             }
 
             RPC_RunnerGetSupplies();
         }
 
-        /// <summary>
-        /// 호스트에게 보급품 공유변수 초기화를 요청하는 함수
-        /// </summary>
-        /// <param name="supplyArray">보급품 목록</param>
-        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-        private void RPC_SetSuppliesList(int[] supplyArray)
+        public bool TryLoadSupplies(int[] supplyArray)
         {
-            if (HasStateAuthority)
+            if (!HasStateAuthority || supplyArray == null || supplyArray.Length == 0)
+                return false;
+
+            Supplies.Clear();
+
+            var supplyManager = SupplyTowerManager.Instance;
+            for (int i = 0; i < supplyArray.Length && Supplies.Count < MaxSlots; i++)
             {
-                for (int i = 0; i < supplyArray.Length; i++)
+                int supplyNum = supplyArray[i];
+                if (supplyManager != null && !supplyManager.NumToSupplies.ContainsKey(supplyNum))
                 {
-                    Supplies.Add(supplyArray[i]);
+                    continue;
                 }
+
+                Supplies.Add(supplyNum);
             }
+
+            return Supplies.Count > 0;
         }
 
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
         private void RPC_RunnerGetSupplies()
         {
             if (HasStateAuthority)
+            {
                 Supplies.Clear();
+                DespawnIfEmpty();
+            }
         }
 
-        private void OnEmptySupplies()
+        private void OnSuppliesChanged()
+        {
+            DespawnIfEmpty();
+        }
+
+        private void DespawnIfEmpty()
         {
             if (HasStateAuthority && Supplies.Count == 0)
             {
-                Runner.Despawn(this.Object);
+                ReleaseGridOccupation();
+                Runner.Despawn(Object);
             }
         }
     }

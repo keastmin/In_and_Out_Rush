@@ -62,6 +62,9 @@ namespace KIM.Dev
             if (_tower == null || _towerRef == default)
                 return false;
 
+            if (!CanBuildCenterTower(IsCenterTower))
+                return false;
+
             if (!HasSufficientResources())
                 return false;
 
@@ -123,6 +126,10 @@ namespace KIM.Dev
         {
             if (_towerRef != default && _tower != null)
             {
+                bool isCenterTower = IsCenterTower;
+                if (!CanBuildCenterTower(isCenterTower))
+                    return;
+
                 bool isSupplyTower = TowerID == TowerIDContainer.SUPPLY_TOWER_ID;
                 int[] supplyArray = new int[0];
                 if (isSupplyTower)
@@ -139,6 +146,7 @@ namespace KIM.Dev
                     _buildCost,
                     index,
                     BuildRange,
+                    isCenterTower,
                     TowerID == TowerIDContainer.TELEPORT_TOWER_ID,
                     isSupplyTower,
                     supplyArray);
@@ -183,6 +191,9 @@ namespace KIM.Dev
             if (!TowerBuildConditionChecker(_tower.TowerID))
                 return;
 
+            if (!CanBuildCenterTower(_tower.IsCenter))
+                return;
+
             _isStandByBuild = true;
         }
 
@@ -197,7 +208,7 @@ namespace KIM.Dev
         }
 
         [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-        private void RPC_BuildTower(NetworkPrefabRef towerRef, Cost cost, Vector2Int index, int buildRange, bool isTeleportTower, bool isSupplyTower, int[] supplyArray)
+        private void RPC_BuildTower(NetworkPrefabRef towerRef, Cost cost, Vector2Int index, int buildRange, bool isCenterTower, bool isTeleportTower, bool isSupplyTower, int[] supplyArray)
         {
             if (!HasStateAuthority)
                 return;
@@ -206,6 +217,9 @@ namespace KIM.Dev
                 return;
 
             if (isTeleportTower && !TowerBuildConditionChecker(TowerIDContainer.TELEPORT_TOWER_ID))
+                return;
+
+            if (!CanBuildCenterTower(isCenterTower))
                 return;
 
             if (isSupplyTower && (supplyArray == null || supplyArray.Length == 0))
@@ -238,8 +252,71 @@ namespace KIM.Dev
                 }
             }
 
+            if (!TryRegisterCenterTowerBuild(isCenterTower))
+            {
+                Runner.Despawn(towerObject);
+                return;
+            }
+
             ResourceSystem.Instance.Mineral -= cost.Mineral;
             ResourceSystem.Instance.Gas -= cost.Gas;
+        }
+
+        private bool CanBuildCenterTower(bool isCenterTower)
+        {
+            if (!isCenterTower)
+                return true;
+
+            return TryGetComponent(out PlayerBuilder builder) &&
+                   GetCenterTowerCountForBuild(builder) < builder.MaxCenterTowerCount;
+        }
+
+        private bool TryRegisterCenterTowerBuild(bool isCenterTower)
+        {
+            if (!isCenterTower)
+                return true;
+
+            if (!TryGetComponent(out PlayerBuilder builder))
+                return false;
+
+            int centerTowerCount = GetStateAuthorityCenterTowerCount();
+            if (centerTowerCount <= 0)
+            {
+                centerTowerCount = builder.CenterTowerCount + 1;
+            }
+
+            if (centerTowerCount > builder.MaxCenterTowerCount)
+                return false;
+
+            builder.SetCenterTowerCount(centerTowerCount);
+            return true;
+        }
+
+        private int GetCenterTowerCountForBuild(PlayerBuilder builder)
+        {
+            if (HasStateAuthority)
+            {
+                return GetStateAuthorityCenterTowerCount();
+            }
+
+            return builder.CenterTowerCount;
+        }
+
+        private int GetStateAuthorityCenterTowerCount()
+        {
+            if (InfiniteGrid.Instance == null || InfiniteGrid.Instance.HostOnlyReadTowers == null)
+                return 0;
+
+            int count = 0;
+            foreach (Tower tower in InfiniteGrid.Instance.HostOnlyReadTowers)
+            {
+                if (tower != null && tower.IsCenter)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
     }
 }

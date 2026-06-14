@@ -1,3 +1,4 @@
+using Fusion;
 using UnityEngine;
 
 public class SandTomb : WorldMonster
@@ -18,20 +19,29 @@ public class SandTomb : WorldMonster
     [SerializeField] private float _suckedIntoRadius = 5f;
     [SerializeField] private float _attackSpeed = 5f;
 
-    private SandTombState state = SandTombState.Inactive;
+    [Networked, OnChangedRender(nameof(ApplyStateVisual))]
+    private SandTombState State { get; set; }
+
     private float _activationTimer = 0f;
     private float _attackElapsedTime = 0f;
+
+    public override void Spawned()
+    {
+        base.Spawned();
+        ApplyStateVisual();
+    }
 
     public override void FixedUpdateNetwork()
     {
         base.FixedUpdateNetwork();
 
+        if (!HasStateAuthority) return;
         if (playerTransform == null) return;
 
         var distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
         UpdateActivation(distanceToPlayer);
 
-        if (state == SandTombState.Active)
+        if (State == SandTombState.Active)
         {
             if (IsPlayerInTerritory()) return;
             if (IsPlayerOutOfSuckedIntoRadius(distanceToPlayer)) return;
@@ -44,28 +54,38 @@ public class SandTomb : WorldMonster
     {
         if (distanceToPlayer <= _activationRadius)
         {
-            if (state == SandTombState.Inactive)
+            if (State == SandTombState.Inactive)
             {
                 Debug.Log($"{name} is activated by {playerTransform.name}");
-                _meshRenderer.material = _activeMaterial;
-                state = SandTombState.Active;
+                State = SandTombState.Active;
                 _activationTimer = 0f;
             }
         }
         else
         {
-            if (state == SandTombState.Active)
+            if (State == SandTombState.Active)
             {
-                _activationTimer += Time.deltaTime;
+                _activationTimer += Runner.DeltaTime;
                 if (_activationTimer >= _activationDuration)
                 {
                     Debug.Log($"{name} is deactivated due to timeout");
-                    _meshRenderer.material = _inactiveMaterial;
-                    state = SandTombState.Inactive;
+                    State = SandTombState.Inactive;
                     _activationTimer = 0f;
                 }
             }
         }
+    }
+
+    private void ApplyStateVisual()
+    {
+        if (_meshRenderer == null) return;
+
+        Material material = State == SandTombState.Active
+            ? _activeMaterial
+            : _inactiveMaterial;
+
+        if (material != null)
+            _meshRenderer.sharedMaterial = material;
     }
 
     private bool IsPlayerInTerritory()
@@ -80,12 +100,12 @@ public class SandTomb : WorldMonster
     private void SuckIntoSandTomb()
     {
         Vector3 direction = (transform.position - playerTransform.position).normalized;
-        playerTransform.position += _suckedIntoSpeed * Time.deltaTime * direction;
+        playerTransform.position += _suckedIntoSpeed * Runner.DeltaTime * direction;
     }
 
     private void Attack()
     {
-        _attackElapsedTime += Time.deltaTime * _attackSpeed;
+        _attackElapsedTime += Runner.DeltaTime * _attackSpeed;
         if (_attackElapsedTime >= 1f)
         {
             playerTransform.GetComponent<IDamageable>()?.TakeDamage(1f);

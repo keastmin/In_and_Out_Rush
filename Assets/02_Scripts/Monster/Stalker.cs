@@ -1,22 +1,55 @@
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 using UnityEngine;
 
 public class Stalker : WorldMonster
 {
+    private const float AttackRangeThresholdRatio = 0.98f;
+
     [Header("Stalker Settings")]
     [SerializeField] private float _sensingRange = 5f;
     [SerializeField] private float _attackRange = 2f;
     [SerializeField] private float _attackSpeed = 1f;
 
     private bool _isChasing;
+    private bool _isAttacking;
     private float _attackElapsedTime = 0f;
 
     public override void UpdateMonster()
     {
         if (_isChasing)
         {
-            Chase();
-            if (Vector3.Distance(transform.position, attackTargetTransform.position) < _attackRange)
+            if (attackTargetTransform == null)
             {
+                _isChasing = false;
+                _isAttacking = false;
+                return;
+            }
+
+            if (_isAttacking)
+            {
+                if (IsTargetWithinRange(_attackRange))
+                {
+                    Attack();
+                    return;
+                }
+
+                _isAttacking = false;
+            }
+
+            if (CanEnterAttackState())
+            {
+                _isAttacking = true;
+                Attack();
+                return;
+            }
+
+            Chase();
+
+            if (CanEnterAttackState())
+            {
+                _isAttacking = true;
                 Attack();
             }
         }
@@ -25,20 +58,37 @@ public class Stalker : WorldMonster
             base.UpdateMonster();
 
             if (playerTransform == null) { return; }
-            if (Vector3.Distance(transform.position, playerTransform.position) < _sensingRange)
+            if (GetPlanarSqrDistance(playerTransform.position) < _sensingRange * _sensingRange)
             {
                 StartChasing(playerTransform);
             }
         }
     }
 
-    void Attack()
+    private bool CanEnterAttackState()
+        => IsTargetWithinRange(GetAttackRangeThreshold());
+
+    private bool IsTargetWithinRange(float range)
+        => GetPlanarSqrDistance(attackTargetTransform.position) <= range * range;
+
+    private float GetAttackRangeThreshold()
+        => _attackRange * AttackRangeThresholdRatio;
+
+    private float GetPlanarSqrDistance(Vector3 targetPosition)
     {
-        _attackElapsedTime += Time.deltaTime * _attackSpeed;
+        Vector3 offset = targetPosition - transform.position;
+        offset.y = 0f;
+        return offset.sqrMagnitude;
+    }
+
+    private void Attack()
+    {
+        FaceTarget();
+        _attackElapsedTime += Runner.DeltaTime * _attackSpeed;
         if (_attackElapsedTime >= 1f)
         {
-            playerTransform.GetComponent<IDamageable>()?.TakeDamage(1f);
-            Debug.Log($"{name} attacks {playerTransform.name}");
+            attackTargetTransform.GetComponent<IDamageable>()?.TakeDamage(1f);
+            Debug.Log($"{name} attacks {attackTargetTransform.name}");
             _attackElapsedTime = 0f;
         }
     }
@@ -47,22 +97,72 @@ public class Stalker : WorldMonster
     {
         attackTargetTransform = target;
         _isChasing = true;
+        _isAttacking = false;
     }
 
     protected virtual void Chase()
     {
-        if (attackTargetTransform != null)
+        var attackTargetPosition = attackTargetTransform.position;
+        var attackTargetPosition2d = new Vector2(attackTargetPosition.x, attackTargetPosition.z);
+        if (territory.IsPointInPolygon(attackTargetPosition2d))
         {
-            var attackTargetPosition = attackTargetTransform.position;
-            var attackTargetPosition2d = new Vector2(attackTargetPosition.x, attackTargetPosition.z);
-            if (territory.IsPointInPolygon(attackTargetPosition2d))
-            {
-                _isChasing = false;
-                return;
-            }
-            Vector3 direction = (attackTargetTransform.position - transform.position).normalized;
-            transform.position += movementSpeed * Time.deltaTime * direction;
-            transform.LookAt(attackTargetTransform);
+            _isChasing = false;
+            _isAttacking = false;
+            return;
         }
+
+        Vector3 toTarget = attackTargetPosition - transform.position;
+        toTarget.y = 0f;
+
+        float distance = toTarget.magnitude;
+        float moveDistance = Mathf.Min(
+            movementSpeed * Runner.DeltaTime,
+            Mathf.Max(0f, distance - GetAttackRangeThreshold()));
+
+        transform.position += toTarget.normalized * moveDistance;
+        FaceTarget();
     }
+
+    private void FaceTarget()
+    {
+        Vector3 lookDirection = attackTargetTransform.position - transform.position;
+        lookDirection.y = 0f;
+
+        if (lookDirection.sqrMagnitude > 0.0001f)
+            transform.rotation = Quaternion.LookRotation(lookDirection, Vector3.up);
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, _sensingRange);
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, _attackRange);
+
+#if UNITY_EDITOR
+        DrawStateLabel();
+#endif
+    }
+
+#if UNITY_EDITOR
+    private void DrawStateLabel()
+    {
+        string state = _isAttacking ? "Attack" : _isChasing ? "Chase" : "Patrol";
+        Color stateColor = _isAttacking ? Color.red : _isChasing ? Color.yellow : Color.green;
+        string targetDistance = attackTargetTransform == null
+            ? "None"
+            : Mathf.Sqrt(GetPlanarSqrDistance(attackTargetTransform.position)).ToString("F2");
+
+        GUIStyle style = new GUIStyle(EditorStyles.boldLabel);
+        style.normal.textColor = stateColor;
+
+        Handles.Label(
+            transform.position + Vector3.up * 2.5f,
+            $"State: {state}\n"
+            + $"Target Distance: {targetDistance}\n"
+            + $"Enter Range: {GetAttackRangeThreshold():F2} / Exit Range: {_attackRange:F2}\n"
+            + $"Attack Timer: {_attackElapsedTime:F2}",
+            style);
+    }
+#endif
 }

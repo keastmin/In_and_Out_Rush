@@ -21,5 +21,13 @@ namespace Dev.Network
             _targetRigidbody.linearVelocity = actualMovementSpeed * direction;
             _targetRigidbody.transform.LookAt(_targetRigidbody.transform.position + direction);
         }
+
+        public void Stop()
+        {
+            if (_targetRigidbody == null) return;
+
+            _targetRigidbody.linearVelocity = Vector3.zero;
+            _targetRigidbody.angularVelocity = Vector3.zero;
+        }
     }
 }

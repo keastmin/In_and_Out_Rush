@@ -32,6 +32,7 @@ namespace KIM.Dev
         public bool ShowCellStateOverlay => _layout.ShowCellStateOverlay;
         public Vector3 GridOrigin => _layout.ResolveOrigin(transform);
         public float GridHeight => GridOrigin.y;
+        public float CellSize => _layout.CellSize;
 
         private GridCalculator _gridCalculator;
         private InfiniteGridVisualController _visualController;

@@ -149,6 +149,7 @@ Transform:
   m_Children:
   - {fileID: 8355381677218973595}
   - {fileID: 5455947531722268542}
+  - {fileID: 8889067391957367747}
   m_Father: {fileID: 5948079281826790062}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2419436783449513935
@@ -5134,6 +5135,37 @@ Transform:
   - {fileID: 8237892346383518036}
   m_Father: {fileID: 5948079281826790062}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &7189864747703749736
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8889067391957367747}
+  m_Layer: 0
+  m_Name: Barrier Muzzle
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8889067391957367747
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7189864747703749736}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.5, z: 0.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5782809305708921265}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &9008013758366610681
 GameObject:
   m_ObjectHideFlags: 0
@@ -5190,7 +5222,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _cineCamPrefab: {fileID: 4353033904106726711, guid: 4e4841cec5e071f4b8139bae6a2b9696, type: 3}
   _Health: 100
+  _MaxHealth: 100
   _Stamina: 100
+  _MaxStamina: 100
   _StaminaRecoveryRate: 10
   _MovementSpeed: 6
   _WeaponDamage: 1
@@ -5202,6 +5236,24 @@ MonoBehaviour:
   _IsDead:
     _value: 0
   _weaponBehaviour: {fileID: -3321396743853381275}
+  _barrierPrefab: {fileID: 1623655954361001160, guid: 7a094e5f0ee577d4fa3dbbc29c6f03e5, type: 3}
+  _barrierMuzzle: {fileID: 8889067391957367747}
+  _itemDefinitions:
+  - ItemType: 1
+    InitialCount: 3
+    MaxCount: 3
+  - ItemType: 2
+    InitialCount: 99
+    MaxCount: 99
+  - ItemType: 3
+    InitialCount: 1
+    MaxCount: 1
+  - ItemType: 4
+    InitialCount: 3
+    MaxCount: 3
+  - ItemType: 5
+    InitialCount: 2
+    MaxCount: 2
   _swiftnessParticleEffect: {fileID: 6092269608685176354}
   skillIcons:
   - {fileID: 1471596959, guid: e1a81109ab95c0344a014a0e72fa1378, type: 3}
@@ -5278,7 +5330,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 112
+  m_Constraints: 116
   m_CollisionDetection: 0
 --- !u!114 &-8069737387449572781
 MonoBehaviour:

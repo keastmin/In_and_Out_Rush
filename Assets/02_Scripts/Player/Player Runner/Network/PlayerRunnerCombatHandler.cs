@@ -30,11 +30,18 @@ public class PlayerRunnerCombatHandler
         runner.Health = Mathf.Max(0f, runner.Health - damage);
 
         if (runner.Health <= 0f)
-        {
-            runner.IsDead = true;
-            runner.InvokeDiedEvent(runner, runner);
-        }
+            MarkAsDead(runner);
 
+        UpdateHealthUI(runner);
+    }
+
+    public void Kill(PlayerRunner runner)
+    {
+        if (!runner.HasStateAuthority) return;
+        if (runner.IsDead) return;
+
+        runner.Health = 0f;
+        MarkAsDead(runner);
         UpdateHealthUI(runner);
     }
 
@@ -86,5 +93,12 @@ public class PlayerRunnerCombatHandler
         if (playerUI == null) return;
 
         playerUI.SetHealthBarRatio(runner.Health / runner.MaxHealth);
+    }
+
+    private static void MarkAsDead(PlayerRunner runner)
+    {
+        runner.IsDead = true;
+        runner.StopMovement();
+        runner.InvokeDiedEvent(runner, runner);
     }
 }

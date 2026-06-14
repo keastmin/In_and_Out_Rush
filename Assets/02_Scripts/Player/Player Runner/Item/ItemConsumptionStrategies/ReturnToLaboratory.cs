@@ -2,13 +2,13 @@ using UnityEngine;
 
 public class ReturnToLaboratory : IItemConsumptionStrategy
 {
-    public void Use(object parameters)
+    public bool TryUse(object parameters)
     {
         var playerRunner = parameters as PlayerRunner;
         if (playerRunner == null)
         {
             Debug.LogError("ReturnToLaboratory strategy requires a Transform parameter.");
-            return;
+            return false;
         }
         var playerRunnerTransform = playerRunner.transform;
 
@@ -18,5 +18,6 @@ public class ReturnToLaboratory : IItemConsumptionStrategy
         var z = Mathf.Sin(angle) * 2f;
         var randomOffset = new Vector3(x, playerRunnerTransform.position.y, z);
         playerRunnerTransform.position = targetPosition + randomOffset;
+        return true;
     }
 }

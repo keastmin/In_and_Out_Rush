@@ -250,6 +250,7 @@ public class TerritorySystem : NetworkSystemBase
             // GameOver
             Debug.Log("Game Over! Player crossed own path.");
             isIntersected = true;
+            playerRunner?.Kill();
             return true;
         }
 

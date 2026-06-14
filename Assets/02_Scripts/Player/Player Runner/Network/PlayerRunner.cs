@@ -38,6 +38,12 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     [Header("Weapon")]
     [SerializeField] private MonoBehaviour _weaponBehaviour;
 
+    [Header("Items")]
+    [SerializeField] private BarrierWave _barrierPrefab;
+    [SerializeField] private Transform _barrierMuzzle;
+    [SerializeField] private RunnerItemDefinition[] _itemDefinitions =
+        RunnerItemInventory.CreateDefaultDefinitions();
+
     [SerializeField] private ParticleSystem _swiftnessParticleEffect;
     public Sprite[] skillIcons;
 
@@ -103,8 +109,8 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
         if (_weaponBehaviour != null && _weapon == null)
             Debug.LogWarning($"{nameof(_weaponBehaviour)} must implement {nameof(IRunnerWeapon)}.", this);
 
-        _itemConsumer = new RunnerItemConsumer();
-        _itemInventory = new RunnerItemInventory(_itemConsumer);
+        _itemConsumer = new RunnerItemConsumer(_barrierPrefab, _barrierMuzzle);
+        _itemInventory = new RunnerItemInventory(_itemConsumer, _itemDefinitions);
         _skillCaster = new RunnerSkillCaster();
         _combatHandler = new PlayerRunnerCombatHandler();
         _slideHandler = new PlayerRunnerSlideHandler();
@@ -145,6 +151,13 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
 
     public override void FixedUpdateNetwork()
     {
+        if (IsDead)
+        {
+            if (HasStateAuthority)
+                StopMovement();
+            return;
+        }
+
         if (HasStateAuthority)
         {
             _buffHandler.Tick(Runner.DeltaTime);
@@ -386,6 +399,8 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
 
     // IDamageable
     public void TakeDamage(float damage) => _combatHandler.TakeDamage(this, damage);
+    public void Kill() => _combatHandler.Kill(this);
+    public void StopMovement() => _movement.Stop();
     public void InvokeDiedEvent(PlayerRunner runner, object sender) => OnDied?.Invoke(runner, sender);
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

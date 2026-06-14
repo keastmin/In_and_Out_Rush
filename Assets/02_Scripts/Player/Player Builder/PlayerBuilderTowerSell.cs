@@ -1,4 +1,5 @@
 using Fusion;
+using Dev.Network;
 using System;
 using System.Collections.Generic;
 
@@ -32,14 +33,6 @@ namespace KIM.Dev
 
                 costs[n] = t.Cost;
                 ids[n++] = no.Id;
-
-                if (t.IsCenter)
-                {
-                    if (t.TryGetComponent(out CenterTower centerTower))
-                    {
-                        builder.SetCenterTowerCount(builder.CenterTowerCount - 1);
-                    }
-                }
             }
 
             if (n == 0) return;
@@ -68,6 +61,12 @@ namespace KIM.Dev
 
                 if (obj.TryGetComponent(out Tower tower))
                 {
+                    if (tower.IsCenter && StageBootstrapper.Instance != null && StageBootstrapper.Instance.PlayerBuilder != null)
+                    {
+                        int nextCenterCount = Math.Max(0, StageBootstrapper.Instance.PlayerBuilder.CenterTowerCount - 1);
+                        StageBootstrapper.Instance.PlayerBuilder.SetCenterTowerCount(nextCenterCount);
+                    }
+
                     tower.ReleaseGridOccupation();
                 }
 

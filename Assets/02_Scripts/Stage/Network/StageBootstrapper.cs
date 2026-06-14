@@ -31,6 +31,7 @@ namespace Dev.Network
         [Space(10)]
 
         [Header("Local Systems")]
+        [SerializeField] private FogOfWarSystem _fogOfWarSystem;
         [SerializeField] private CinemachineSystem cinemachineSystemPrefab;
         public StageUIController UIController;
 
@@ -193,6 +194,9 @@ namespace Dev.Network
         public void LocalPlayerRunnerSpawned(PlayerRunner playerRunner)
         {
             PlayerRunnerReferenceInjectToUI(playerRunner);
+            _fogOfWarSystem.InitializeFogOfWarSystem(playerRunner);
+            _fogOfWarSystem.SetTerritorySource(TerritoryVisible.GetComponent<MeshFilter>(), TerritoryVisible.GetComponent<MeshRenderer>());
+            _fogOfWarSystem.SetWorldBounds(_worldBoundaryRadius);
         }
 
         // 플레이어 러너 참조를 UI 컨트롤러에 전달하는 함수

@@ -9,7 +9,7 @@ namespace KIM.Dev
         {
             Debug.Log("게임 종료");
             gameObject.SetActive(false);
-            MatchMaker.Instance.QuitGame();
+            MatchMaker.Instance.QuitApplication();
         }
     }
 }

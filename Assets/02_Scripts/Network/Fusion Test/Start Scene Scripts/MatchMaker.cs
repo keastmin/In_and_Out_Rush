@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.SceneManagement;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace KIM.Dev
 {
@@ -48,6 +51,7 @@ namespace KIM.Dev
         private bool _isShutdownInProgress;
         private bool _hostShutdownWasIntentional;
         private bool _hostShutdownWasGame;
+        private bool _quitApplicationAfterShutdown;
         private string _pendingRemoteShutdownMessage;
 
         private void Awake()
@@ -172,6 +176,19 @@ namespace KIM.Dev
             await ShutdownRunnerAsync(LocalShutdownIntent.QuitGame);
         }
 
+        public async void QuitApplication()
+        {
+            _quitApplicationAfterShutdown = true;
+
+            if (!Runner)
+            {
+                QuitApplicationImmediately();
+                return;
+            }
+
+            await ShutdownRunnerAsync(LocalShutdownIntent.QuitGame);
+        }
+
         public void MarkPlayerGameShutdownIntent(PlayerRef player)
         {
             if (player != PlayerRef.None)
@@ -292,6 +309,21 @@ namespace KIM.Dev
             _hostShutdownWasIntentional = false;
             _hostShutdownWasGame = false;
             _pendingRemoteShutdownMessage = null;
+
+            if (_quitApplicationAfterShutdown)
+            {
+                _quitApplicationAfterShutdown = false;
+                QuitApplicationImmediately();
+            }
+        }
+
+        private void QuitApplicationImmediately()
+        {
+#if UNITY_EDITOR
+            EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
         }
 
         public void OnSceneLoadDone(NetworkRunner runner)

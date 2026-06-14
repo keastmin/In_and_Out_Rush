@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8092433541136705184}
+  - component: {fileID: 4764181635377372804}
   m_Layer: 0
   m_Name: Fog of War System
   m_TagString: Untagged
@@ -31,3 +32,28 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4764181635377372804
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5400355807062306309}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32c5fdb8e7d91884b8767bb46837ccba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _renderCamera: {fileID: 0}
+  _fogVisibleLayers:
+    serializedVersion: 2
+    m_Bits: 128
+  _fogHiddenLayers:
+    serializedVersion: 2
+    m_Bits: 64
+  _runnerVisionBrush: {fileID: 2800000, guid: c36f65eb23b02574eb515d2afa3ac4a9, type: 3}
+  _playerRunnerVisibleRange: 10
+  _fogDensity: 0.95
+  _territoryMeshFilter: {fileID: 0}
+  _territoryMeshRenderer: {fileID: 0}
+  _territoryVisibleRange: 10

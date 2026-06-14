@@ -1860,6 +1860,86 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1573621952}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &1442561932
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 4764181635377372804, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
+      propertyPath: _renderCamera
+      value: 
+      objectReference: {fileID: 633568624}
+    - target: {fileID: 4764181635377372804, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
+      propertyPath: _territoryMeshFilter
+      value: 
+      objectReference: {fileID: 6219545451852062860}
+    - target: {fileID: 4764181635377372804, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
+      propertyPath: _territoryMeshRenderer
+      value: 
+      objectReference: {fileID: 6219545451852062859}
+    - target: {fileID: 5400355807062306309, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
+      propertyPath: m_Name
+      value: Fog of War System
+      objectReference: {fileID: 0}
+    - target: {fileID: 8092433541136705184, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 213.17992
+      objectReference: {fileID: 0}
+    - target: {fileID: 8092433541136705184, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 13.492563
+      objectReference: {fileID: 0}
+    - target: {fileID: 8092433541136705184, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 102.84988
+      objectReference: {fileID: 0}
+    - target: {fileID: 8092433541136705184, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8092433541136705184, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8092433541136705184, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8092433541136705184, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8092433541136705184, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8092433541136705184, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8092433541136705184, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
+--- !u!114 &1442561933 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4764181635377372804, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
+  m_PrefabInstance: {fileID: 1442561932}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32c5fdb8e7d91884b8767bb46837ccba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &1496419945
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2721,6 +2801,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 0}
     - target: {fileID: 7251378647776299556, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
+      propertyPath: _fogOfWarSystem
+      value: 
+      objectReference: {fileID: 1442561933}
+    - target: {fileID: 7251378647776299556, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
       propertyPath: TerritoryVisible
       value: 
       objectReference: {fileID: 6219545451852062858}
@@ -2963,6 +3047,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 490a1ca698ea46b4289dce6ba0570c01, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!23 &6219545451852062859 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 5620635842871032251, guid: 14b1e178ce627cf478c33ff40343590e, type: 3}
+  m_PrefabInstance: {fileID: 6219545451852062856}
+  m_PrefabAsset: {fileID: 0}
+--- !u!33 &6219545451852062860 stripped
+MeshFilter:
+  m_CorrespondingSourceObject: {fileID: 6045853437150522673, guid: 14b1e178ce627cf478c33ff40343590e, type: 3}
+  m_PrefabInstance: {fileID: 6219545451852062856}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -2979,3 +3073,4 @@ SceneRoots:
   - {fileID: 2081881239}
   - {fileID: 1583980226647794305}
   - {fileID: 2134243887}
+  - {fileID: 1442561932}

@@ -39,6 +39,9 @@ namespace KIM.Dev
 
         public void FillSupplyList(int num)
         {
+            if (!NumToSupplies.ContainsKey(num))
+                return;
+
             _suppliesNums.Add(num);
         }
 
@@ -55,6 +58,13 @@ namespace KIM.Dev
         /// </summary>
         public int[] GetSupplyNumArray()
         {
+            int[] supplyArray = PeekSupplyNumArray();
+            RevertSupplyManagerSlot();
+            return supplyArray;
+        }
+
+        public int[] PeekSupplyNumArray()
+        {
             int listCount = _suppliesNums.Count;
             int[] supplyArray = new int[listCount];
             for (int i = 0; i < listCount; i++)
@@ -62,8 +72,18 @@ namespace KIM.Dev
                 supplyArray[i] = _suppliesNums[i];
             }
 
-            RevertSupplyManagerSlot();
             return supplyArray;
+        }
+
+        public bool TryConsumePendingSupplies(out int[] supplyArray)
+        {
+            supplyArray = PeekSupplyNumArray();
+            if (supplyArray.Length == 0)
+                return false;
+
+            RevertSupplyManagerSlot();
+            RevertLaboratorySupplySlotRevert();
+            return true;
         }
 
         /// <summary>

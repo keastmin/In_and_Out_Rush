@@ -21,7 +21,7 @@ namespace Dev
             for (int i = 0; i < param.MaxRetryCount; i++)
             {
                 var randomAngle = UnityEngine.Random.Range(0f, 360f) * Mathf.Deg2Rad;
-                var randomRadius = UnityEngine.Random.Range(0f, circleParam.SpawnRadius);
+                var randomRadius = Mathf.Sqrt(UnityEngine.Random.value) * circleParam.SpawnRadius;
                 var randomPosition = new Vector2(Mathf.Cos(randomAngle), Mathf.Sin(randomAngle)) * randomRadius;
                 var rotatedPosition = circleParam.SpawnRotation * new Vector3(randomPosition.x, 0, randomPosition.y);
                 var position = circleParam.SpawnPosition + rotatedPosition;

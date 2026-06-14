@@ -152,6 +152,11 @@ namespace Dev.Network
             _store.PlayerRunnerMovementSpeed = 5f;
             _store.PlayerRunnerDashScaler = 2f;
 
+            if (NetworkLaboratory != null)
+                _resourceSpawnSystem.SetStartPosition(NetworkLaboratory.transform.position);
+            else
+                Debug.LogWarning("ResourceSpawnSystem could not receive the laboratory start position.");
+
             _resourceSpawnSystem.SetUp();
             _stageResultView.Hide();
 

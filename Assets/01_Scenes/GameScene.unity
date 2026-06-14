@@ -819,6 +819,7 @@ MonoBehaviour:
   - {fileID: -1371715635768697079, guid: 3febb430baa3e5a42834c9c276f5ce3e, type: 3}
   - {fileID: -7740008079418054329, guid: 016c82c53b2d0094ea2d7832ca2e11b1, type: 3}
   - {fileID: -5550781050059216141, guid: ad46d8f98d96fd94196ef19d385fdd25, type: 3}
+  - {fileID: 1996878198739820596, guid: 08c57da2db45b24428da686d59997b61, type: 3}
   spawnCount: 50
   spawnRadius: 200
   playerTransform: {fileID: 0}
@@ -2772,40 +2773,44 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 709947505}
     - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
+      propertyPath: _maxRetryCount
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
       propertyPath: _territorySystem
       value: 
       objectReference: {fileID: 1028244186}
     - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: _initialResourceCount
-      value: 200
-      objectReference: {fileID: 0}
-    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: _circleSpawnParam.SpawnRadius
+      propertyPath: _worldSpawnRadius
       value: 250
       objectReference: {fileID: 0}
     - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: _circleSpawnParam.ObjectSampleParam.Prefabs.Array.size
-      value: 2
-      objectReference: {fileID: 0}
-    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: _circleSpawnParam.ObjectSampleParam.Weights.Array.size
-      value: 2
-      objectReference: {fileID: 0}
-    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: '_circleSpawnParam.ObjectSampleParam.Prefabs.Array.data[0]'
-      value: 
-      objectReference: {fileID: 2142689607256237635, guid: d02a8295b7d9841418f05dd9ff95b627, type: 3}
-    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: '_circleSpawnParam.ObjectSampleParam.Prefabs.Array.data[1]'
+      propertyPath: _gasSettings._prefab
       value: 
       objectReference: {fileID: 2142689607256237635, guid: 8b86240da3c329f4fba94b55052fc461, type: 3}
     - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: '_circleSpawnParam.ObjectSampleParam.Weights.Array.data[0]'
-      value: 2
+      propertyPath: _nearStartSpawnRadius
+      value: 80
       objectReference: {fileID: 0}
     - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: '_circleSpawnParam.ObjectSampleParam.Weights.Array.data[1]'
-      value: 1
+      propertyPath: _gasSettings._worldCount
+      value: 66
+      objectReference: {fileID: 0}
+    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
+      propertyPath: _mineralSettings._prefab
+      value: 
+      objectReference: {fileID: 2142689607256237635, guid: d02a8295b7d9841418f05dd9ff95b627, type: 3}
+    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
+      propertyPath: _gasSettings._nearStartCount
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
+      propertyPath: _mineralSettings._worldCount
+      value: 134
+      objectReference: {fileID: 0}
+    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
+      propertyPath: _mineralSettings._nearStartCount
+      value: 60
       objectReference: {fileID: 0}
     - target: {fileID: 7470420851286671921, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
       propertyPath: SortKey
@@ -2838,7 +2843,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2984146816420512075, guid: e4f76d1c9ebcfc94da4fe245963476d1, type: 3}
       propertyPath: _playerPosition
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8681410219602733062, guid: e4f76d1c9ebcfc94da4fe245963476d1, type: 3}
       propertyPath: m_LocalPosition.x

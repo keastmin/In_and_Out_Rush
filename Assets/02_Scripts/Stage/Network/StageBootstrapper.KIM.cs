@@ -28,7 +28,7 @@ namespace Dev.Network
 
         private void KIMInitializeObjects()
         {
-
+            UIController.InitializeStageUIController(_towerUpgradeManager);
         }
 
         private void KIMBindObjects()

@@ -70,6 +70,11 @@ namespace KIM.Dev
             InitializeMainUI();
         }
 
+        public void InitializePlayerBuilderUI(TowerUpgradeManager towerUpgradeManager)
+        {
+            _laboratoryUI.InitializeLaboratoryUI(towerUpgradeManager);
+        }
+
         #region 클릭 이벤트 메서드
 
         // 실험실 버튼 클릭 이벤트

@@ -40,6 +40,8 @@ namespace KIM.Dev
 
     public class LaboratoryUI : MonoBehaviour
     {
+        [SerializeField] private TowerUpgradeUI _towerUpgradeUI;
+
         [Header("업그레이드 최대치")]
         [SerializeField] private int _hpUpgradeMaxCount = 4;
         [SerializeField] private int _speedUpgradeMaxCount = 4;
@@ -99,6 +101,11 @@ namespace KIM.Dev
         {
             // 슬롯의 텍스트를 초기화하는 이벤트 연결
             SupplyTowerManager.Instance.OnUIRevertAction += RevertSupplySlotText;
+        }
+
+        public void InitializeLaboratoryUI(TowerUpgradeManager towerUpgradeManager)
+        {
+            _towerUpgradeUI.InitializeTowerUpgradeUI(towerUpgradeManager);
         }
 
         /// <summary>

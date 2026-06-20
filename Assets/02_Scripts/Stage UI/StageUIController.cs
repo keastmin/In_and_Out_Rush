@@ -14,6 +14,11 @@ public class StageUIController : MonoBehaviour
         SetDisableAllUI(); // 시작할 때 모든 UI 비활성화
     }
 
+    public void InitializeStageUIController(TowerUpgradeManager towerUpgradeManager)
+    {
+        BuilderUI.InitializePlayerBuilderUI(towerUpgradeManager);
+    }
+
     /// <summary>
     /// 자신의 역할군에 따라 맞는 UI를 활성화
     /// </summary>

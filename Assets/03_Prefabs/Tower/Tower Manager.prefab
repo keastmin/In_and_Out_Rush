@@ -12,6 +12,8 @@ GameObject:
   - component: {fileID: 4646828546241837011}
   - component: {fileID: 8178771247926238874}
   - component: {fileID: 164917509264809771}
+  - component: {fileID: 3437625606896600604}
+  - component: {fileID: 2530420396968840566}
   m_Layer: 0
   m_Name: Tower Manager
   m_TagString: Untagged
@@ -72,3 +74,42 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cdfe1353f9d75ba43833cc24733f3792, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &3437625606896600604
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5033802363253270362}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4edaee22da25b3249b362ab44e2a1486, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _maxSentryGunUpgradeCount: 5
+  _maxLaserBeamUpgradeCount: 5
+  _maxMisileRauncherUpgradeCount: 5
+  _maxRailGunUpgradeCount: 5
+  _maxBladeUpgradeCount: 5
+  _maxPlasmaUpgradeCount: 9999
+  _maxSparkUpgradeCount: 9999
+  _maxBiohazardUpgradeCount: 9999
+--- !u!114 &2530420396968840566
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5033802363253270362}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  SortKey: 970756204
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 3437625606896600604}
+  ForceRemoteRenderTimeframe: 0

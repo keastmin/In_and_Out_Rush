@@ -1,7 +1,7 @@
 using UnityEngine;
 
-public interface IBarrierDestructibleProjectile
+public interface IItemDestructibleProjectile
 {
     Transform ProjectileTransform { get; }
-    void DestroyByBarrier();
+    void DestroyByItemEffect();
 }

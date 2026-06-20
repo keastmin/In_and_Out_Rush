@@ -7,10 +7,10 @@ public class RunnerItemInventory
 
     private readonly RunnerItemSlot[] _slots;
 
-    private readonly RunnerItemConsumer _consumer;
+    private readonly IRunnerItemConsumer _consumer;
 
     public RunnerItemInventory(
-        RunnerItemConsumer consumer,
+        IRunnerItemConsumer consumer,
         IReadOnlyList<RunnerItemDefinition> definitions)
     {
         _consumer = consumer ?? throw new ArgumentNullException(nameof(consumer));
@@ -25,7 +25,7 @@ public class RunnerItemInventory
         return _slots[slotIndex];
     }
 
-    public bool TryUse(int slotIndex, object parameters = null)
+    public bool TryUse(int slotIndex, RunnerItemUseContext context)
     {
         if (!IsValidSlotIndex(slotIndex))
             return false;
@@ -34,10 +34,7 @@ public class RunnerItemInventory
         if (!slot.HasItem)
             return false;
 
-        if (slot.ItemType == RunnerItemType.Lifeline)
-            return false;
-
-        if (!_consumer.TryUse(slot.ItemType, parameters))
+        if (!_consumer.TryUse(slot.ItemType, context))
             return false;
 
         slot.TryConsume();

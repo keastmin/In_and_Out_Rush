@@ -21,7 +21,7 @@ public class BarrierWave : NetworkBehaviour
 
     [Networked] private float CurrentDiameter { get; set; }
 
-    private readonly List<IBarrierDestructibleProjectile> _projectileBuffer = new();
+    private readonly List<IItemDestructibleProjectile> _projectileBuffer = new();
     private LineRenderer _lineRenderer;
     private Vector3 _direction;
     private TickTimer _lifeTimer;
@@ -127,7 +127,7 @@ public class BarrierWave : NetworkBehaviour
 
         for (int i = 0; i < _projectileBuffer.Count; i++)
         {
-            IBarrierDestructibleProjectile projectile = _projectileBuffer[i];
+            IItemDestructibleProjectile projectile = _projectileBuffer[i];
             if (projectile?.ProjectileTransform == null)
                 continue;
 
@@ -138,7 +138,7 @@ public class BarrierWave : NetworkBehaviour
 
             Vector3 projectedOffset = offset - Vector3.Dot(offset, ringNormal) * ringNormal;
             if (projectedOffset.magnitude <= radius + halfThickness)
-                projectile.DestroyByBarrier();
+                projectile.DestroyByItemEffect();
         }
     }
 

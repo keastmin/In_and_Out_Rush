@@ -11,9 +11,12 @@ public sealed class SpawnBarrierStrategy : IItemConsumptionStrategy
         _barrierMuzzle = barrierMuzzle;
     }
 
-    public bool TryUse(object parameters = null)
+    public RunnerItemType ItemType => RunnerItemType.Barrier;
+
+    public bool TryUse(RunnerItemUseContext context)
     {
-        if (parameters is not PlayerRunner playerRunner || !playerRunner.HasStateAuthority)
+        PlayerRunner playerRunner = context.User;
+        if (playerRunner == null || !playerRunner.HasStateAuthority)
             return false;
 
         if (_barrierPrefab == null)

@@ -5238,6 +5238,7 @@ MonoBehaviour:
   _weaponBehaviour: {fileID: -3321396743853381275}
   _barrierPrefab: {fileID: 1623655954361001160, guid: 7a094e5f0ee577d4fa3dbbc29c6f03e5, type: 3}
   _barrierMuzzle: {fileID: 8889067391957367747}
+  _incineratorDronePrefab: {fileID: 1776347810608415407, guid: 8ee11caaa11354744be85437784e1bda, type: 3}
   _itemDefinitions:
   - ItemType: 1
     InitialCount: 3

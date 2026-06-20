@@ -2,9 +2,11 @@ using UnityEngine;
 
 public class ReturnToLaboratory : IItemConsumptionStrategy
 {
-    public bool TryUse(object parameters)
+    public RunnerItemType ItemType => RunnerItemType.Lifeline;
+
+    public bool TryUse(RunnerItemUseContext context)
     {
-        var playerRunner = parameters as PlayerRunner;
+        PlayerRunner playerRunner = context.User;
         if (playerRunner == null)
         {
             Debug.LogError("ReturnToLaboratory strategy requires a Transform parameter.");

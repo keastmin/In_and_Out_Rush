@@ -3,7 +3,7 @@ using UnityEngine;
 
 [RequireComponent(typeof(NetworkObject))]
 [RequireComponent(typeof(Rigidbody))]
-public class MonsterProjectile : NetworkBehaviour, IBarrierDestructibleProjectile
+public class MonsterProjectile : NetworkBehaviour, IItemDestructibleProjectile
 {
     private Rigidbody _rigidbody;
     private ShooterWorldMonster _owner;
@@ -64,7 +64,7 @@ public class MonsterProjectile : NetworkBehaviour, IBarrierDestructibleProjectil
         ApplyVelocity();
     }
 
-    public void DestroyByBarrier()
+    public void DestroyByItemEffect()
     {
         if (HasStateAuthority)
             Despawn();

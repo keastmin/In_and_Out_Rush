@@ -2033,6 +2033,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2530420396968840566, guid: 16a75431e336df44a89baf2323564ec9, type: 3}
+      propertyPath: SortKey
+      value: 942982916
+      objectReference: {fileID: 0}
     - target: {fileID: 2819567517167211890, guid: 16a75431e336df44a89baf2323564ec9, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.9533844
@@ -2082,6 +2086,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 16a75431e336df44a89baf2323564ec9, type: 3}
+--- !u!114 &1532805954 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3437625606896600604, guid: 16a75431e336df44a89baf2323564ec9, type: 3}
+  m_PrefabInstance: {fileID: 1532805953}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4edaee22da25b3249b362ab44e2a1486, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1573621951
 GameObject:
   m_ObjectHideFlags: 0
@@ -2820,6 +2835,10 @@ PrefabInstance:
       propertyPath: systems.Array.size
       value: 4
       objectReference: {fileID: 0}
+    - target: {fileID: 7251378647776299556, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
+      propertyPath: _towerUpgradeManager
+      value: 
+      objectReference: {fileID: 1532805954}
     - target: {fileID: 7251378647776299556, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
       propertyPath: _worldBoundaryRadius
       value: 250

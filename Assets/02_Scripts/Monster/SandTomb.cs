@@ -35,7 +35,7 @@ public class SandTomb : WorldMonster
     {
         base.FixedUpdateNetwork();
 
-        if (!HasStateAuthority) return;
+        if (!HasStateAuthority || IsStunned) return;
         if (playerTransform == null) return;
 
         var distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);

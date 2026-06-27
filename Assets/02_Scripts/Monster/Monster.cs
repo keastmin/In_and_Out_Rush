@@ -9,6 +9,7 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
     [SerializeField] protected float arrivalThreshold = 0.1f;
 
     [Networked] protected float Health { get; private set; }
+    [Networked] private TickTimer StunTimer { get; set; }
     protected float maxHealth;
 
     protected Territory territory;
@@ -56,15 +57,38 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
         }
     }
 
+    public void ApplyStun(float duration)
+    {
+        if (!Object.HasStateAuthority || duration <= 0f)
+            return;
+
+        StunTimer = TickTimer.CreateFromSeconds(Runner, duration);
+        StopByStun();
+    }
+
     public virtual void DestroyMonster() => Runner.Despawn(Object);
 
     public override void FixedUpdateNetwork()
     {
         if (!Object.HasStateAuthority) { return; }
+        if (IsStunned)
+        {
+            StopByStun();
+            return;
+        }
+
         UpdateMonster();
     }
 
     public virtual void UpdateMonster() => throw new System.NotImplementedException();
+
+    protected bool IsStunned => StunTimer.IsRunning && !StunTimer.Expired(Runner);
+
+    protected virtual void StopByStun()
+    {
+        if (rigidBody != null)
+            rigidBody.linearVelocity = Vector3.zero;
+    }
 
     public void OnTerritoryExpanded(Territory territory, TerritorySystem territorySystem)
     {

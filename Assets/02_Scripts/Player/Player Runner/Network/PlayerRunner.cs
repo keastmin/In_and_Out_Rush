@@ -42,6 +42,8 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     [SerializeField] private BarrierWave _barrierPrefab;
     [SerializeField] private Transform _barrierMuzzle;
     [SerializeField] private IncineratorDrone _incineratorDronePrefab;
+    [SerializeField] private ElectricGrenadeProjectile _electricGrenadePrefab;
+    [SerializeField] private Transform _electricGrenadeMuzzle;
     [SerializeField] private RunnerItemDefinition[] _itemDefinitions =
         RunnerItemInventory.CreateDefaultDefinitions();
 
@@ -114,6 +116,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
         {
             new SpawnBarrierStrategy(_barrierPrefab, _barrierMuzzle),
             new SpawnIncineratorStrategy(_incineratorDronePrefab),
+            new SpawnElectricGrenadeStrategy(_electricGrenadePrefab, _electricGrenadeMuzzle),
         });
         _itemInventory = new RunnerItemInventory(_itemConsumer, _itemDefinitions);
         _skillCaster = new RunnerSkillCaster();
@@ -254,7 +257,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     {
         UpdateSelectedItemSlot(data.SelectedItem);
         if (!data.ItemInput.IsSet(NetworkInputData.ITEM_INPUT)) return;
-        if (!_itemInventory.TryUse(data.SelectedItem, new RunnerItemUseContext(this))) return;
+        if (!_itemInventory.TryUse(data.SelectedItem, new RunnerItemUseContext(this, data.MousePosition))) return;
 
         RefreshItemSlots();
     }

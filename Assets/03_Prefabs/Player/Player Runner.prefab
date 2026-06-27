@@ -150,6 +150,7 @@ Transform:
   - {fileID: 8355381677218973595}
   - {fileID: 5455947531722268542}
   - {fileID: 8889067391957367747}
+  - {fileID: 654166963584021036}
   m_Father: {fileID: 5948079281826790062}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2419436783449513935
@@ -5166,6 +5167,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 5782809305708921265}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &7340158797572438556
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 654166963584021036}
+  m_Layer: 0
+  m_Name: Electric Grenade Muzzle
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &654166963584021036
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7340158797572438556}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.5, z: 0.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5782809305708921265}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &9008013758366610681
 GameObject:
   m_ObjectHideFlags: 0
@@ -5239,6 +5271,8 @@ MonoBehaviour:
   _barrierPrefab: {fileID: 1623655954361001160, guid: 7a094e5f0ee577d4fa3dbbc29c6f03e5, type: 3}
   _barrierMuzzle: {fileID: 8889067391957367747}
   _incineratorDronePrefab: {fileID: 1776347810608415407, guid: 8ee11caaa11354744be85437784e1bda, type: 3}
+  _electricGrenadePrefab: {fileID: 4720270319675766395, guid: 0b193d251b7f2a74b8ef07e8e930f2e4, type: 3}
+  _electricGrenadeMuzzle: {fileID: 654166963584021036}
   _itemDefinitions:
   - ItemType: 1
     InitialCount: 3

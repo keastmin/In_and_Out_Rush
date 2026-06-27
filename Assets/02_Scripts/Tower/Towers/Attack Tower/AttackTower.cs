@@ -28,7 +28,6 @@ namespace KIM.Dev
         [Space(10)]
 
         [Header("속성 부여")]
-        [SerializeField] protected TowerPropertiesType _propertiesType = TowerPropertiesType.None; // 부여된 속성
         [SerializeField] private GameObject _flameEffect;
         [SerializeField] private GameObject _blitzEffect;
         [SerializeField] private GameObject _bioEffect;
@@ -45,6 +44,7 @@ namespace KIM.Dev
         private float _maxAttackSpeedBonusRate;
 
         protected float EffectiveAttackInterval => _attackSpeed / (1f + _maxAttackSpeedBonusRate);
+        protected virtual TowerUpgradeType UpgradeType => TowerUpgradeType.SentryGun;
 
         #endregion
 
@@ -131,6 +131,27 @@ namespace KIM.Dev
 
         protected virtual void Fire() { }
 
+        protected float CalculateDamage(float baseDamage)
+        {
+            return TowerUpgradeManager != null
+                ? TowerUpgradeManager.CalculateDamage(UpgradeType, PropertyType, baseDamage)
+                : baseDamage;
+        }
+
+        protected void ApplyDamageAndPropertyEffect(Collider target, float baseDamage)
+        {
+            if (target == null)
+                return;
+
+            float finalDamage = CalculateDamage(baseDamage);
+            TowerPropertyEffectApplier.ApplyDamageAndEffect(
+                target,
+                PropertyType,
+                this,
+                baseDamage,
+                finalDamage);
+        }
+
         #region 속성 부여
 
         /// <summary>
@@ -142,9 +163,9 @@ namespace KIM.Dev
         public TowerPropertiesType AddProperties(TowerPropertiesType increaseType, float increaseAmount = 0f)
         {
             // 이미 속성이 부여되어 있으면 즉시 반환
-            if (_propertiesType != TowerPropertiesType.None)
+            if (HasProperty)
             {
-                return _propertiesType;
+                return PropertyType;
             }
 
             float flameProb = 1f / 3f; // 화염 속성 확률
@@ -175,12 +196,12 @@ namespace KIM.Dev
 
             // 속성 부여
             var type = RandomPickProperties(flameProb, blitzProb, bioProb);
-            RPC_SetLocalTowerProperties(type);
-            RPC_ActivePropertiesEffect(type);
+            if (!TryAssignProperty(type))
+                return PropertyType;
 
             Debug.Log("속성 부여 완료");
 
-            return _propertiesType;
+            return type;
         }
 
         #endregion
@@ -268,15 +289,10 @@ namespace KIM.Dev
             return TowerPropertiesType.Biochemical;
         }
 
-        [Rpc(RpcSources.All, RpcTargets.All)]
-        private void RPC_SetLocalTowerProperties(TowerPropertiesType type)
+        protected override void OnTowerPropertyChanged(TowerPropertiesType type)
         {
-            _propertiesType = type;
-        }
+            base.OnTowerPropertyChanged(type);
 
-        [Rpc(RpcSources.All, RpcTargets.All)]
-        private void RPC_ActivePropertiesEffect(TowerPropertiesType type)
-        {
             if (type == TowerPropertiesType.None)
             {
                 _flameEffect.SetActive(false);

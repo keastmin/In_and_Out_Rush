@@ -8,6 +8,8 @@ namespace KIM.Dev
     [RequireComponent(typeof(PlayerBuilderTowerBuild))]
     public class PlayerBuilder : Player
     {
+        private TowerBuildManager _towerBuildManager;
+
         [SerializeField] private PlayerBuilderCameraMover _cameraMover = new();
 
         [Header("Click")]
@@ -45,7 +47,7 @@ namespace KIM.Dev
         public int SelectedTowersCount => SelectedTowers.Count;
 
         // 설치된 타워 정보
-        [SerializeField] private int _centerTowerCount = 0; // 센터타워 개수
+        [Networked] public int CenterTowerCount { get; private set; }
         [SerializeField] private TowerPropertiesType _increaseProperties = TowerPropertiesType.None; // 확률이 증가한 속성
         [SerializeField] private float _increaseProbability = 0f; // 증가한 확률
 
@@ -71,6 +73,7 @@ namespace KIM.Dev
         public PlayerBuilderTowerBuild BuilderTowerBuild => _builderTowerBuild;
         public PlayerBuilderTowerMove BuilderTowerMove => _builderTowerMove;
         public PlayerBuilderUI BuilderUI => _builderUI;
+        public TowerBuildManager TowerBuildManager => _towerBuildManager;
 
         #endregion
 
@@ -82,7 +85,6 @@ namespace KIM.Dev
         public Vector2 CurrentMousePoint => _currentMousePoint;
         public float DragThresholdPixel => _dragThresholdPixel;
         public LayerMask DragDetectLayer => _dragDetectLayer;
-        public int CenterTowerCount => _centerTowerCount;
         public TowerPropertiesType IncreaseProperties => _increaseProperties;
         public float IncreaseProbability => _increaseProbability;
         public int MaxCenterTowerCount => _maxCenterTowerCount;
@@ -173,6 +175,16 @@ namespace KIM.Dev
             // 타워 건설 관련 컴포넌트 초기화
             TryGetComponent(out _builderTowerBuild);
             _builderTowerBuild.Init(_builderUI, _builderTowerSystem);
+        }
+
+        public void InjectTowerBuildManager(TowerBuildManager towerBuildManager)
+        {
+            _towerBuildManager = towerBuildManager;
+
+            if (_builderTowerBuild == null)
+                TryGetComponent(out _builderTowerBuild);
+
+            _builderTowerBuild?.InitializeTowerBuildManager(towerBuildManager);
         }
 
         #endregion
@@ -301,6 +313,9 @@ namespace KIM.Dev
                 Debug.Log("타워 속성부여 이벤트 눌림");
                 foreach (var tower in SelectedTowers)
                 {
+                    if (tower == null || !tower.HasCapability(TowerCapability.AssignProperty))
+                        continue;
+
                     if (tower.TryGetComponent(out AttackTower attackTower))
                     {
                         attackTower.AddProperties(IncreaseProperties, IncreaseProbability);
@@ -334,6 +349,9 @@ namespace KIM.Dev
         // 타워 판매 함수
         public void TowerSell()
         {
+            if ((GetSelectedTowerCapabilities() & TowerCapability.Sell) == 0)
+                return;
+
             ClickObject = null;
             DragObjectHash.Clear();
             _builderTowerSell.SellTower(SelectedTowers, this);
@@ -346,6 +364,27 @@ namespace KIM.Dev
                 return;
 
             _selectedTowers.Add(tower);
+        }
+
+        public TowerCapability GetSelectedTowerCapabilities()
+        {
+            TowerCapability commonCapabilities =
+                TowerCapability.Move |
+                TowerCapability.Sell |
+                TowerCapability.AssignProperty |
+                TowerCapability.IndividualUpgrade;
+            bool hasTower = false;
+
+            foreach (Tower tower in SelectedTowers)
+            {
+                if (tower == null)
+                    continue;
+
+                commonCapabilities &= tower.AvailableCapabilities;
+                hasTower = true;
+            }
+
+            return hasTower ? commonCapabilities : TowerCapability.None;
         }
 
         // 공격 타워 선택 해쉬를 초기화하는 함수
@@ -385,7 +424,10 @@ namespace KIM.Dev
         // 센터 타워 개수를 설정
         public void SetCenterTowerCount(int centerCount)
         {
-            _centerTowerCount = centerCount;
+            if (!HasStateAuthority)
+                return;
+
+            CenterTowerCount = centerCount;
         }
 
         #endregion
@@ -398,7 +440,13 @@ namespace KIM.Dev
 
         #region 상태
 
-        private void ActiveTowerMoveState() => StateMachine.TransitionToState(StateMachine.TowerMoveState);
+        private void ActiveTowerMoveState()
+        {
+            if ((GetSelectedTowerCapabilities() & TowerCapability.Move) == 0)
+                return;
+
+            StateMachine.TransitionToState(StateMachine.TowerMoveState);
+        }
 
         private void CleanupInvalidTowerReferences()
         {

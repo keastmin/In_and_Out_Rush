@@ -26,7 +26,6 @@ namespace KIM.Dev
         [SerializeField] private GameObject _bioPropertiesEffect; // 생화학 속성 이펙트
 
         private TowerTargeting _towerTargeting; // 타워의 타겟 감지
-        private TowerUpgrade _towerUpgrade; // 타워의 업그레이드
 
         // 타겟
         private Collider _targetCollider; // 타겟의 콜라이더
@@ -39,8 +38,6 @@ namespace KIM.Dev
         // 속성
         private Dictionary<TowerPropertiesType, GameObject> _effects; // 속성에 따른 이펙트
 
-        public TowerPropertiesType PropertiesType => _towerUpgrade.Properties; // 현재 타워의 속성
-
         protected override void TowerAwake()
         {
             base.TowerAwake();
@@ -48,8 +45,6 @@ namespace KIM.Dev
             _blitzPropertiesEffect.SetActive(false);
             _bioPropertiesEffect.SetActive(false);
             _towerTargeting = new TowerTargeting();
-            _towerUpgrade = new TowerUpgrade();
-
             _effects = new Dictionary<TowerPropertiesType, GameObject>();
             _effects.Add(TowerPropertiesType.Flame, _flamePropertiesEffect);
             _effects.Add(TowerPropertiesType.Blitz, _blitzPropertiesEffect);
@@ -93,10 +88,12 @@ namespace KIM.Dev
                 _fireTrigger++;
 
                 // 데미지 주기
-                if (_targetCollider.TryGetComponent(out IDamageable damageable))
-                {
-                    damageable.TakeDamage(_damage);
-                }
+                TowerPropertyEffectApplier.ApplyDamageAndEffect(
+                    _targetCollider,
+                    PropertyType,
+                    this,
+                    _damage,
+                    _damage);
             }
         }
 
@@ -116,20 +113,20 @@ namespace KIM.Dev
         /// <returns>속성 부여 성공 여부</returns>
         public bool AddProperties(TowerPropertiesType type)
         {
-            bool isAdd = _towerUpgrade.AddProperties(type);
-            if (isAdd)
-            {
-                RPC_EffectsOn(type);
-            }
-            return isAdd;
+            return TryAssignProperty(type);
         }
 
         #region RPC
 
-        [Rpc(RpcSources.All, RpcTargets.All)]
-        private void RPC_EffectsOn(TowerPropertiesType type)
+        protected override void OnTowerPropertyChanged(TowerPropertiesType type)
         {
-            _effects[type].SetActive(true);
+            base.OnTowerPropertyChanged(type);
+
+            foreach (GameObject effect in _effects.Values)
+                effect.SetActive(false);
+
+            if (type != TowerPropertiesType.None && _effects.TryGetValue(type, out GameObject targetEffect))
+                targetEffect.SetActive(true);
         }
 
         #endregion

@@ -127,7 +127,8 @@ namespace KIM.Dev
                 _player.BuilderTowerBuild.EvaluateBuildFootprint(_towerBuildIndex, _previewValidIndices, _previewBlockedIndices);
                 InfiniteGrid.Instance.SetBuildRangePreview(_previewValidIndices, _previewBlockedIndices);
 
-                bool canBuild = _player.BuilderTowerBuild.CanBuildAt(_towerBuildIndex);
+                bool canBuild = _previewBlockedIndices.Count == 0 &&
+                                _player.BuilderTowerBuild.CanBuildAt(_towerBuildIndex);
 
                 if (canBuild)
                 {

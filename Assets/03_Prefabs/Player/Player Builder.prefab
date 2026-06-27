@@ -80,7 +80,6 @@ MonoBehaviour:
   _environmentalLayer:
     serializedVersion: 2
     m_Bits: 128
-  _centerTowerCount: 0
   _increaseProperties: 0
   _increaseProbability: 0
   DragSelectedColliders: []

@@ -5,6 +5,8 @@ namespace KIM.Dev
 {
     public sealed class SentryGunTower : AttackTower
     {
+        protected override TowerUpgradeType UpgradeType => TowerUpgradeType.SentryGun;
+
         // 총구 위치에서 발포 이펙트 재생
         // 타겟 몬스터에서 피격 이펙트 재생
         // 타겟 몬스터에 데미지 적용
@@ -51,11 +53,7 @@ namespace KIM.Dev
                 _attackTick = TickTimer.CreateFromSeconds(Runner, EffectiveAttackInterval);
                 _shotSeq++;
 
-                // 데미지 넣기
-                if (_currTarget.TryGetComponent(out IDamageable damageable))
-                {
-                    damageable.TakeDamage(_bulletDamage);
-                }
+                ApplyDamageAndPropertyEffect(_currTarget, _bulletDamage);
             }
         }
 

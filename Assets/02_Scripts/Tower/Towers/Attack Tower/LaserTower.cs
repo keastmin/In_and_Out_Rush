@@ -6,6 +6,8 @@ namespace KIM.Dev
 {
     public class LaserTower : AttackTower
     {
+        protected override TowerUpgradeType UpgradeType => TowerUpgradeType.LaserBeam;
+
         [Header("레이저")]
         [SerializeField] private LineRenderer _laser;
         [SerializeField] private float _laserWidth;
@@ -48,11 +50,7 @@ namespace KIM.Dev
                 _attackTick = TickTimer.CreateFromSeconds(Runner, EffectiveAttackInterval);
                 _shotSeq++;
 
-                // 데미지 넣기
-                if (_currTarget.TryGetComponent(out IDamageable damageable))
-                {
-                    damageable.TakeDamage(_laserDamage);
-                }
+                ApplyDamageAndPropertyEffect(_currTarget, _laserDamage);
             }
         }
 

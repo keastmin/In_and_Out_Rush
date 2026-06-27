@@ -8,6 +8,10 @@ namespace KIM.Dev
 {
     public class Tower : GridPlaceable, ICanClickObject
     {
+        [Header("Capabilities")]
+        [SerializeField] private TowerCapability _capabilities = TowerCapability.Sell;
+        [SerializeField] private bool _includeLegacyCapabilities = true;
+
         [Header("타워")]
         [SerializeField] private Cost _cost;
         [SerializeField] private TowerGhost _ghost;
@@ -23,6 +27,16 @@ namespace KIM.Dev
         public bool IsCenter => (_type == TowerType.Center);
         public TowerType Type => _type;
         public string TowerID => _towerId;
+        public TowerUpgradeManager TowerUpgradeManager => _towerUpgradeManager;
+        public bool HasProperty => PropertyType != TowerPropertiesType.None;
+        public bool IsPropertyRequestPending => _isPropertyRequestPending;
+        public TowerCapability AvailableCapabilities => GetAvailableCapabilities();
+
+        [Networked, OnChangedRender(nameof(HandlePropertyChanged))]
+        public TowerPropertiesType PropertyType { get; private set; }
+
+        private TowerUpgradeManager _towerUpgradeManager;
+        private bool _isPropertyRequestPending;
 
         private void Awake()
         {
@@ -33,6 +47,11 @@ namespace KIM.Dev
         public override void Spawned()
         {
             base.Spawned();
+
+            TowerBuildManager.Instance?.InjectTowerDependencies(this);
+
+            if (PropertyType != TowerPropertiesType.None)
+                HandlePropertyChanged();
 
             if (HasStateAuthority)
             {
@@ -76,6 +95,35 @@ namespace KIM.Dev
             _towerId = id;
         }
 
+        public void InitializeTowerUpgradeManager(TowerUpgradeManager towerUpgradeManager)
+        {
+            _towerUpgradeManager = towerUpgradeManager;
+        }
+
+        public bool HasCapability(TowerCapability capability)
+        {
+            return (AvailableCapabilities & capability) == capability;
+        }
+
+        protected bool TryAssignProperty(TowerPropertiesType propertyType)
+        {
+            if (propertyType == TowerPropertiesType.None ||
+                (GetConfiguredCapabilities() & TowerCapability.AssignProperty) == 0 ||
+                HasProperty ||
+                _isPropertyRequestPending)
+            {
+                return false;
+            }
+
+            _isPropertyRequestPending = true;
+            RPC_RequestAssignProperty(propertyType);
+            return true;
+        }
+
+        protected virtual void OnTowerPropertyChanged(TowerPropertiesType propertyType)
+        {
+        }
+
         public void OnLeftMouseDownThisObject()
         {
             _selectedChecker.SetActive(true);
@@ -105,6 +153,45 @@ namespace KIM.Dev
                 return;
 
             builder.OnTowerDespawned(this);
+        }
+
+        private TowerCapability GetAvailableCapabilities()
+        {
+            TowerCapability capabilities = GetConfiguredCapabilities();
+            if (HasProperty || _isPropertyRequestPending)
+                capabilities &= ~TowerCapability.AssignProperty;
+
+            return capabilities;
+        }
+
+        private TowerCapability GetConfiguredCapabilities()
+        {
+            TowerCapability capabilities = _capabilities;
+            if (!_includeLegacyCapabilities)
+                return capabilities;
+
+            if (this is ICanDragObject)
+                capabilities |= TowerCapability.Move;
+
+            if (this is AttackTower || this is CenterTower)
+                capabilities |= TowerCapability.AssignProperty;
+
+            return capabilities;
+        }
+
+        private void HandlePropertyChanged()
+        {
+            _isPropertyRequestPending = false;
+            OnTowerPropertyChanged(PropertyType);
+        }
+
+        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+        private void RPC_RequestAssignProperty(TowerPropertiesType propertyType)
+        {
+            if (PropertyType != TowerPropertiesType.None || propertyType == TowerPropertiesType.None)
+                return;
+
+            PropertyType = propertyType;
         }
     }
 }

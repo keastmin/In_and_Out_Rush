@@ -15,6 +15,8 @@ namespace KIM.Dev {
         [SerializeField] private int _maxPlasmaUpgradeCount;
         [SerializeField] private int _maxSparkUpgradeCount;
         [SerializeField] private int _maxBiohazardUpgradeCount;
+        [SerializeField, Min(0f)] private float _towerDamageIncreaseRatePerUpgrade = 0.2f;
+        [SerializeField, Min(0f)] private float _propertyDamageIncreaseRatePerUpgrade = 0.05f;
 
         [Networked, OnChangedRender(nameof(SentryGunUpgradeCountChange))]
         private int _currentSentryGunUpgradeCount { get; set; }
@@ -48,6 +50,9 @@ namespace KIM.Dev {
             if (!IsCanUpgrade(type))
                 return false;
 
+            if (!CanAffordUpgrade(type))
+                return false;
+
             RPC_RequestTowerUpgradeCountUp(type);
 
             return true;
@@ -56,6 +61,27 @@ namespace KIM.Dev {
         public bool IsUpgradeCountReflected(TowerUpgradeType type, int upgradeCount)
         {
             return GetCurrentUpgradeCount(type) >= upgradeCount;
+        }
+
+        public float CalculateDamage(TowerUpgradeType type, float baseDamage)
+        {
+            float damageMultiplier = 1f + GetCurrentUpgradeCount(type) * _towerDamageIncreaseRatePerUpgrade;
+            return Mathf.Max(0f, baseDamage) * damageMultiplier;
+        }
+
+        public float CalculateDamage(TowerUpgradeType type, TowerPropertiesType propertyType, float baseDamage)
+        {
+            float safeBaseDamage = Mathf.Max(0f, baseDamage);
+            float towerDamageBonus = GetCurrentUpgradeCount(type) * _towerDamageIncreaseRatePerUpgrade;
+            float propertyDamageBonus = GetPropertyUpgradeCount(propertyType) * _propertyDamageIncreaseRatePerUpgrade;
+            return safeBaseDamage * (1f + towerDamageBonus + propertyDamageBonus);
+        }
+
+        public Cost GetUpgradeCost(TowerUpgradeType type)
+        {
+            int currentUpgradeCount = GetCurrentUpgradeCount(type);
+            int mineralIncreasePerUpgrade = IsPropertyUpgradeType(type) ? 10 : 50;
+            return new Cost(100 + mineralIncreasePerUpgrade * currentUpgradeCount, 0);
         }
 
         private void InitializeTowerUpgradeManager()
@@ -75,7 +101,8 @@ namespace KIM.Dev {
 
         private bool IsCanUpgrade(TowerUpgradeType type)
         {
-            return GetCurrentUpgradeCount(type) < GetMaxUpgradeCount(type);
+            return IsSupportedUpgradeType(type) &&
+                   GetCurrentUpgradeCount(type) < GetMaxUpgradeCount(type);
         }
 
         public int GetCurrentUpgradeCount(TowerUpgradeType type)
@@ -143,11 +170,54 @@ namespace KIM.Dev {
             }
         }
 
+        private int GetPropertyUpgradeCount(TowerPropertiesType propertyType)
+        {
+            return propertyType switch
+            {
+                TowerPropertiesType.Flame => _currentPlasmaUpgradeCount,
+                TowerPropertiesType.Blitz => _currentSparkUpgradeCount,
+                TowerPropertiesType.Biochemical => _currentBiohazardUpgradeCount,
+                _ => 0
+            };
+        }
+
+        private static bool IsPropertyUpgradeType(TowerUpgradeType type)
+        {
+            return type == TowerUpgradeType.Plasma ||
+                   type == TowerUpgradeType.Spark ||
+                   type == TowerUpgradeType.Biohazard;
+        }
+
+        private static bool IsSupportedUpgradeType(TowerUpgradeType type)
+        {
+            return type != TowerUpgradeType.RailGun;
+        }
+
+        private bool CanAffordUpgrade(TowerUpgradeType type)
+        {
+            return ResourceSystem.Instance != null &&
+                   ResourceSystem.Instance.IsResourceSufficient(GetUpgradeCost(type));
+        }
+
+        private bool TryPayUpgradeCost(TowerUpgradeType type)
+        {
+            if (ResourceSystem.Instance == null)
+                return false;
+
+            Cost cost = GetUpgradeCost(type);
+            if (!ResourceSystem.Instance.IsResourceSufficient(cost))
+                return false;
+
+            ResourceSystem.Instance.Mineral -= cost.Mineral;
+            ResourceSystem.Instance.Gas -= cost.Gas;
+            return true;
+        }
+
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
         private void RPC_RequestTowerUpgradeCountUp(TowerUpgradeType type, RpcInfo rpcInfo = default)
         {
             bool isValidType = Enum.IsDefined(typeof(TowerUpgradeType), type);
-            bool isUpgradeAccepted = isValidType && IsCanUpgrade(type);
+            bool isUpgradeAccepted = isValidType && IsCanUpgrade(type) && TryPayUpgradeCost(type);
 
             if (isUpgradeAccepted)
                 TowerUpgradeCountUp(type);

@@ -86,6 +86,22 @@ namespace KIM.Dev
             return true;
         }
 
+        public bool TryConsumePendingSupplies(int[] expectedSupplyArray)
+        {
+            if (expectedSupplyArray == null || expectedSupplyArray.Length != PendingSupplyCount)
+                return false;
+
+            for (int i = 0; i < expectedSupplyArray.Length; i++)
+            {
+                if (_suppliesNums[i] != expectedSupplyArray[i])
+                    return false;
+            }
+
+            RevertSupplyManagerSlot();
+            RevertLaboratorySupplySlotRevert();
+            return true;
+        }
+
         /// <summary>
         /// 매니저가 가지고 있는 보급품 목록을 초기화하는 함수
         /// </summary>

@@ -15,6 +15,7 @@ namespace Dev.Network
         public InfiniteGrid Grid => _grid;
         [HideInInspector] [Networked] public Laboratory NetworkLaboratory { get; private set; }
         private Laboratory _localLaboratory;
+        private TowerBuildManager _towerBuildManager;
 
         private void KIMInitializeHost()
         {
@@ -28,6 +29,19 @@ namespace Dev.Network
 
         private void KIMInitializeObjects()
         {
+            if (_towerUpgradeManager != null)
+                _towerUpgradeManager.TryGetComponent(out _towerBuildManager);
+
+            if (_towerBuildManager == null)
+            {
+                Debug.LogError("TowerBuildManager 참조를 찾을 수 없습니다.");
+            }
+            else
+            {
+                _towerBuildManager.Initialize(_towerUpgradeManager);
+                PlayerBuilder?.InjectTowerBuildManager(_towerBuildManager);
+            }
+
             UIController.InitializeStageUIController(_towerUpgradeManager);
         }
 

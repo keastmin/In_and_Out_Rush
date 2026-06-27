@@ -284,7 +284,6 @@ MonoBehaviour:
     m_Bits: 64
   _targettingRange: 5
   _rotateSpeed: 10
-  _propertiesType: 0
   _flameEffect: {fileID: 7190305726298204931}
   _blitzEffect: {fileID: 4124963853794736319}
   _bioEffect: {fileID: 1036938011115028901}

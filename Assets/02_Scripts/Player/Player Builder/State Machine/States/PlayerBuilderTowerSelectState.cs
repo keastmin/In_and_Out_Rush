@@ -16,24 +16,20 @@ namespace KIM.Dev
         {
             Debug.Log("Tower Select 상태 진입");
 
-            TowerType type = TowerType.Attack;
-            foreach (var tower in _player.SelectedTowers)
-            {
-                if (tower == null)
-                    continue;
+            TowerType type = GetSelectedTowerType();
 
-                if (tower.Type == TowerType.Center || tower.Type == TowerType.Support)
-                {
-                    type = tower.Type;
-                    break;
-                }
-            }
-
-            _player.BuilderUI.ActivationTowerSelectUI(true, type);
+            _player.BuilderUI.ActivationTowerSelectUI(
+                true,
+                type,
+                _player.GetSelectedTowerCapabilities());
         }
 
         public void Update()
         {
+            _player.BuilderUI.RefreshTowerSelectActions(
+                GetSelectedTowerType(),
+                _player.GetSelectedTowerCapabilities());
+
             if (Input.GetMouseButtonDown(0) && !EventSystem.current.IsPointerOverGameObject())
             {
                 _player.ClickLeftMouseDownOnWorld();
@@ -58,6 +54,24 @@ namespace KIM.Dev
             {
                 _player.StateMachine.TransitionToState(_player.StateMachine.OriginState);
             }
+        }
+
+        private TowerType GetSelectedTowerType()
+        {
+            TowerType type = TowerType.Attack;
+            foreach (Tower tower in _player.SelectedTowers)
+            {
+                if (tower == null)
+                    continue;
+
+                if (tower.Type == TowerType.Center || tower.Type == TowerType.Support)
+                {
+                    type = tower.Type;
+                    break;
+                }
+            }
+
+            return type;
         }
     }
 }

@@ -1,5 +1,4 @@
 using Fusion;
-using Dev.Network;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -12,6 +11,12 @@ namespace KIM.Dev
         [SerializeField] private Cost _buildCost;
         [SerializeField] private NetworkPrefabRef _towerRef;
         [SerializeField] private bool _isStandByBuild = false;
+
+        private TowerData _towerData;
+        private TowerBuildManager _towerBuildManager;
+        private PlayerBuilder _builder;
+        private bool _isBuildRequestPending;
+        private int[] _pendingSupplyArray = System.Array.Empty<int>();
 
         public TowerGhost TowerGhost => _towerGhost;
         public Cost BuildCost => _buildCost;
@@ -26,7 +31,25 @@ namespace KIM.Dev
         {
             _isStandByBuild = false;
             _towerSystem = towerSystem;
+            TryGetComponent(out _builder);
             LinkBuildTowerAction(builderUI);
+        }
+
+        public void InitializeTowerBuildManager(TowerBuildManager towerBuildManager)
+        {
+            if (_towerBuildManager != null)
+                _towerBuildManager.OnTowerBuildRequestCompleted -= HandleTowerBuildRequestCompleted;
+
+            _towerBuildManager = towerBuildManager;
+
+            if (_towerBuildManager != null)
+                _towerBuildManager.OnTowerBuildRequestCompleted += HandleTowerBuildRequestCompleted;
+        }
+
+        private void OnDestroy()
+        {
+            if (_towerBuildManager != null)
+                _towerBuildManager.OnTowerBuildRequestCompleted -= HandleTowerBuildRequestCompleted;
         }
 
         public bool TowerBuildConditionChecker(string towerId)
@@ -48,33 +71,12 @@ namespace KIM.Dev
             return true;
         }
 
-        public bool HasSufficientResources()
-        {
-            if (StageBootstrapper.Instance == null || StageBootstrapper.Instance.ResourceSystem == null)
-                return false;
-
-            return StageBootstrapper.Instance.ResourceSystem.Mineral >= _buildCost.Mineral &&
-                   StageBootstrapper.Instance.ResourceSystem.Gas >= _buildCost.Gas;
-        }
-
         public bool CanBuildAt(Vector2Int index)
         {
-            if (_tower == null || _towerRef == default)
-                return false;
+            if (_towerBuildManager != null)
+                return _towerBuildManager.CanBuildAt(_towerData, _builder, index);
 
-            if (!CanBuildCenterTower(IsCenterTower))
-                return false;
-
-            if (!HasSufficientResources())
-                return false;
-
-            if (!TowerBuildConditionChecker(TowerID))
-                return false;
-
-            if (InfiniteGrid.Instance == null)
-                return false;
-
-            return InfiniteGrid.Instance.CanPlaceAt(index, BuildRange);
+            return false;
         }
 
         public void EvaluateBuildFootprint(Vector2Int centerIndex, HashSet<Vector2Int> validIndices, HashSet<Vector2Int> blockedIndices)
@@ -124,32 +126,27 @@ namespace KIM.Dev
 
         public void BuildTower(Vector2Int index)
         {
-            if (_towerRef != default && _tower != null)
+            if (_isBuildRequestPending || _towerBuildManager == null || _towerData == null || _builder == null)
+                return;
+
+            bool isSupplyTower = TowerID == TowerIDContainer.SUPPLY_TOWER_ID;
+            int[] supplyArray = isSupplyTower && SupplyTowerManager.Instance != null
+                ? SupplyTowerManager.Instance.PeekSupplyNumArray()
+                : System.Array.Empty<int>();
+
+            if (isSupplyTower && supplyArray.Length == 0)
+                return;
+
+            _pendingSupplyArray = supplyArray;
+            _isBuildRequestPending = true;
+            if (!_towerBuildManager.TryRequestTowerBuild(
+                _towerData,
+                _builder,
+                index,
+                supplyArray))
             {
-                bool isCenterTower = IsCenterTower;
-                if (!CanBuildCenterTower(isCenterTower))
-                    return;
-
-                bool isSupplyTower = TowerID == TowerIDContainer.SUPPLY_TOWER_ID;
-                int[] supplyArray = new int[0];
-                if (isSupplyTower)
-                {
-                    if (SupplyTowerManager.Instance == null ||
-                        !SupplyTowerManager.Instance.TryConsumePendingSupplies(out supplyArray))
-                    {
-                        return;
-                    }
-                }
-
-                RPC_BuildTower(
-                    _towerRef,
-                    _buildCost,
-                    index,
-                    BuildRange,
-                    isCenterTower,
-                    TowerID == TowerIDContainer.TELEPORT_TOWER_ID,
-                    isSupplyTower,
-                    supplyArray);
+                _isBuildRequestPending = false;
+                _pendingSupplyArray = System.Array.Empty<int>();
             }
         }
 
@@ -158,6 +155,7 @@ namespace KIM.Dev
             _tower = null;
             _towerGhost = null;
             _towerRef = default;
+            _towerData = null;
             _isStandByBuild = false;
         }
 
@@ -174,6 +172,7 @@ namespace KIM.Dev
             if (data == null)
                 return;
 
+            _towerData = data;
             _tower = data.Tower;
             _towerGhost = data.TowerGhost;
             _towerRef = data.TowerPrefabRef;
@@ -191,7 +190,7 @@ namespace KIM.Dev
             if (!TowerBuildConditionChecker(_tower.TowerID))
                 return;
 
-            if (!CanBuildCenterTower(_tower.IsCenter))
+            if (_tower.IsCenter && (_builder == null || _builder.CenterTowerCount >= _builder.MaxCenterTowerCount))
                 return;
 
             _isStandByBuild = true;
@@ -207,116 +206,18 @@ namespace KIM.Dev
             return towerGhost;
         }
 
-        [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-        private void RPC_BuildTower(NetworkPrefabRef towerRef, Cost cost, Vector2Int index, int buildRange, bool isCenterTower, bool isTeleportTower, bool isSupplyTower, int[] supplyArray)
+        private void HandleTowerBuildRequestCompleted(bool success, bool isSupplyTower)
         {
-            if (!HasStateAuthority)
-                return;
+            _isBuildRequestPending = false;
 
-            if (InfiniteGrid.Instance == null)
-                return;
-
-            if (isTeleportTower && !TowerBuildConditionChecker(TowerIDContainer.TELEPORT_TOWER_ID))
-                return;
-
-            if (!CanBuildCenterTower(isCenterTower))
-                return;
-
-            if (isSupplyTower && (supplyArray == null || supplyArray.Length == 0))
-                return;
-
-            if (ResourceSystem.Instance.Mineral < cost.Mineral || ResourceSystem.Instance.Gas < cost.Gas)
-                return;
-
-            if (!InfiniteGrid.Instance.CanPlaceAt(index, buildRange))
-                return;
-
-            Vector3 position = InfiniteGrid.Instance.GetCellCenterPositionFromCellIndex(index);
-            NetworkObject towerObject = Runner.Spawn(towerRef, position, Quaternion.identity);
-            if (towerObject == null)
-                return;
-
-            if (towerObject.TryGetComponent(out GridPlaceable placeable) && !placeable.HasGridOccupation)
+            if (!success || !isSupplyTower || SupplyTowerManager.Instance == null)
             {
-                Runner.Despawn(towerObject);
+                _pendingSupplyArray = System.Array.Empty<int>();
                 return;
             }
 
-            if (isSupplyTower)
-            {
-                if (!towerObject.TryGetComponent(out SupplyTower supplyTower) ||
-                    !supplyTower.TryLoadSupplies(supplyArray))
-                {
-                    Runner.Despawn(towerObject);
-                    return;
-                }
-            }
-
-            if (!TryRegisterCenterTowerBuild(isCenterTower))
-            {
-                Runner.Despawn(towerObject);
-                return;
-            }
-
-            ResourceSystem.Instance.Mineral -= cost.Mineral;
-            ResourceSystem.Instance.Gas -= cost.Gas;
-        }
-
-        private bool CanBuildCenterTower(bool isCenterTower)
-        {
-            if (!isCenterTower)
-                return true;
-
-            return TryGetComponent(out PlayerBuilder builder) &&
-                   GetCenterTowerCountForBuild(builder) < builder.MaxCenterTowerCount;
-        }
-
-        private bool TryRegisterCenterTowerBuild(bool isCenterTower)
-        {
-            if (!isCenterTower)
-                return true;
-
-            if (!TryGetComponent(out PlayerBuilder builder))
-                return false;
-
-            int centerTowerCount = GetStateAuthorityCenterTowerCount();
-            if (centerTowerCount <= 0)
-            {
-                centerTowerCount = builder.CenterTowerCount + 1;
-            }
-
-            if (centerTowerCount > builder.MaxCenterTowerCount)
-                return false;
-
-            builder.SetCenterTowerCount(centerTowerCount);
-            return true;
-        }
-
-        private int GetCenterTowerCountForBuild(PlayerBuilder builder)
-        {
-            if (HasStateAuthority)
-            {
-                return GetStateAuthorityCenterTowerCount();
-            }
-
-            return builder.CenterTowerCount;
-        }
-
-        private int GetStateAuthorityCenterTowerCount()
-        {
-            if (InfiniteGrid.Instance == null || InfiniteGrid.Instance.HostOnlyReadTowers == null)
-                return 0;
-
-            int count = 0;
-            foreach (Tower tower in InfiniteGrid.Instance.HostOnlyReadTowers)
-            {
-                if (tower != null && tower.IsCenter)
-                {
-                    count++;
-                }
-            }
-
-            return count;
+            SupplyTowerManager.Instance.TryConsumePendingSupplies(_pendingSupplyArray);
+            _pendingSupplyArray = System.Array.Empty<int>();
         }
     }
 }

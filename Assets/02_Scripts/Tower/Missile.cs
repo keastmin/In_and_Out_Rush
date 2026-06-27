@@ -14,8 +14,11 @@ namespace KIM.Dev
         [SerializeField] private LayerMask _damageableMask = ~0;
 
         private float _damage;
+        private float _baseDamage;
         private float _explosionRange;
         private float _speed;
+        private TowerPropertiesType _propertyType;
+        private Tower _sourceTower;
 
         private Collider _targetCollider;
         private Vector3 _lastTargetPos;
@@ -41,14 +44,24 @@ namespace KIM.Dev
         /// 스폰 직후(호스트)에서만 초기화해도 충분함.
         /// Spawn 콜백이 모든 피어에서 호출되더라도, 아래 가드로 클라는 무시한다.
         /// </summary>
-        public void InitMissile(float damage, float explosionRange, float speed, Collider targetCollider)
+        public void InitMissile(
+            float damage,
+            float explosionRange,
+            float speed,
+            Collider targetCollider,
+            TowerPropertiesType propertyType = TowerPropertiesType.None,
+            Tower sourceTower = null,
+            float baseDamage = 0f)
         {
             if (!HasStateAuthority)
                 return;
 
             _damage = damage;
+            _baseDamage = baseDamage;
             _explosionRange = explosionRange;
             _speed = speed;
+            _propertyType = propertyType;
+            _sourceTower = sourceTower;
 
             _targetCollider = targetCollider;
             _lastTargetPos = targetCollider != null ? targetCollider.transform.position : _rb.position;
@@ -143,7 +156,15 @@ namespace KIM.Dev
                     if (col.TryGetComponent(out IDamageable d))
                     {
                         if (damaged.Add(d))
+                        {
                             d.TakeDamage(_damage);
+                            TowerPropertyEffectApplier.ApplyEffect(
+                                col,
+                                _propertyType,
+                                _sourceTower,
+                                _baseDamage,
+                                _damage);
+                        }
                     }
                 }
             }

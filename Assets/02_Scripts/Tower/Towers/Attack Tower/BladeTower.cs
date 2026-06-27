@@ -6,6 +6,8 @@ namespace KIM.Dev
 {
     public class BladeTower : AttackTower
     {
+        protected override TowerUpgradeType UpgradeType => TowerUpgradeType.Blade;
+
         // 칼날 회전 이펙트 재생
         // 타겟 몬스터에서 피격 이펙트 재생
         // 타겟 몬스터에 데미지 적용
@@ -47,7 +49,7 @@ namespace KIM.Dev
         {
             if (collider.TryGetComponent(out NetworkObject hitNo))
             {
-                collider.GetComponent<Monster>()?.TakeDamage(blade.Damage);
+                ApplyDamageAndPropertyEffect(collider, blade.Damage);
             }
         }
 

@@ -21,17 +21,16 @@ namespace KIM.Dev
             if (towers == null || towers.Count == 0) return;
 
             NetworkId[] ids = new NetworkId[towers.Count];
-            Cost[] costs = new Cost[towers.Count];
             int n = 0;
 
             foreach (var t in towers)
             {
                 if (t == null) continue;
+                if (!t.HasCapability(TowerCapability.Sell)) continue;
 
                 NetworkObject no = t.Object;
                 if (no == null) continue;
 
-                costs[n] = t.Cost;
                 ids[n++] = no.Id;
             }
 
@@ -40,11 +39,10 @@ namespace KIM.Dev
             if (n != ids.Length)
             {
                 Array.Resize(ref ids, n);
-                Array.Resize(ref costs, n);
             }
 
             towers.Clear();
-            RPC_SellTower(ids, costs);
+            RPC_SellTower(ids);
         }
 
         #endregion
@@ -52,32 +50,38 @@ namespace KIM.Dev
         #region Core
 
         [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-        private void RPC_SellTower(NetworkId[] towerIds, Cost[] costs)
+        private void RPC_SellTower(NetworkId[] towerIds)
         {
+            int mineralRefund = 0;
+            int gasRefund = 0;
+
             foreach (var id in towerIds)
             {
                 if (!Runner.TryFindObject(id, out NetworkObject obj))
                     continue;
 
-                if (obj.TryGetComponent(out Tower tower))
+                if (!obj.TryGetComponent(out Tower tower) ||
+                    !tower.HasCapability(TowerCapability.Sell))
                 {
-                    if (tower.IsCenter && StageBootstrapper.Instance != null && StageBootstrapper.Instance.PlayerBuilder != null)
-                    {
-                        int nextCenterCount = Math.Max(0, StageBootstrapper.Instance.PlayerBuilder.CenterTowerCount - 1);
-                        StageBootstrapper.Instance.PlayerBuilder.SetCenterTowerCount(nextCenterCount);
-                    }
-
-                    tower.ReleaseGridOccupation();
+                    continue;
                 }
+
+                mineralRefund += (int)(tower.Cost.Mineral * 0.5f);
+                gasRefund += (int)(tower.Cost.Gas * 0.5f);
+
+                if (tower.IsCenter && StageBootstrapper.Instance != null && StageBootstrapper.Instance.PlayerBuilder != null)
+                {
+                    int nextCenterCount = Math.Max(0, StageBootstrapper.Instance.PlayerBuilder.CenterTowerCount - 1);
+                    StageBootstrapper.Instance.PlayerBuilder.SetCenterTowerCount(nextCenterCount);
+                }
+
+                tower.ReleaseGridOccupation();
 
                 Runner.Despawn(obj);
             }
 
-            foreach (var cost in costs)
-            {
-                ResourceSystem.Instance.Mineral += (int)(cost.Mineral * 0.5f);
-                ResourceSystem.Instance.Gas += (int)(cost.Gas * 0.5f);
-            }
+            ResourceSystem.Instance.Mineral += mineralRefund;
+            ResourceSystem.Instance.Gas += gasRefund;
         }
 
         #endregion

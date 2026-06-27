@@ -22,6 +22,10 @@ namespace KIM.Dev
         [SerializeField] private GameObject _randomPropertiesUI;
         [SerializeField] private GameObject[] _selectPropertiesUI;
 
+        [Header("Tower Actions")]
+        [SerializeField] private GameObject _towerSellButton;
+        [SerializeField] private GameObject _towerMoveButton;
+
         public bool IsLaboratoryUIActive => _laboratoryUI.gameObject.activeSelf;
 
         private PlayerRunner _playerRunner;
@@ -131,20 +135,35 @@ namespace KIM.Dev
         }
 
         // 타워 선택 UI 활성화/비활성화
-        public void ActivationTowerSelectUI(bool isActive, TowerType type = TowerType.Attack)
+        public void ActivationTowerSelectUI(
+            bool isActive,
+            TowerType type = TowerType.Attack,
+            TowerCapability capabilities = TowerCapability.None)
         {
             _builderMainUI.gameObject.SetActive(!isActive);
             _towerSelectUI.SetActive(isActive);
 
+            RefreshTowerSelectActions(type, capabilities);
+        }
+
+        public void RefreshTowerSelectActions(TowerType type, TowerCapability capabilities)
+        {
+            bool canSell = (capabilities & TowerCapability.Sell) != 0;
+            bool canMove = (capabilities & TowerCapability.Move) != 0;
+            bool canAssignProperty = (capabilities & TowerCapability.AssignProperty) != 0;
+
+            _towerSellButton?.SetActive(canSell);
+            _towerMoveButton?.SetActive(canMove);
+
             switch (type)
             {
                 case TowerType.Attack:
-                    _randomPropertiesUI?.SetActive(true);
+                    _randomPropertiesUI?.SetActive(canAssignProperty);
                     SelectPropertiesButtonsActive(false);
                     break;
                 case TowerType.Center:
                     _randomPropertiesUI?.SetActive(false);
-                    SelectPropertiesButtonsActive(true);
+                    SelectPropertiesButtonsActive(canAssignProperty);
                     break;
                 case TowerType.Support:
                     _randomPropertiesUI?.SetActive(false);

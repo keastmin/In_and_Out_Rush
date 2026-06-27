@@ -344,6 +344,9 @@ namespace KIM.Dev
                 if (tower == null)
                     continue;
 
+                if (!tower.HasCapability(TowerCapability.Move))
+                    continue;
+
                 var ghost = Instantiate(tower.Ghost);
                 if (ghost == null)
                     continue;
@@ -468,6 +471,9 @@ namespace KIM.Dev
 
                 if (!obj.TryGetComponent(out Tower tower) || tower == null)
                     continue;
+
+                if (!tower.HasCapability(TowerCapability.Move))
+                    return;
 
                 Vector2Int currentCenter = tower.HasGridOccupation
                     ? tower.BuiltIndex

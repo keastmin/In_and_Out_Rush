@@ -5,6 +5,8 @@ namespace KIM.Dev
 {
     public sealed class MissileTower : AttackTower
     {
+        protected override TowerUpgradeType UpgradeType => TowerUpgradeType.MisileRauncher;
+
         // 총구 위치에서 발포 이펙트 재생
         // 타겟 몬스터에서 피격 이펙트 재생
         // 타겟 몬스터에 데미지 적용
@@ -30,7 +32,14 @@ namespace KIM.Dev
                 _attackTick = TickTimer.CreateFromSeconds(Runner, EffectiveAttackInterval);
                 // 데미지는 미사일 탄 자체가 넣음
                 var missile = Runner.Spawn(_missliePrefab, _attackPosition.position, _attackPosition.rotation);
-                missile.InitMissile(_missileDamage, _explosionRange, _missileSpeed, _currTarget);
+                missile.InitMissile(
+                    CalculateDamage(_missileDamage),
+                    _explosionRange,
+                    _missileSpeed,
+                    _currTarget,
+                    PropertyType,
+                    this,
+                    _missileDamage);
             }
         }
     }

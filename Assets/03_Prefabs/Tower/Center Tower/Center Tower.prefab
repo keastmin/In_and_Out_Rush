@@ -120,6 +120,16 @@ MonoBehaviour:
   _flamePropertiesEffect: {fileID: 2553892069381617317}
   _blitzPropertiesEffect: {fileID: 8756958642325513497}
   _bioPropertiesEffect: {fileID: 5682370755753876483}
+  _skillProjectilePrefab: {fileID: 5823364036799239144, guid: c4d90dfcad1abeb45a30cfa9f89aebfa, type: 3}
+  _skillExplosionPrefab: {fileID: 3084805165390535365, guid: 97f9469870b03404084a50991f2c7d1a, type: 3}
+  _skillProjectileSpeed: 10
+  _skillExplosionRange: 5
+  _flameSkillCooldown: 60
+  _blitzSkillCooldown: 45
+  _bioSkillCooldown: 30
+  _empStunDuration: 3
+  _skillVisualPoolPrewarmCount: 3
+  _skillExplosionVisualReleaseDelay: 3
 --- !u!4 &5158920055649005697 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 513425532071931175, guid: 6892247cd852b494dac5840fdd95f6ea, type: 3}

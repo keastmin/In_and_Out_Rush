@@ -107,6 +107,11 @@ namespace KIM.Dev
 
         protected bool TryAssignProperty(TowerPropertiesType propertyType)
         {
+            return TryAssignProperty(propertyType, default);
+        }
+
+        protected bool TryAssignProperty(TowerPropertiesType propertyType, Cost requestedCost)
+        {
             if (propertyType == TowerPropertiesType.None ||
                 (GetConfiguredCapabilities() & TowerCapability.AssignProperty) == 0 ||
                 HasProperty ||
@@ -115,9 +120,18 @@ namespace KIM.Dev
                 return false;
             }
 
+            Cost cost = GetPropertyAssignmentCost(propertyType, requestedCost);
+            if (!CanPayPropertyAssignmentCost(cost))
+                return false;
+
             _isPropertyRequestPending = true;
-            RPC_RequestAssignProperty(propertyType);
+            RPC_RequestAssignProperty(propertyType, requestedCost);
             return true;
+        }
+
+        protected virtual Cost GetPropertyAssignmentCost(TowerPropertiesType propertyType, Cost requestedCost)
+        {
+            return requestedCost;
         }
 
         protected virtual void OnTowerPropertyChanged(TowerPropertiesType propertyType)
@@ -185,11 +199,63 @@ namespace KIM.Dev
             OnTowerPropertyChanged(PropertyType);
         }
 
+        private static bool CanPayPropertyAssignmentCost(Cost cost)
+        {
+            if (cost.Mineral <= 0 && cost.Gas <= 0)
+                return true;
+
+            return ResourceSystem.Instance != null &&
+                   ResourceSystem.Instance.IsResourceSufficient(cost);
+        }
+
+        private static bool TryPayPropertyAssignmentCost(Cost cost)
+        {
+            if (cost.Mineral <= 0 && cost.Gas <= 0)
+                return true;
+
+            if (ResourceSystem.Instance == null || !ResourceSystem.Instance.IsResourceSufficient(cost))
+                return false;
+
+            ResourceSystem.Instance.Mineral -= cost.Mineral;
+            ResourceSystem.Instance.Gas -= cost.Gas;
+            return true;
+        }
+
+        private void NotifyPropertyAssignRejected(PlayerRef requester)
+        {
+            if (requester == PlayerRef.None)
+            {
+                _isPropertyRequestPending = false;
+                return;
+            }
+
+            RPC_NotifyPropertyAssignRejected(requester);
+        }
+
+        [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+        private void RPC_NotifyPropertyAssignRejected([RpcTarget] PlayerRef requester)
+        {
+            _isPropertyRequestPending = false;
+        }
+
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-        private void RPC_RequestAssignProperty(TowerPropertiesType propertyType)
+        private void RPC_RequestAssignProperty(
+            TowerPropertiesType propertyType,
+            Cost requestedCost,
+            RpcInfo rpcInfo = default)
         {
             if (PropertyType != TowerPropertiesType.None || propertyType == TowerPropertiesType.None)
+            {
+                NotifyPropertyAssignRejected(rpcInfo.Source);
                 return;
+            }
+
+            Cost cost = GetPropertyAssignmentCost(propertyType, requestedCost);
+            if (!TryPayPropertyAssignmentCost(cost))
+            {
+                NotifyPropertyAssignRejected(rpcInfo.Source);
+                return;
+            }
 
             PropertyType = propertyType;
         }

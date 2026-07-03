@@ -48,8 +48,8 @@ MonoBehaviour:
   _meshRenderers:
   - {fileID: 6060775977087562456}
   - {fileID: 1682783116373012347}
-  _enableMat: {fileID: 2100000, guid: 28692f7f1e3a530459cc61512adeb04b, type: 2}
-  _disableMat: {fileID: 2100000, guid: f476d72d8e4b2df458a80a806a27b46c, type: 2}
+  _enableMat: {fileID: 2100000, guid: 1ab9f42695df9b64080449171ba7c3e6, type: 2}
+  _disableMat: {fileID: 2100000, guid: 6a6ec261623de784d80759341e0daa2f, type: 2}
   _buffTransform: {fileID: 0}
   _showLegacyBuffRangeCircle: 0
 --- !u!1 &4832906137266226308

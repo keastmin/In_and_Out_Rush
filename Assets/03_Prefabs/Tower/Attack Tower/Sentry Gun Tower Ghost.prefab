@@ -55,8 +55,8 @@ MonoBehaviour:
   - {fileID: 8565095559630036747}
   - {fileID: 6892367314031027029}
   - {fileID: 4769035637995855295}
-  _enableMat: {fileID: 2100000, guid: 28692f7f1e3a530459cc61512adeb04b, type: 2}
-  _disableMat: {fileID: 2100000, guid: f476d72d8e4b2df458a80a806a27b46c, type: 2}
+  _enableMat: {fileID: 2100000, guid: 1ab9f42695df9b64080449171ba7c3e6, type: 2}
+  _disableMat: {fileID: 2100000, guid: 6a6ec261623de784d80759341e0daa2f, type: 2}
   _buffTransform: {fileID: 0}
   _showLegacyBuffRangeCircle: 0
 --- !u!1001 &7974117419279066407
@@ -70,6 +70,46 @@ PrefabInstance:
     - target: {fileID: 529306906193240519, guid: 4063295e4c703164a899864faf273f02, type: 3}
       propertyPath: m_Name
       value: Sentrygun Tower
+      objectReference: {fileID: 0}
+    - target: {fileID: 1762196646019742252, guid: 4063295e4c703164a899864faf273f02, type: 3}
+      propertyPath: m_CastShadows
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1762196646019742252, guid: 4063295e4c703164a899864faf273f02, type: 3}
+      propertyPath: m_LightProbeUsage
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1925799479049886563, guid: 4063295e4c703164a899864faf273f02, type: 3}
+      propertyPath: m_CastShadows
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1925799479049886563, guid: 4063295e4c703164a899864faf273f02, type: 3}
+      propertyPath: m_LightProbeUsage
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2690590273457555275, guid: 4063295e4c703164a899864faf273f02, type: 3}
+      propertyPath: m_CastShadows
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2690590273457555275, guid: 4063295e4c703164a899864faf273f02, type: 3}
+      propertyPath: m_LightProbeUsage
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3208468588030195864, guid: 4063295e4c703164a899864faf273f02, type: 3}
+      propertyPath: m_CastShadows
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3208468588030195864, guid: 4063295e4c703164a899864faf273f02, type: 3}
+      propertyPath: m_LightProbeUsage
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3535143211292362354, guid: 4063295e4c703164a899864faf273f02, type: 3}
+      propertyPath: m_CastShadows
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3535143211292362354, guid: 4063295e4c703164a899864faf273f02, type: 3}
+      propertyPath: m_LightProbeUsage
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4268570111676256473, guid: 4063295e4c703164a899864faf273f02, type: 3}
       propertyPath: m_LocalPosition.x
@@ -109,6 +149,38 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4268570111676256473, guid: 4063295e4c703164a899864faf273f02, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4459933237504888552, guid: 4063295e4c703164a899864faf273f02, type: 3}
+      propertyPath: m_CastShadows
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4459933237504888552, guid: 4063295e4c703164a899864faf273f02, type: 3}
+      propertyPath: m_LightProbeUsage
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5670857349835244050, guid: 4063295e4c703164a899864faf273f02, type: 3}
+      propertyPath: m_CastShadows
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5670857349835244050, guid: 4063295e4c703164a899864faf273f02, type: 3}
+      propertyPath: m_LightProbeUsage
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6917154876339066948, guid: 4063295e4c703164a899864faf273f02, type: 3}
+      propertyPath: m_CastShadows
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6917154876339066948, guid: 4063295e4c703164a899864faf273f02, type: 3}
+      propertyPath: m_LightProbeUsage
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8184474386887649499, guid: 4063295e4c703164a899864faf273f02, type: 3}
+      propertyPath: m_CastShadows
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8184474386887649499, guid: 4063295e4c703164a899864faf273f02, type: 3}
+      propertyPath: m_LightProbeUsage
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []

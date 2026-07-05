@@ -31,18 +31,12 @@ public sealed class SpawnBarrierStrategy : IItemConsumptionStrategy
             return false;
         }
 
-        Vector3 direction = _barrierMuzzle.forward;
-        direction.y = 0f;
-        if (direction.sqrMagnitude <= 0.0001f)
-            direction = Vector3.forward;
-
-        direction.Normalize();
         BarrierWave barrier = playerRunner.Runner.Spawn(
             _barrierPrefab,
             _barrierMuzzle.position,
-            Quaternion.LookRotation(direction, Vector3.up));
+            Quaternion.identity);
 
-        barrier.Initialize(direction);
+        barrier.Initialize();
         return true;
     }
 }

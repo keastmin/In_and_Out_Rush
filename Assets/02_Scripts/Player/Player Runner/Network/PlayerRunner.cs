@@ -34,6 +34,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     [Networked] public float WeaponAttackSpeedScaler { get; set; } = 1f;
     [Networked] public float WeaponReloadSpeedScaler { get; set; } = 1f;
     [Networked] public NetworkBool IsDead { get; set; }
+    [Networked] public NetworkBool IsBiodecompositionDeviceActive { get; set; }
 
     [Header("Weapon")]
     [SerializeField] private MonoBehaviour _weaponBehaviour;
@@ -46,6 +47,17 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     [SerializeField] private Transform _electricGrenadeMuzzle;
     [SerializeField] private RunnerItemDefinition[] _itemDefinitions =
         RunnerItemInventory.CreateDefaultDefinitions();
+
+    [Header("Biodecomposition Device")]
+    [SerializeField, Min(0.01f)] private float _biodecompositionDuration = 30f;
+    [SerializeField, Min(0.01f)] private float _biodecompositionDamageInterval = 0.5f;
+    [SerializeField, Min(0f)] private float _biodecompositionMaxHealthDamageRate = 0.035f;
+    [SerializeField, Min(0f)] private float _slashMonsterContactDamage = 1f;
+    [SerializeField, Min(0.01f)] private float _biodecompositionFallbackTrackRadius = 0.4f;
+    [SerializeField] private LayerMask _biodecompositionMonsterLayerMask = 1 << 6;
+    [SerializeField] private GameObject _biodecompositionSlashVfxPrefab;
+    [SerializeField, Min(0.01f)] private float _biodecompositionSlashVfxSampleSpacing = 0.8f;
+    [SerializeField, Min(1)] private int _biodecompositionSlashVfxMaxPoints = 64;
 
     [SerializeField] private ParticleSystem _swiftnessParticleEffect;
     public Sprite[] skillIcons;
@@ -65,6 +77,10 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     private PlayerRunnerSwiftnessHandler _swiftnessHandler;
     private PlayerRunnerBuffHandler _buffHandler;
     private PlayerRunnerUpgradeHandler _upgradeHandler;
+    private SlashContactDetector _slashContactDetector;
+    private PlayerRunnerSlashContactDamageHandler _slashContactDamageHandler;
+    private PlayerRunnerBiodecompositionDeviceHandler _biodecompositionDeviceHandler;
+    private PlayerRunnerBiodecompositionSlashVfxHandler _biodecompositionSlashVfxHandler;
 
     private float _elapsedTime = 0f;
 
@@ -117,6 +133,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
             new SpawnBarrierStrategy(_barrierPrefab, _barrierMuzzle),
             new SpawnIncineratorStrategy(_incineratorDronePrefab),
             new SpawnElectricGrenadeStrategy(_electricGrenadePrefab, _electricGrenadeMuzzle),
+            new UseBiodecompositionDeviceStrategy(),
         });
         _itemInventory = new RunnerItemInventory(_itemConsumer, _itemDefinitions);
         _skillCaster = new RunnerSkillCaster();
@@ -126,6 +143,10 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
         _swiftnessHandler = new PlayerRunnerSwiftnessHandler();
         _buffHandler = new PlayerRunnerBuffHandler();
         _upgradeHandler = new PlayerRunnerUpgradeHandler();
+        _slashContactDetector = new SlashContactDetector();
+        _slashContactDamageHandler = new PlayerRunnerSlashContactDamageHandler();
+        _biodecompositionDeviceHandler = new PlayerRunnerBiodecompositionDeviceHandler();
+        _biodecompositionSlashVfxHandler = new PlayerRunnerBiodecompositionSlashVfxHandler();
     }
 
     public override void Spawned()
@@ -144,6 +165,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
             }
 
             IsDead = false;
+            IsBiodecompositionDeviceActive = false;
         }
         BuffReceiverRegistry.Register(this, transform, BuffTargetType.Runner);
         RefreshItemSlots();
@@ -162,7 +184,10 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
         if (IsDead)
         {
             if (HasStateAuthority)
+            {
                 StopMovement();
+                _biodecompositionDeviceHandler?.Stop(this);
+            }
             return;
         }
 
@@ -170,6 +195,27 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
         {
             _buffHandler.Tick(Runner.DeltaTime);
             RecoverStamina(Runner.DeltaTime);
+            TerritorySystem territorySystem = StageBootstrapper.Instance != null
+                ? StageBootstrapper.Instance.TerritorySystem
+                : null;
+
+            _biodecompositionDeviceHandler.Tick(
+                this,
+                _slashContactDetector,
+                territorySystem,
+                _biodecompositionDamageInterval,
+                _biodecompositionMaxHealthDamageRate,
+                _biodecompositionFallbackTrackRadius,
+                _biodecompositionMonsterLayerMask);
+            _slashContactDamageHandler.Tick(
+                this,
+                _slashContactDetector,
+                territorySystem,
+                _biodecompositionDamageInterval,
+                _slashMonsterContactDamage,
+                _biodecompositionFallbackTrackRadius,
+                _biodecompositionMonsterLayerMask,
+                !_biodecompositionDeviceHandler.IsActive);
         }
 
         if (!GetInput(out NetworkInputData data)) return;
@@ -199,10 +245,23 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
         }
 
         OnPositionChanged?.Invoke(sharedPosition, this, this);
+
+        TerritorySystem territorySystem = StageBootstrapper.Instance != null
+            ? StageBootstrapper.Instance.TerritorySystem
+            : null;
+        _biodecompositionSlashVfxHandler?.Render(
+            IsBiodecompositionDeviceActive && !IsDead,
+            _biodecompositionSlashVfxPrefab,
+            _slashContactDetector,
+            territorySystem,
+            _biodecompositionSlashVfxSampleSpacing,
+            _biodecompositionSlashVfxMaxPoints);
     }
 
     public override void Despawned(NetworkRunner runner, bool hasState)
     {
+        _biodecompositionDeviceHandler?.Stop(this);
+        _biodecompositionSlashVfxHandler?.Dispose();
         base.Despawned(runner, hasState);
         BuffReceiverRegistry.Unregister(this);
     }
@@ -407,6 +466,8 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
 
     // IDamageable
     public void TakeDamage(float damage) => _combatHandler.TakeDamage(this, damage);
+    public void TakeTrackCompletionDamage(float damage) => _combatHandler.TakeTrackCompletionDamage(this, damage);
+    public void TakeSlashDamage(float damage) => _combatHandler.TakeSlashDamage(this, damage);
     public void Kill() => _combatHandler.Kill(this);
     public void StopMovement() => _movement.Stop();
     public void InvokeDiedEvent(PlayerRunner runner, object sender) => OnDied?.Invoke(runner, sender);
@@ -447,6 +508,17 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     // RunnerSkillCaster 호출용 공개 메서드
     public void StartTumble() => _tumbleHandler.StartTumble(this, _rigidbody);
     public void StartInvincibility(float duration) => _combatHandler.StartInvincibility(this, duration);
+    public bool TryStartBiodecompositionDevice() =>
+        _biodecompositionDeviceHandler.TryStart(this, _biodecompositionDuration);
+    public void SetSlashDamageInvincible(bool enabled) =>
+        _combatHandler.SetSlashDamageInvincible(this, enabled);
+    public void SetBiodecompositionDeviceActive(bool enabled)
+    {
+        if (!HasStateAuthority || Object == null || !Object.IsValid || !Object.IsInSimulation)
+            return;
+
+        IsBiodecompositionDeviceActive = enabled;
+    }
     public void StartOutOfBody() => _outOfBodyController.StartOutOfBody();
     public void StartSwiftness() => _swiftnessHandler.StartSwiftness(this, _swiftnessParticleEffect);
     public void TeleportTo(Vector3 position) => _teleporter.TeleportTo(position);

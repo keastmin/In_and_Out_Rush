@@ -21,6 +21,8 @@ public class TerritorySystem : NetworkSystemBase
 
     public Territory Territory;
     public TerritoryVisible TerritoryVisible;
+    public bool IsExpanding => isExpanding;
+    public float ExpansionLineWidth => lineRenderer != null ? lineRenderer.widthMultiplier : 0f;
 
     public event Action<Territory, TerritorySystem> OnTerritoryExpandedEvent;
 
@@ -111,6 +113,21 @@ public class TerritorySystem : NetworkSystemBase
         var converted = playerPath.ConvertAll(p => new Vector3(p.x, 0, p.y));
         converted.Add(new Vector3(point.x, 0, point.y));
         lineRenderer.SetPositions(converted.ToArray());
+    }
+
+    public bool TryGetCurrentExpansionPath(List<Vector3> results)
+    {
+        if (results == null)
+            return false;
+
+        results.Clear();
+        if (!isExpanding || lineRenderer == null || lineRenderer.positionCount < 2)
+            return false;
+
+        for (int i = 0; i < lineRenderer.positionCount; i++)
+            results.Add(lineRenderer.GetPosition(i));
+
+        return results.Count >= 2;
     }
 
     Vector2 toward;

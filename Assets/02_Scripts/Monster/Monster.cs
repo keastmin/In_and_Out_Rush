@@ -16,6 +16,24 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
     [SerializeField] protected Transform playerTransform;
     protected Rigidbody rigidBody;
 
+    public bool CanAccessNetworkState => Object != null && Object.IsValid && Object.IsInSimulation;
+    public float CurrentHealth => CanAccessNetworkState ? Health : 0f;
+    public float MaxHealth => maxHealth > 0f ? maxHealth : health;
+
+    public bool TryGetHealthSnapshot(out float currentHealth, out float maximumHealth)
+    {
+        maximumHealth = MaxHealth;
+
+        if (!CanAccessNetworkState)
+        {
+            currentHealth = 0f;
+            return false;
+        }
+
+        currentHealth = Health;
+        return true;
+    }
+
     public override void Spawned()
     {
         base.Spawned();
@@ -36,7 +54,7 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
 
     public virtual void ApplyStatMultiplier(float multiplier)
     {
-        if (!Object.HasStateAuthority)
+        if (!CanAccessNetworkState || !Object.HasStateAuthority)
             return;
 
         float previousMaxHealth = maxHealth > 0f ? maxHealth : health;
@@ -47,7 +65,7 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
 
     public void TakeDamage(float damage)
     {
-        if (Object.HasStateAuthority)
+        if (CanAccessNetworkState && Object.HasStateAuthority)
         {
             Health -= damage;
             if (Health <= 0)
@@ -59,7 +77,7 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
 
     public void ApplyStun(float duration)
     {
-        if (!Object.HasStateAuthority || duration <= 0f)
+        if (!CanAccessNetworkState || !Object.HasStateAuthority || duration <= 0f)
             return;
 
         StunTimer = TickTimer.CreateFromSeconds(Runner, duration);
@@ -70,7 +88,7 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
 
     public override void FixedUpdateNetwork()
     {
-        if (!Object.HasStateAuthority) { return; }
+        if (!CanAccessNetworkState || !Object.HasStateAuthority) { return; }
         if (IsStunned)
         {
             StopByStun();

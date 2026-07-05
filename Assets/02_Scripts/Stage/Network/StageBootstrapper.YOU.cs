@@ -10,6 +10,7 @@ namespace Dev.Network
         [SerializeField] private ResourceSpawnSystem _resourceSpawnSystem;
         [SerializeField] private TimeSystem timeSystem;
         [SerializeField] private TrackSystem roundTrackSystem;
+        [SerializeField] private TerritorySystem territorySystem;
         [SerializeField] private TrackMonsterSpawnSystem trackMonsterSpawnSystem;
 
         [Header("Gate")]
@@ -21,6 +22,9 @@ namespace Dev.Network
         private bool _isReturningToTitle = false;
 
         public event global::System.Action<PlayerRunner, Gate, object> OnGateEntered;
+        public TrackSystem RoundTrackSystem => roundTrackSystem;
+        public TerritorySystem TerritorySystem =>
+            territorySystem != null ? territorySystem : UnityEngine.Object.FindFirstObjectByType<TerritorySystem>();
 
         private void YOUInitializeHost()
         {
@@ -43,6 +47,9 @@ namespace Dev.Network
         {
             if (roundTrackSystem == null)
                 roundTrackSystem = FindNetworkSystem<TrackSystem>(systems);
+
+            if (territorySystem == null)
+                territorySystem = FindNetworkSystem<TerritorySystem>(systems);
 
             if (trackMonsterSpawnSystem == null)
                 trackMonsterSpawnSystem = FindNetworkSystem<TrackMonsterSpawnSystem>(systems);

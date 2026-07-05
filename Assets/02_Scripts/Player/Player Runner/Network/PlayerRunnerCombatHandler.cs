@@ -6,6 +6,7 @@ using UnityEngine;
 public class PlayerRunnerCombatHandler
 {
     private bool _timedInvincible;
+    private bool _slashDamageInvincible;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     private bool _testModeInvincible;
 #endif
@@ -33,6 +34,21 @@ public class PlayerRunnerCombatHandler
             MarkAsDead(runner);
 
         UpdateHealthUI(runner);
+    }
+
+    public void TakeTrackCompletionDamage(PlayerRunner runner, float damage)
+    {
+        if (!runner.HasStateAuthority) return;
+
+        TakeDamage(runner, damage);
+    }
+
+    public void TakeSlashDamage(PlayerRunner runner, float damage)
+    {
+        if (!runner.HasStateAuthority) return;
+        if (_slashDamageInvincible) return;
+
+        TakeDamage(runner, damage);
     }
 
     public void Kill(PlayerRunner runner)
@@ -68,6 +84,13 @@ public class PlayerRunnerCombatHandler
         Debug.Log("무적 상태 시작");
         _timedInvincible = true;
         _ = EndInvincibilityAfterDelay(runner, duration);
+    }
+
+    public void SetSlashDamageInvincible(PlayerRunner runner, bool enabled)
+    {
+        if (!runner.HasStateAuthority) return;
+
+        _slashDamageInvincible = enabled;
     }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

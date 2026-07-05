@@ -5,7 +5,6 @@ using UnityEngine;
 
 [RequireComponent(typeof(NetworkObject))]
 [RequireComponent(typeof(NetworkTransform))]
-[RequireComponent(typeof(LineRenderer))]
 public sealed class IncineratorDrone : NetworkBehaviour
 {
     private const float DefaultCellSize = 1.6f;
@@ -16,8 +15,10 @@ public sealed class IncineratorDrone : NetworkBehaviour
     [SerializeField] private Vector3 localOffset = new(0f, 2f, -0.5f);
 
     [Header("Flame")]
-    [SerializeField, Min(0.01f)] private float rangeInTiles = 5f;
-    [SerializeField, Min(0.01f)] private float widthInTiles = 0.5f;
+    [SerializeField] private Transform flameMuzzle;
+    [SerializeField] private ParticleSystem flameParticle;
+    [SerializeField, Min(0.01f)] private float coneRangeInTiles = 5f;
+    [SerializeField, Range(1f, 89f)] private float coneHalfAngleDegrees = 20f;
     [SerializeField, Min(0f)] private float damagePerSecond = 10f;
     [SerializeField, Min(0.01f)] private float damageInterval = 0.2f;
     [SerializeField, Min(0f)] private float turnSpeedDegrees = 180f;
@@ -30,8 +31,6 @@ public sealed class IncineratorDrone : NetworkBehaviour
     private readonly HashSet<IDamageable> _damagedTargets = new();
     private readonly List<IItemDestructibleProjectile> _projectileBuffer = new();
 
-    private LineRenderer _flameRenderer;
-    private Material _runtimeMaterial;
     private TickTimer _lifeTimer;
     private TickTimer _damageTimer;
     private bool _initialized;
@@ -43,9 +42,8 @@ public sealed class IncineratorDrone : NetworkBehaviour
 
     public override void Spawned()
     {
-        _flameRenderer = GetComponent<LineRenderer>();
         _cellSize = ResolveCellSize();
-        ConfigureFlameRenderer();
+        PlayFlameParticle();
     }
 
     public bool Initialize(PlayerRunner owner)
@@ -103,27 +101,19 @@ public sealed class IncineratorDrone : NetworkBehaviour
 
     public override void Render()
     {
-        if (_flameRenderer == null)
-            _flameRenderer = GetComponent<LineRenderer>();
-
-        Vector3 direction = FlattenDirection(AimDirection);
-        float range = rangeInTiles * ResolveCellSize();
-        _flameRenderer.SetPosition(0, transform.position);
-        _flameRenderer.SetPosition(1, transform.position + direction * range);
+        PlayFlameParticle();
     }
 
     public override void Despawned(NetworkRunner runner, bool hasState)
     {
-        if (_runtimeMaterial != null)
-            Destroy(_runtimeMaterial);
-
+        StopFlameParticle();
         base.Despawned(runner, hasState);
     }
 
     private Vector3 FindDesiredDirection(PlayerRunner owner)
     {
-        Vector3 origin = transform.position;
-        float range = rangeInTiles * _cellSize;
+        Vector3 origin = GetFlameOrigin();
+        float range = GetConeRange();
         int hitCount = Physics.OverlapSphereNonAlloc(
             origin,
             range,
@@ -169,11 +159,10 @@ public sealed class IncineratorDrone : NetworkBehaviour
 
     private void ApplyFlameDamage()
     {
-        GetBeam(out Vector3 start, out Vector3 end, out float radius);
-        int hitCount = Physics.OverlapCapsuleNonAlloc(
-            start,
-            end,
-            radius,
+        GetCone(out Vector3 origin, out Vector3 forward, out float range, out float minimumDot);
+        int hitCount = Physics.OverlapSphereNonAlloc(
+            origin,
+            range,
             _targetBuffer,
             monsterLayerMask,
             QueryTriggerInteraction.Collide);
@@ -184,6 +173,9 @@ public sealed class IncineratorDrone : NetworkBehaviour
         for (int i = 0; i < hitCount; i++)
         {
             Collider hit = _targetBuffer[i];
+            if (!IsInsideCone(hit, origin, forward, range, minimumDot))
+                continue;
+
             IDamageable damageable = hit != null ? hit.GetComponentInParent<IDamageable>() : null;
             if (damageable != null && _damagedTargets.Add(damageable))
                 damageable.TakeDamage(damage);
@@ -193,8 +185,7 @@ public sealed class IncineratorDrone : NetworkBehaviour
     private void DestroyIntersectingProjectiles()
     {
         MonsterProjectileRegistry.CopyActiveProjectilesTo(_projectileBuffer);
-        GetBeam(out Vector3 start, out Vector3 end, out float radius);
-        float radiusSquared = radius * radius;
+        GetCone(out Vector3 origin, out Vector3 forward, out float range, out float minimumDot);
 
         for (int i = 0; i < _projectileBuffer.Count; i++)
         {
@@ -203,42 +194,73 @@ public sealed class IncineratorDrone : NetworkBehaviour
             if (projectileTransform == null)
                 continue;
 
-            if (DistanceToSegmentSquared(projectileTransform.position, start, end) <= radiusSquared)
+            if (IsInsideCone(projectileTransform.position, origin, forward, range, minimumDot))
                 projectile.DestroyByItemEffect();
         }
     }
 
-    private void GetBeam(out Vector3 start, out Vector3 end, out float radius)
+    private void GetCone(out Vector3 origin, out Vector3 forward, out float range, out float minimumDot)
     {
-        start = transform.position;
-        end = start + FlattenDirection(AimDirection) * (rangeInTiles * _cellSize);
-        radius = widthInTiles * _cellSize * 0.5f;
+        origin = GetFlameOrigin();
+        forward = GetFlameForward();
+        range = GetConeRange();
+        minimumDot = Mathf.Cos(Mathf.Clamp(coneHalfAngleDegrees, 0f, 89f) * Mathf.Deg2Rad);
     }
 
-    private void ConfigureFlameRenderer()
+    private Vector3 GetFlameOrigin()
     {
-        _flameRenderer.useWorldSpace = true;
-        _flameRenderer.positionCount = 2;
-        _flameRenderer.startWidth = widthInTiles * _cellSize;
-        _flameRenderer.endWidth = widthInTiles * _cellSize * 0.6f;
-        _flameRenderer.startColor = new Color(1f, 0.75f, 0.1f, 0.95f);
-        _flameRenderer.endColor = new Color(1f, 0.1f, 0f, 0.35f);
+        return flameMuzzle != null ? flameMuzzle.position : transform.position;
+    }
 
-        if (_flameRenderer.sharedMaterial != null)
-            return;
+    private Vector3 GetFlameForward()
+    {
+        Vector3 forward = flameMuzzle != null ? flameMuzzle.forward : transform.forward;
+        if (forward.sqrMagnitude <= 0.0001f)
+            forward = AimDirection;
 
-        Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
-        if (shader == null)
-            shader = Shader.Find("Sprites/Default");
+        return FlattenDirection(forward);
+    }
 
-        if (shader != null)
-        {
-            _runtimeMaterial = new Material(shader)
-            {
-                color = new Color(1f, 0.35f, 0.05f, 1f)
-            };
-            _flameRenderer.sharedMaterial = _runtimeMaterial;
-        }
+    private float GetConeRange()
+    {
+        return Mathf.Max(0.01f, coneRangeInTiles) * _cellSize;
+    }
+
+    private static bool IsInsideCone(Collider target, Vector3 origin, Vector3 forward, float range, float minimumDot)
+    {
+        if (target == null)
+            return false;
+
+        return IsInsideCone(target.bounds.center, origin, forward, range, minimumDot);
+    }
+
+    private static bool IsInsideCone(Vector3 point, Vector3 origin, Vector3 forward, float range, float minimumDot)
+    {
+        Vector3 offset = point - origin;
+        offset.y = 0f;
+
+        float distanceSquared = offset.sqrMagnitude;
+        if (distanceSquared <= 0.0001f)
+            return true;
+
+        float rangeSquared = range * range;
+        if (distanceSquared > rangeSquared)
+            return false;
+
+        Vector3 direction = offset / Mathf.Sqrt(distanceSquared);
+        return Vector3.Dot(forward, direction) >= minimumDot;
+    }
+
+    private void PlayFlameParticle()
+    {
+        if (flameParticle != null && !flameParticle.isPlaying)
+            flameParticle.Play(true);
+    }
+
+    private void StopFlameParticle()
+    {
+        if (flameParticle != null)
+            flameParticle.Stop(true, ParticleSystemStopBehavior.StopEmitting);
     }
 
     private void Despawn()
@@ -257,18 +279,6 @@ public sealed class IncineratorDrone : NetworkBehaviour
             return Vector3.forward;
 
         return direction.normalized;
-    }
-
-    private static float DistanceToSegmentSquared(Vector3 point, Vector3 start, Vector3 end)
-    {
-        Vector3 segment = end - start;
-        float lengthSquared = segment.sqrMagnitude;
-        if (lengthSquared <= 0.0001f)
-            return (point - start).sqrMagnitude;
-
-        float t = Mathf.Clamp01(Vector3.Dot(point - start, segment) / lengthSquared);
-        Vector3 closestPoint = start + segment * t;
-        return (point - closestPoint).sqrMagnitude;
     }
 
     private static float ResolveCellSize()

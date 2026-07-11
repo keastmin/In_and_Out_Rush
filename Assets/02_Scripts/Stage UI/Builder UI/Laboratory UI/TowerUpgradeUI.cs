@@ -15,6 +15,24 @@ namespace KIM.Dev
         [SerializeField] private TextMeshProUGUI _sparkUpgradeCountText;
         [SerializeField] private TextMeshProUGUI _biohazardUpgradeCountText;
 
+        [Header("다음 업그레이드 비용")]
+        [SerializeField] private TextMeshProUGUI _sentryMineralCostText;
+        [SerializeField] private TextMeshProUGUI _sentryGasCostText;
+        [SerializeField] private TextMeshProUGUI _laserMineralCostText;
+        [SerializeField] private TextMeshProUGUI _laserGasCostText;
+        [SerializeField] private TextMeshProUGUI _misileMineralCostText;
+        [SerializeField] private TextMeshProUGUI _misileGasCostText;
+        [SerializeField] private TextMeshProUGUI _railGunMineralCostText;
+        [SerializeField] private TextMeshProUGUI _railGunGasCostText;
+        [SerializeField] private TextMeshProUGUI _bladeMineralCostText;
+        [SerializeField] private TextMeshProUGUI _bladeGasCostText;
+        [SerializeField] private TextMeshProUGUI _plasmaMineralCostText;
+        [SerializeField] private TextMeshProUGUI _plasmaGasCostText;
+        [SerializeField] private TextMeshProUGUI _sparkMineralCostText;
+        [SerializeField] private TextMeshProUGUI _sparkGasCostText;
+        [SerializeField] private TextMeshProUGUI _biohazardMineralCostText;
+        [SerializeField] private TextMeshProUGUI _biohazardGasCostText;
+
         private TowerUpgradeManager _towerUpgradeManager;
         private readonly HashSet<TowerUpgradeType> _pendingUpgradeTypes = new();
         private readonly Dictionary<TowerUpgradeType, int> _acceptedUpgradeCounts = new();
@@ -196,9 +214,6 @@ namespace KIM.Dev
 
         private void HandleTowerUpgradeCountTextChange(TowerUpgradeType type, int count)
         {
-            // 숫자 이전에 공통적으로 들어갈 베이스 텍스트
-            string baseText = "x ";
-
             TextMeshProUGUI upgradeCountText = type switch
             {
                 TowerUpgradeType.SentryGun => _sentryUpgradeCountText,
@@ -213,9 +228,34 @@ namespace KIM.Dev
             };
 
             if (upgradeCountText != null)
-                upgradeCountText.text = baseText + count;
+                upgradeCountText.text = "Lv. " + count;
 
-            // 타입에 따라서 카운트 반영
+            RefreshUpgradeCostText(type);
+        }
+
+        private void RefreshUpgradeCostText(TowerUpgradeType type)
+        {
+            if (_towerUpgradeManager == null)
+                return;
+
+            Cost cost = _towerUpgradeManager.GetUpgradeCost(type);
+            (TextMeshProUGUI mineralText, TextMeshProUGUI gasText) = type switch
+            {
+                TowerUpgradeType.SentryGun => (_sentryMineralCostText, _sentryGasCostText),
+                TowerUpgradeType.LaserBeam => (_laserMineralCostText, _laserGasCostText),
+                TowerUpgradeType.MisileRauncher => (_misileMineralCostText, _misileGasCostText),
+                TowerUpgradeType.RailGun => (_railGunMineralCostText, _railGunGasCostText),
+                TowerUpgradeType.Blade => (_bladeMineralCostText, _bladeGasCostText),
+                TowerUpgradeType.Plasma => (_plasmaMineralCostText, _plasmaGasCostText),
+                TowerUpgradeType.Spark => (_sparkMineralCostText, _sparkGasCostText),
+                TowerUpgradeType.Biohazard => (_biohazardMineralCostText, _biohazardGasCostText),
+                _ => (null, null)
+            };
+
+            if (mineralText != null)
+                mineralText.text = cost.Mineral.ToString();
+            if (gasText != null)
+                gasText.text = cost.Gas.ToString();
         }
     }
 }

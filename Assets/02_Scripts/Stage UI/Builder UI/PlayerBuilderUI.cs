@@ -15,6 +15,7 @@ namespace KIM.Dev
         [SerializeField] private GameObject _towerSelectUI;
         [SerializeField] private DragSystem _dragSystem;
         [SerializeField] private Slider _runnerHPSlider;
+        [SerializeField] private ResourceInfoUI _resourceInfoUI;
 
         [SerializeField] private TextMeshProUGUI _buildUIText;
 
@@ -74,9 +75,14 @@ namespace KIM.Dev
             InitializeMainUI();
         }
 
-        public void InitializePlayerBuilderUI(TowerUpgradeManager towerUpgradeManager)
+        public void InitializePlayerBuilderUI(TowerUpgradeManager towerUpgradeManager, ResourceSystem resourceSystem)
         {
+            // 연구소 UI 초기화
             _laboratoryUI.InitializeLaboratoryUI(towerUpgradeManager);
+            _laboratoryUI.gameObject.SetActive(false);
+
+            // 자원 UI 초기화
+            _resourceInfoUI.InitializeResourceInfoUI(resourceSystem);
         }
 
         #region 클릭 이벤트 메서드

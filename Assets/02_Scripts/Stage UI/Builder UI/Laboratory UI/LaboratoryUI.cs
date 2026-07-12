@@ -41,6 +41,8 @@ namespace KIM.Dev
     public class LaboratoryUI : MonoBehaviour
     {
         [SerializeField] private TowerUpgradeUI _towerUpgradeUI;
+        [SerializeField] private RunnerUpgradeUI _runnerUpgradeUI;
+        [SerializeField] private RunnerSupplyUI _runnerSupplyUI;
 
         [Header("업그레이드 최대치")]
         [SerializeField] private int _hpUpgradeMaxCount = 4;
@@ -105,7 +107,9 @@ namespace KIM.Dev
 
         public void InitializeLaboratoryUI(TowerUpgradeManager towerUpgradeManager)
         {
-            _towerUpgradeUI.InitializeTowerUpgradeUI(towerUpgradeManager);
+            _towerUpgradeUI?.InitializeTowerUpgradeUI(towerUpgradeManager);
+            _runnerUpgradeUI?.InitializeRunnerUpgradeUI();
+            _runnerSupplyUI?.InitializeRunnerSupplyUI();
         }
 
         /// <summary>
@@ -115,6 +119,7 @@ namespace KIM.Dev
         public void InjectionRunnerReference(PlayerRunner runner)
         {
             _playerRunner = runner;
+            _runnerUpgradeUI?.InjectionRunnerReference(runner);
         }
 
         #region 버튼 이벤트 함수
@@ -122,6 +127,12 @@ namespace KIM.Dev
         // 러너의 체력 업그레이드
         public void OnClickRunnerHPUpButton()
         {
+            if (_runnerUpgradeUI != null)
+            {
+                _runnerUpgradeUI.OnClickRunnerHPUpButton();
+                return;
+            }
+
             TryRequestRunnerUpgrade(
                 RunnerLaboratoryUpgradeType.Health,
                 ref _currentHpUpgradeCount,
@@ -135,6 +146,12 @@ namespace KIM.Dev
         // 러너의 속도 업그레이드
         public void OnClickRunnerSpeedUpButton()
         {
+            if (_runnerUpgradeUI != null)
+            {
+                _runnerUpgradeUI.OnClickRunnerSpeedUpButton();
+                return;
+            }
+
             TryRequestRunnerUpgrade(
                 RunnerLaboratoryUpgradeType.MoveSpeed,
                 ref _currentSpeedUpgradeCount,
@@ -148,6 +165,12 @@ namespace KIM.Dev
         // 러너의 기력량 업그레이드
         public void OnClickRunnerStaminaUpButton()
         {
+            if (_runnerUpgradeUI != null)
+            {
+                _runnerUpgradeUI.OnClickRunnerStaminaUpButton();
+                return;
+            }
+
             TryRequestRunnerUpgrade(
                 RunnerLaboratoryUpgradeType.Stamina,
                 ref _currentStaminaUpgradeCount,
@@ -161,6 +184,12 @@ namespace KIM.Dev
         // 러너의 기력 회복속도 업그레이드
         public void OnClickRunnerStaminaRecoveryUpButton()
         {
+            if (_runnerUpgradeUI != null)
+            {
+                _runnerUpgradeUI.OnClickRunnerStaminaRecoveryUpButton();
+                return;
+            }
+
             TryRequestRunnerUpgrade(
                 RunnerLaboratoryUpgradeType.StaminaRecovery,
                 ref _currentStaminaRecoveryUpgradeCount,
@@ -174,6 +203,12 @@ namespace KIM.Dev
         // 러너의 무기 업그레이드
         public void OnClickRunnerWeaponUpButton()
         {
+            if (_runnerUpgradeUI != null)
+            {
+                _runnerUpgradeUI.OnClickRunnerWeaponUpButton();
+                return;
+            }
+
             TryRequestRunnerUpgrade(
                 RunnerLaboratoryUpgradeType.Weapon,
                 ref _currentWeaponUpgradeCount,
@@ -187,6 +222,12 @@ namespace KIM.Dev
         // 스킬 보급품 구매
         public void OnClickSkillSupplyButton()
         {
+            if (_runnerSupplyUI != null)
+            {
+                _runnerSupplyUI.OnClickSkillSupplyButton();
+                return;
+            }
+
             if (_currSlotFillCount >= _maxSlotCount) return;
 
             SupplyTowerManager.Instance.FillSupplyList(SupplyTowerManager.SKILL_SUPPLY_NUM);
@@ -197,6 +238,12 @@ namespace KIM.Dev
         // 무기 보급품 구매
         public void OnClickWeaponSupplyButton()
         {
+            if (_runnerSupplyUI != null)
+            {
+                _runnerSupplyUI.OnClickWeaponSupplyButton();
+                return;
+            }
+
             if (_currSlotFillCount >= _maxSlotCount) return;
 
             SupplyTowerManager.Instance.FillSupplyList(SupplyTowerManager.WEAPON_SUPPLY_NUM);
@@ -207,6 +254,12 @@ namespace KIM.Dev
         // 아이템 보급품 구매
         public void OnClickItemSupplyButton()
         {
+            if (_runnerSupplyUI != null)
+            {
+                _runnerSupplyUI.OnClickItemSupplyButton();
+                return;
+            }
+
             if (_currSlotFillCount >= _maxSlotCount) return;
 
             SupplyTowerManager.Instance.FillSupplyList(SupplyTowerManager.ITEM_SUPPLY_NUM);

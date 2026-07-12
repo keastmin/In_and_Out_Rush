@@ -53,6 +53,8 @@ namespace Dev.Network
             if (!Object.HasStateAuthority)
                 return;
 
+            ResolveReferences();
+
             if (!_hasStartPosition)
             {
                 Debug.LogWarning("Resource spawn skipped because the start position was not provided.");
@@ -60,6 +62,21 @@ namespace Dev.Network
             }
 
             GenerateResources();
+        }
+
+        private void ResolveReferences()
+        {
+            if (_resourceSystem == null && StageBootstrapper.Instance != null)
+                _resourceSystem = StageBootstrapper.Instance.ResourceSystem;
+
+            if (_resourceSystem == null)
+                _resourceSystem = ResourceSystem.Instance;
+
+            if (_resourceView == null)
+                _resourceView = UnityEngine.Object.FindFirstObjectByType<Local.ResourceView>();
+
+            if (_resourceSystem == null)
+                Debug.LogWarning($"{nameof(ResourceSpawnSystem)} has no {nameof(ResourceSystem)} reference.");
         }
 
         public void GenerateResources()
@@ -162,13 +179,27 @@ namespace Dev.Network
         {
             var (_, position, _) = (ValueTuple<GameObject, Vector3, Quaternion>)args;
             var xzPosition = new Vector2(position.x, position.z);
-            return !_territorySystem.Territory.IsPointInPolygon(xzPosition);
+            return _territorySystem == null ||
+                   _territorySystem.Territory == null ||
+                   !_territorySystem.Territory.IsPointInPolygon(xzPosition);
         }
 
         private void BindResource(ResourceVisible resource)
         {
+            if (_territorySystem == null)
+            {
+                Debug.LogWarning($"{nameof(ResourceSpawnSystem)} cannot bind {resource.name}: territory system is missing.");
+                return;
+            }
+
             void HandleTerritoryExpanded(Territory territory, TerritorySystem territorySystem)
             {
+                if (resource == null || resource.Object == null || !resource.Object.IsValid)
+                {
+                    _territorySystem.OnTerritoryExpandedEvent -= HandleTerritoryExpanded;
+                    return;
+                }
+
                 var xzPosition = new Vector2(resource.transform.position.x, resource.transform.position.z);
                 if (!territory.IsPointInPolygon(xzPosition))
                     return;
@@ -183,19 +214,31 @@ namespace Dev.Network
 
         private void HandleResourceCollected(ResourceType type, int amount, ResourceVisible resource, object context)
         {
+            if (_resourceSystem == null)
+            {
+                Debug.LogWarning($"Resource collection skipped because {nameof(ResourceSystem)} is missing.");
+                return;
+            }
+
+            if (resource != null)
+                resource.OnCollected -= HandleResourceCollected;
+
             switch (type)
             {
                 case ResourceType.Mineral:
                     _resourceSystem.RPC_GetMineral(amount);
-                    _resourceView.SetMineral(_resourceSystem.Mineral);
+                    if (_resourceView != null)
+                        _resourceView.SetMineral(_resourceSystem.Mineral);
                     break;
                 case ResourceType.Gas:
                     _resourceSystem.RPC_GetGas(amount);
-                    _resourceView.SetGas(_resourceSystem.Gas);
+                    if (_resourceView != null)
+                        _resourceView.SetGas(_resourceSystem.Gas);
                     break;
             }
             // Debug.Log($"Obtained {amount} {type} from {resource.gameObject.name}");
-            Runner.Despawn(resource.Object);
+            if (resource != null && resource.Object != null && resource.Object.IsValid)
+                Runner.Despawn(resource.Object);
         }
     }
 }

@@ -7,9 +7,17 @@ namespace Dev.Network
         public ResourceType Type;
         public int Amount = 5;
 
+        private bool _isCollected;
+
         public event Action<ResourceType, int, ResourceVisible, object> OnCollected;
 
         public void Collect()
-            => OnCollected?.Invoke(Type, Amount, this, this);
+        {
+            if (_isCollected)
+                return;
+
+            _isCollected = true;
+            OnCollected?.Invoke(Type, Amount, this, this);
+        }
     }
 }

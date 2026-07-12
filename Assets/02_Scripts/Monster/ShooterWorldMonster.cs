@@ -23,6 +23,9 @@ public class ShooterWorldMonster : WorldMonster
         if (playerTransform == null || projectilePrefab == null || muzzle == null)
             return;
 
+        if (IsTargetInRunnerSafeZone(playerTransform))
+            return;
+
         Vector3 toPlayer = playerTransform.position - transform.position;
         toPlayer.y = 0f;
         if (toPlayer.sqrMagnitude > detectionRadius * detectionRadius)

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Fusion;
 using UnityEngine;
@@ -14,9 +15,13 @@ public sealed class PlayerRunnerSlashContactDamageHandler
         float playerContactDamage,
         float fallbackRadius,
         LayerMask monsterLayerMask,
-        bool canDamageRunner)
+        bool canDamageRunner,
+        Func<Vector3, bool> isRunnerProtected = null)
     {
         if (!canDamageRunner || runner == null || !runner.HasStateAuthority || slashContactDetector == null)
+            return;
+
+        if (isRunnerProtected != null && isRunnerProtected(runner.transform.position))
             return;
 
         if (!_damageTimer.ExpiredOrNotRunning(runner.Runner))

@@ -13,6 +13,7 @@ public class TrackMonster : Monster
     protected Track track;
     protected int currentPointIndex;
     private int _priority;
+    private bool _isInternalized;
 
     public int Priority => _priority;
     public event Action<TrackMonster> OnDestroyed;
@@ -44,6 +45,11 @@ public class TrackMonster : Monster
     public void SetTrackMonsterPriority(int priority)
     {
         _priority = priority;
+    }
+
+    public void SetInternalized(bool isInternalized)
+    {
+        _isInternalized = isInternalized;
     }
 
     public override void UpdateMonster() => FollowTrack();
@@ -84,7 +90,7 @@ public class TrackMonster : Monster
             return;
 
         var runner = StageBootstrapper.Instance != null ? StageBootstrapper.Instance.PlayerRunner : null;
-        if (runner != null)
+        if (!_isInternalized && runner != null)
         {
             runner.TakeDamage(_completionDamage);
             Debug.Log($"{name} completed a lap and dealt {_completionDamage} damage to PlayerRunner.");

@@ -57,7 +57,7 @@ public class Centipede : WorldMonster
         if (isPatrolling == false)
         {
             var randomTargetPosition = patrolPivotPosition + Random.insideUnitSphere * patrolRadius;
-            if (!territory.IsPointInPolygon(new Vector2(randomTargetPosition.x, randomTargetPosition.z)))
+            if (!IsPositionInRunnerSafeZone(randomTargetPosition))
             {
                 originalPosition = transform.position;
                 progressivePosition = transform.position;
@@ -73,7 +73,15 @@ public class Centipede : WorldMonster
         {
             elapsedTime += Runner.DeltaTime; // Fusion 고정 틱 델타타임 사용
             Vector3 direction = (patrolTargetPosition - originalPosition).normalized;
-            progressivePosition += movementSpeed * Runner.DeltaTime * direction;
+            Vector3 nextProgressivePosition = progressivePosition + movementSpeed * Runner.DeltaTime * direction;
+            if (IsPositionInRunnerSafeZone(nextProgressivePosition))
+            {
+                isPatrolling = false;
+                StopMovement();
+                return;
+            }
+
+            progressivePosition = nextProgressivePosition;
             // Debug.Log("??: " + Vector3.Distance(progressivePosition, originalPosition));
             if (distance < Vector3.Distance(progressivePosition, originalPosition))
             {

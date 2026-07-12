@@ -14,6 +14,7 @@ public class TrackMonsterSpawnSystem : NetworkSystemBase
     [SerializeField] float strengthenMultiplier = 1.2f;
 
     readonly List<TrackMonster> aliveTrackMonsters = new();
+    int spawnSequence;
     int strengthenCount;
 
     public override void SetUp()
@@ -33,6 +34,19 @@ public class TrackMonsterSpawnSystem : NetworkSystemBase
         StartCoroutine(MonsterSpawnRoutine(track));
     }
 
+    public void SpawnInternalizedMonsters(Track track, int count)
+    {
+        if (!Object.HasStateAuthority || count <= 0) { return; }
+        if (track == null || track.Vertices == null || track.Vertices.Length == 0)
+        {
+            Debug.LogWarning("Internalized track monster spawn skipped. Track is not ready.");
+            return;
+        }
+
+        for (int i = 0; i < count; i++)
+            SpawnTrackMonster(track, true, i);
+    }
+
     public void StrengthenTrackMonsters()
     {
         if (!Object.HasStateAuthority) { return; }
@@ -44,24 +58,33 @@ public class TrackMonsterSpawnSystem : NetworkSystemBase
 
     IEnumerator MonsterSpawnRoutine(Track track)
     {
-        var startPosition = track.Vertices[0];
-
         for (int i = 0; i < spawnCount; i++)
         {
-            var monster = Runner.Spawn(monsterPrefab, startPosition, Quaternion.identity, PlayerRef.None, (runner, obj) =>
-            {
-                obj.name = $"Monster_{i}";
-                obj.transform.SetParent(monsterParentTransform);
-            });
-
-            monster.SetTrack(track);
-            monster.Initialize();
-            monster.SetTrackMonsterPriority(i);
-            RegisterTrackMonster(monster);
-            ApplyCurrentStrength(monster);
-
+            SpawnTrackMonster(track, false, i);
             yield return new WaitForSeconds(spawnInterval);
         }
+    }
+
+    TrackMonster SpawnTrackMonster(Track track, bool internalized, int priority)
+    {
+        var startPosition = track.Vertices[0];
+        int sequence = spawnSequence++;
+
+        var monster = Runner.Spawn(monsterPrefab, startPosition, Quaternion.identity, PlayerRef.None, (runner, obj) =>
+        {
+            obj.name = internalized ? $"Internalized Monster_{sequence}" : $"Monster_{sequence}";
+            obj.transform.SetParent(monsterParentTransform);
+        });
+
+        monster.SetTrack(track);
+        monster.Initialize();
+        monster.SetTrackMonsterPriority(priority);
+        monster.SetInternalized(internalized);
+        RegisterTrackMonster(monster);
+        if (!internalized)
+            ApplyCurrentStrength(monster);
+
+        return monster;
     }
 
     void RegisterTrackMonster(TrackMonster monster)

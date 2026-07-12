@@ -48,7 +48,7 @@ public class WorldMonster : Monster
         {
             var patrolPivotPosition2d = new Vector2(patrolPivotPosition.x, patrolPivotPosition.z);
             var randomTargetPosition = patrolPivotPosition2d + Random.insideUnitCircle * patrolRadius;
-            if (!territory.IsPointInPolygon(randomTargetPosition))
+            if (!IsPositionInRunnerSafeZone(randomTargetPosition))
             {
                 patrolTargetPosition = new Vector3(randomTargetPosition.x, transform.position.y, randomTargetPosition.y);
                 isPatrolling = true;
@@ -57,7 +57,15 @@ public class WorldMonster : Monster
         else
         {
             Vector3 direction = (patrolTargetPosition - transform.position).normalized;
-            transform.position = transform.position + Time.deltaTime * movementSpeed * direction;
+            Vector3 nextPosition = transform.position + Time.deltaTime * movementSpeed * direction;
+            if (IsPositionInRunnerSafeZone(nextPosition))
+            {
+                isPatrolling = false;
+                StopMovement();
+                return;
+            }
+
+            transform.position = nextPosition;
 
             if (Vector3.Distance(transform.position, patrolTargetPosition) < arrivalThreshold)
             {

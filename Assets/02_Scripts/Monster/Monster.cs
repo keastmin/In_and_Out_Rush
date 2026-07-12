@@ -104,9 +104,34 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
 
     protected virtual void StopByStun()
     {
+        StopMovement();
+    }
+
+    protected virtual void StopMovement()
+    {
         if (rigidBody != null)
             rigidBody.linearVelocity = Vector3.zero;
     }
+
+    protected bool IsPositionInRunnerSafeZone(Vector3 position)
+    {
+        Vector2 position2d = new(position.x, position.z);
+        return IsPositionInTerritory(position2d) || IsPositionInActiveSanctuary(position);
+    }
+
+    protected bool IsPositionInRunnerSafeZone(Vector2 position)
+        => IsPositionInTerritory(position) ||
+           IsPositionInActiveSanctuary(new Vector3(position.x, transform.position.y, position.y));
+
+    protected bool IsTargetInRunnerSafeZone(Transform target)
+        => target != null && IsPositionInRunnerSafeZone(target.position);
+
+    private bool IsPositionInTerritory(Vector2 position)
+        => territory != null && territory.IsPointInPolygon(position);
+
+    private static bool IsPositionInActiveSanctuary(Vector3 position)
+        => Dev.Network.StageBootstrapper.Instance != null &&
+           Dev.Network.StageBootstrapper.Instance.IsPointInActiveSanctuary(position);
 
     public void OnTerritoryExpanded(Territory territory, TerritorySystem territorySystem)
     {

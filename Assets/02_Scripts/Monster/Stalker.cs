@@ -22,8 +22,13 @@ public class Stalker : WorldMonster
         {
             if (attackTargetTransform == null)
             {
-                _isChasing = false;
-                _isAttacking = false;
+                StopChasing();
+                return;
+            }
+
+            if (IsTargetInRunnerSafeZone(attackTargetTransform))
+            {
+                StopChasing();
                 return;
             }
 
@@ -46,6 +51,8 @@ public class Stalker : WorldMonster
             }
 
             Chase();
+            if (!_isChasing)
+                return;
 
             if (CanEnterAttackState())
             {
@@ -58,6 +65,8 @@ public class Stalker : WorldMonster
             base.UpdateMonster();
 
             if (playerTransform == null) { return; }
+            if (IsTargetInRunnerSafeZone(playerTransform)) { return; }
+
             if (GetPlanarSqrDistance(playerTransform.position) < _sensingRange * _sensingRange)
             {
                 StartChasing(playerTransform);
@@ -103,11 +112,9 @@ public class Stalker : WorldMonster
     protected virtual void Chase()
     {
         var attackTargetPosition = attackTargetTransform.position;
-        var attackTargetPosition2d = new Vector2(attackTargetPosition.x, attackTargetPosition.z);
-        if (territory.IsPointInPolygon(attackTargetPosition2d))
+        if (IsPositionInRunnerSafeZone(attackTargetPosition))
         {
-            _isChasing = false;
-            _isAttacking = false;
+            StopChasing();
             return;
         }
 
@@ -119,8 +126,23 @@ public class Stalker : WorldMonster
             movementSpeed * Runner.DeltaTime,
             Mathf.Max(0f, distance - GetAttackRangeThreshold()));
 
-        transform.position += toTarget.normalized * moveDistance;
+        Vector3 nextPosition = transform.position + toTarget.normalized * moveDistance;
+        if (IsPositionInRunnerSafeZone(nextPosition))
+        {
+            StopChasing();
+            return;
+        }
+
+        transform.position = nextPosition;
         FaceTarget();
+    }
+
+    private void StopChasing()
+    {
+        _isChasing = false;
+        _isAttacking = false;
+        attackTargetTransform = null;
+        StopMovement();
     }
 
     private void FaceTarget()

@@ -2625,17 +2625,9 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 886242802}
     - target: {fileID: 7251378647776299556, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: _PlayerRunner
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: 7251378647776299556, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
       propertyPath: ResourceSystem
       value: 
       objectReference: {fileID: 1712230124}
-    - target: {fileID: 7251378647776299556, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: _PlayerBuilder
-      value: 
-      objectReference: {fileID: 0}
     - target: {fileID: 7251378647776299556, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
       propertyPath: _fogOfWarSystem
       value: 

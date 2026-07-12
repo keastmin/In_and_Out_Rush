@@ -64,16 +64,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _resourceSystem: {fileID: 2667290622005498128}
   _territorySystem: {fileID: 0}
-  _circleSpawnParam:
-    ObjectSampleParam:
-      Prefabs: []
-      Weights: []
-    MaxRetryCount: 10
-    SpawnPosition: {x: 0, y: 0, z: 0}
-    SpawnRotation: {x: 0, y: 0, z: 0, w: 0}
-    SpawnRadius: 20
   _resourceView: {fileID: 0}
-  _initialResourceCount: 10
+  _mineralSettings:
+    _prefab: {fileID: 0}
+    _worldCount: 0
+    _nearStartCount: 0
+  _gasSettings:
+    _prefab: {fileID: 0}
+    _worldCount: 0
+    _nearStartCount: 0
+  _worldSpawnRadius: 250
+  _nearStartSpawnRadius: 30
+  _maxRetryCount: 10
 --- !u!114 &7761316472097650306
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -139,21 +141,43 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44c9d5b3de3806741a9bd99a49244065, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _grid: {fileID: 0}
+  _laboratoryPrefab: {fileID: 0}
+  _NetworkLaboratory: {fileID: 0}
+  _store: {fileID: 835821744579008095}
+  _stageSystem: {fileID: 8839147315426102197}
+  _resourceSpawnSystem: {fileID: 7322582062983139011}
+  timeSystem: {fileID: 0}
+  roundTrackSystem: {fileID: 0}
+  territorySystem: {fileID: 0}
+  trackMonsterSpawnSystem: {fileID: 0}
+  sanctuaryPrefab: {fileID: -7601560091525573430, guid: e03912d88c590214ea27d0aa17452698, type: 3}
+  sanctuaryRandomSeed: 20260712
+  sanctuarySpawnCount: 3
+  sanctuaryPlacementRadius: 80
+  sanctuaryRadiusRange: {x: 5, y: 12}
+  sanctuaryVertexCountRange: {x: 8, y: 16}
+  sanctuaryVertexNoise: 1.5
+  sanctuaryActiveDuration: 15
+  spawnInternalizedImmediatelyWhenNoCombat: 1
+  sanctuaryPlacementRetryCount: 30
+  sanctuaryMinimumDistance: 8
+  _gatePrefab: {fileID: 4847213134287343287, guid: f80e2a9882b60234382ffa9183dd1627, type: 3}
+  _stageResultView: {fileID: 0}
+  _worldBoundaryRadius: 1000
+  _PlayerRunner: {fileID: 0}
+  _PlayerBuilder: {fileID: 0}
   playerRunnerPrefab: {fileID: 6623639392449802583, guid: b8a1ffa8094371542a9c31e14125af5b, type: 3}
   playerBuilderPrefab: {fileID: 3984747633682037487, guid: 515b90f1716e1d14a9fa8526fb3363d7, type: 3}
   networkInputSystemPrefab: {fileID: 6846751696317313442, guid: 8c946bd9ccd8fd747b1fea37f61f58ec, type: 3}
   systems: []
+  _towerUpgradeManager: {fileID: 0}
   ResourceSystem: {fileID: 2667290622005498128}
+  _fogOfWarSystem: {fileID: 0}
   cinemachineSystemPrefab: {fileID: 7730110464124259016, guid: aed0d24cf0400854f840e4956fa0356b, type: 3}
   UIController: {fileID: 0}
   TerritoryVisible: {fileID: 0}
   TrackVisible: {fileID: 0}
-  _store: {fileID: 835821744579008095}
-  _stageSystem: {fileID: 8839147315426102197}
-  _resourceSpawnSystem: {fileID: 7322582062983139011}
-  _gatePrefab: {fileID: 4847213134287343287, guid: f80e2a9882b60234382ffa9183dd1627, type: 3}
-  _stageResultView: {fileID: 0}
-  _worldBoundaryRadius: 1000
 --- !u!114 &7305521532576403249
 MonoBehaviour:
   m_ObjectHideFlags: 0

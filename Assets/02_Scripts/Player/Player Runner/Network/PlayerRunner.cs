@@ -215,7 +215,8 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
                 _slashMonsterContactDamage,
                 _biodecompositionFallbackTrackRadius,
                 _biodecompositionMonsterLayerMask,
-                !_biodecompositionDeviceHandler.IsActive);
+                !_biodecompositionDeviceHandler.IsActive,
+                StageBootstrapper.Instance != null ? StageBootstrapper.Instance.IsRunnerProtectedBySanctuary : null);
         }
 
         if (!GetInput(out NetworkInputData data)) return;

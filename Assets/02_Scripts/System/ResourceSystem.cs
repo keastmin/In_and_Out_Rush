@@ -9,11 +9,11 @@ namespace KIM.Dev
     {
         public static ResourceSystem Instance;
 
-        [SerializeField] private TextMeshProUGUI _mineralText;
-        [SerializeField] private TextMeshProUGUI _gasText;
-
         [Networked, OnChangedRender(nameof(OnChangedMineralCount))] public int Mineral { get; set; }
         [Networked, OnChangedRender(nameof(OnChangedGasCount))] public int Gas { get; set; }
+
+        public event Action<int> OnChangedMineral; // 미네랄이 변경될 때 호출되는 Action
+        public event Action<int> OnChangedGas; // 가스가 변경될 때 호출되는 Action
 
         private void Awake()
         {
@@ -44,12 +44,12 @@ namespace KIM.Dev
 
         public void OnChangedMineralCount()
         {
-            _mineralText.text = $"Mineral: {Mineral}";
+            OnChangedMineral?.Invoke(Mineral);
         }
 
         public void OnChangedGasCount()
         {
-            _gasText.text = $"Gas: {Gas}";
+            OnChangedGas?.Invoke(Gas);
         }
 
         /// <summary>

@@ -42,7 +42,7 @@ namespace Dev.Network
                 PlayerBuilder?.InjectTowerBuildManager(_towerBuildManager);
             }
 
-            UIController.InitializeStageUIController(_towerUpgradeManager);
+            UIController.InitializeStageUIController(_towerUpgradeManager, ResourceSystem);
         }
 
         private void KIMBindObjects()

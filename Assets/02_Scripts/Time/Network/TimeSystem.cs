@@ -23,6 +23,8 @@ namespace Dev.Network
         [Networked] public float PhaseElapsedTime { get; private set; }
         [Networked] public NetworkBool IsBerserk { get; private set; }
 
+        public float RoundDuration => _roundDuration;
+
         private bool _isRunning;
 
         public event Action<int, TimeSystem, object> OnRoundStarting;

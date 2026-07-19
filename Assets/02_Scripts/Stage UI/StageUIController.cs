@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.Events;
 using KIM.Dev;
+using Dev.Network;
 
 public class StageUIController : MonoBehaviour
 {
@@ -14,9 +15,9 @@ public class StageUIController : MonoBehaviour
         SetDisableAllUI(); // 시작할 때 모든 UI 비활성화
     }
 
-    public void InitializeStageUIController(TowerUpgradeManager towerUpgradeManager, ResourceSystem resourceSystem)
+    public void InitializeStageUIController(TowerUpgradeManager towerUpgradeManager, ResourceSystem resourceSystem, TimeSystem timeSystem)
     {
-        BuilderUI.InitializePlayerBuilderUI(towerUpgradeManager, resourceSystem);
+        BuilderUI.InitializePlayerBuilderUI(towerUpgradeManager, resourceSystem, timeSystem);
     }
 
     /// <summary>

@@ -1,6 +1,5 @@
+using Dev.Network;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,6 +9,7 @@ namespace KIM.Dev
     public class PlayerBuilderUI : MonoBehaviour
     {
         [SerializeField] private BuilderMainUI _builderMainUI;
+        [SerializeField] private TimerUI _timerUI;
         [SerializeField] private GameObject _towerBuildUI;
         [SerializeField] private LaboratoryUI _laboratoryUI;
         [SerializeField] private GameObject _towerSelectUI;
@@ -75,8 +75,11 @@ namespace KIM.Dev
             InitializeMainUI();
         }
 
-        public void InitializePlayerBuilderUI(TowerUpgradeManager towerUpgradeManager, ResourceSystem resourceSystem)
+        public void InitializePlayerBuilderUI(TowerUpgradeManager towerUpgradeManager, ResourceSystem resourceSystem, TimeSystem timeSystem)
         {
+            // 타이머 UI 초기화
+            _timerUI.InitializeTimerUI(timeSystem);
+
             // 연구소 UI 초기화
             _laboratoryUI.InitializeLaboratoryUI(towerUpgradeManager);
             _laboratoryUI.gameObject.SetActive(false);

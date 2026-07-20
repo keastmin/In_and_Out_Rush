@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 4665693873021043325}
   - component: {fileID: 6873920629067909897}
   - component: {fileID: 4876767757150376269}
+  - component: {fileID: 4082752266359308800}
   - component: {fileID: 7928665524494258476}
   m_Layer: 7
   m_Name: Infinite Grid Ground
@@ -141,6 +142,30 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &4082752266359308800
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5379209773506943472}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f205466cee3465388d6b4f2ef467adb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _rockPrefabs:
+  - {fileID: 7052097930572686336, guid: 81a23d4bdb27489c93ca87a7e482c399, type: 3}
+  - {fileID: 5215269356588812288, guid: 2e4319b9f99540f98a063f14992ebc0a, type: 3}
+  - {fileID: 5858834698672161792, guid: b7a11b2ea1c4406e8399e3e7eaefc21c, type: 3}
+  _spawnCountPerPrefab: 4
+  _maximumHalfExtent: 220
+  _edgePaddingRatio: 0.08
+  _cellJitterRatio: 0.2
+  _placementRetryCount: 24
+  _minimumSpacing: 24
+  _heightOffset: 0
+  _randomSeed: 20260720
 --- !u!114 &7928665524494258476
 MonoBehaviour:
   m_ObjectHideFlags: 0

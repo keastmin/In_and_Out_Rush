@@ -100,3 +100,5 @@ InitTestScene*.unity*
 
 .vscode/
 AGENTS.md
+/[Aa]ssets/docs/
+/[Aa]ssets/docs.meta

@@ -22,7 +22,10 @@ namespace KIM.Dev
         /// <param name="runner">전달 받을 플레이어 러너</param>
         public void Interact(PlayerRunner runner)
         {
-            if (runner == null || Supplies.Count == 0)
+            if (runner == null || !IsSpawnedInSimulation())
+                return;
+
+            if (Supplies.Count == 0)
                 return;
 
             var supplyManager = SupplyTowerManager.Instance;
@@ -42,7 +45,7 @@ namespace KIM.Dev
 
         public bool TryLoadSupplies(int[] supplyArray)
         {
-            if (!HasStateAuthority || supplyArray == null || supplyArray.Length == 0)
+            if (!IsSpawnedInSimulation() || !HasStateAuthority || supplyArray == null || supplyArray.Length == 0)
                 return false;
 
             Supplies.Clear();
@@ -65,11 +68,11 @@ namespace KIM.Dev
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
         private void RPC_RunnerGetSupplies()
         {
-            if (HasStateAuthority)
-            {
-                Supplies.Clear();
-                DespawnIfEmpty();
-            }
+            if (!IsSpawnedInSimulation() || !HasStateAuthority)
+                return;
+
+            Supplies.Clear();
+            DespawnIfEmpty();
         }
 
         private void OnSuppliesChanged()
@@ -79,11 +82,16 @@ namespace KIM.Dev
 
         private void DespawnIfEmpty()
         {
-            if (HasStateAuthority && Supplies.Count == 0)
-            {
-                ReleaseGridOccupation();
-                Runner.Despawn(Object);
-            }
+            if (!IsSpawnedInSimulation() || !HasStateAuthority || Supplies.Count > 0)
+                return;
+
+            ReleaseGridOccupation();
+            Runner.Despawn(Object);
+        }
+
+        private bool IsSpawnedInSimulation()
+        {
+            return Object != null && Object.IsValid && Object.IsInSimulation;
         }
     }
 }

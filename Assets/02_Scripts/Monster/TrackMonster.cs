@@ -14,8 +14,12 @@ public class TrackMonster : Monster
     protected int currentPointIndex;
     private int _priority;
     private bool _isInternalized;
+    private int _spawnOrder;
 
     public int Priority => _priority;
+    public bool IsInternalized => _isInternalized;
+    public float CompletionDamage => _completionDamage;
+    public int SpawnOrder => _spawnOrder;
     public event Action<TrackMonster> OnDestroyed;
 
 #if UNITY_EDITOR
@@ -50,6 +54,11 @@ public class TrackMonster : Monster
     public void SetInternalized(bool isInternalized)
     {
         _isInternalized = isInternalized;
+    }
+
+    public void SetSpawnOrder(int spawnOrder)
+    {
+        _spawnOrder = spawnOrder;
     }
 
     public override void UpdateMonster() => FollowTrack();

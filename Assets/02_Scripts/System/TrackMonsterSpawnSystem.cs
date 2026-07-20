@@ -6,6 +6,8 @@ using UnityEngine;
 
 public class TrackMonsterSpawnSystem : NetworkSystemBase
 {
+    const float InternalizedSettlementInterval = 0.2f;
+
     [SerializeField] TrackSystem trackSystem;
     [SerializeField] Transform monsterParentTransform;
     [SerializeField] TrackMonster monsterPrefab;
@@ -56,6 +58,23 @@ public class TrackMonsterSpawnSystem : NetworkSystemBase
         Debug.Log($"New track monsters will be strengthened. Count: {strengthenCount}, multiplier: {strengthenMultiplier}");
     }
 
+    public void SettleInternalizedMonstersCascade(PlayerRunner runner)
+    {
+        if (Object == null || !Object.HasStateAuthority) { return; }
+        if (runner == null)
+        {
+            Debug.LogWarning("Internalized monster settlement skipped. PlayerRunner is missing.");
+            return;
+        }
+
+        CleanupDestroyedTrackMonsters();
+        var internalizedMonsters = GetInternalizedMonsterSnapshot();
+        if (internalizedMonsters.Count <= 0)
+            return;
+
+        StartCoroutine(InternalizedMonsterSettlementRoutine(internalizedMonsters, runner));
+    }
+
     IEnumerator MonsterSpawnRoutine(Track track)
     {
         for (int i = 0; i < spawnCount; i++)
@@ -80,6 +99,7 @@ public class TrackMonsterSpawnSystem : NetworkSystemBase
         monster.Initialize();
         monster.SetTrackMonsterPriority(priority);
         monster.SetInternalized(internalized);
+        monster.SetSpawnOrder(sequence);
         RegisterTrackMonster(monster);
         if (!internalized)
             ApplyCurrentStrength(monster);
@@ -114,8 +134,51 @@ public class TrackMonsterSpawnSystem : NetworkSystemBase
     {
         for (int i = aliveTrackMonsters.Count - 1; i >= 0; i--)
         {
-            if (aliveTrackMonsters[i] == null)
+            if (aliveTrackMonsters[i] == null || !aliveTrackMonsters[i].CanAccessNetworkState)
                 aliveTrackMonsters.RemoveAt(i);
         }
+    }
+
+    List<TrackMonster> GetInternalizedMonsterSnapshot()
+    {
+        var internalizedMonsters = new List<TrackMonster>();
+        for (int i = 0; i < aliveTrackMonsters.Count; i++)
+        {
+            TrackMonster monster = aliveTrackMonsters[i];
+            if (!CanSettleInternalizedMonster(monster))
+                continue;
+
+            internalizedMonsters.Add(monster);
+        }
+
+        internalizedMonsters.Sort((left, right) => left.SpawnOrder.CompareTo(right.SpawnOrder));
+        return internalizedMonsters;
+    }
+
+    IEnumerator InternalizedMonsterSettlementRoutine(List<TrackMonster> monsters, PlayerRunner runner)
+    {
+        for (int i = 0; i < monsters.Count; i++)
+        {
+            TrackMonster monster = monsters[i];
+            if (!CanSettleInternalizedMonster(monster))
+                continue;
+
+            float damage = monster.CompletionDamage;
+            runner.TakeTrackCompletionDamage(damage);
+            Debug.Log($"{monster.name} settled and dealt {damage} damage to PlayerRunner.");
+
+            monster.DestroyMonster();
+
+            if (i < monsters.Count - 1)
+                yield return new WaitForSeconds(InternalizedSettlementInterval);
+        }
+    }
+
+    static bool CanSettleInternalizedMonster(TrackMonster monster)
+    {
+        return monster != null &&
+               monster.IsInternalized &&
+               monster.CanAccessNetworkState &&
+               monster.Object.HasStateAuthority;
     }
 }

@@ -29,6 +29,8 @@ namespace KIM.Dev
 
         private PlayerRunner _playerRunner;
         private Texture2D _fallbackBrush;
+        private InfiniteGrid _worldBoundsGrid;
+        private MeshRenderer _worldBoundsRenderer;
         private float _worldSize = DefaultWorldSize;
         private Vector2 _worldCenter = Vector2.zero;
         private bool _hasExplicitWorldBounds;
@@ -102,6 +104,9 @@ namespace KIM.Dev
 
         private void ResolveWorldBounds()
         {
+            if (TryResolveInfiniteGridBounds())
+                return;
+
             if (_hasExplicitWorldBounds)
                 return;
 
@@ -117,6 +122,32 @@ namespace KIM.Dev
 
             _worldCenter = Vector2.zero;
         }
+
+        private bool TryResolveInfiniteGridBounds()
+        {
+            InfiniteGrid grid = InfiniteGrid.Instance;
+            if (grid == null)
+                return false;
+
+            if (_worldBoundsGrid != grid || _worldBoundsRenderer == null)
+            {
+                _worldBoundsGrid = grid;
+                _worldBoundsRenderer = grid.GetComponent<MeshRenderer>();
+            }
+
+            if (_worldBoundsRenderer == null)
+                return false;
+
+            Bounds bounds = _worldBoundsRenderer.bounds;
+            float groundSize = Mathf.Max(bounds.size.x, bounds.size.z);
+            if (groundSize <= Mathf.Epsilon)
+                return false;
+
+            _worldSize = groundSize;
+            _worldCenter = new Vector2(bounds.center.x, bounds.center.z);
+            return true;
+        }
+
         private Texture2D CreateFallbackBrush()
         {
             if (_fallbackBrush != null)

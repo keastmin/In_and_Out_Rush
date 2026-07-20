@@ -150,7 +150,7 @@ namespace Dev.Network
             if (!HasStateAuthority)
                 return;
 
-            StartInternalizedMonsterSettlement();
+            StartTrackMonsterSettlement();
 
             if (round == 3 || round == 7 || round == 9)
             {
@@ -165,21 +165,21 @@ namespace Dev.Network
             }
         }
 
-        private void StartInternalizedMonsterSettlement()
+        private void StartTrackMonsterSettlement()
         {
             if (trackMonsterSpawnSystem == null)
             {
-                Debug.LogWarning("TrackMonsterSpawnSystem is missing. Internalized monster settlement skipped.");
+                Debug.LogWarning("TrackMonsterSpawnSystem is missing. Track monster settlement skipped.");
                 return;
             }
 
             if (PlayerRunner == null)
             {
-                Debug.LogWarning("PlayerRunner is missing. Internalized monster settlement skipped.");
+                Debug.LogWarning("PlayerRunner is missing. Track monster settlement skipped.");
                 return;
             }
 
-            trackMonsterSpawnSystem.SettleInternalizedMonstersCascade(PlayerRunner);
+            trackMonsterSpawnSystem.SettleTrackMonstersCascade(PlayerRunner);
         }
 
         private void HandleBerserkStarted(TimeSystem sender, object context)

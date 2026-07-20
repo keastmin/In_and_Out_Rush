@@ -14,7 +14,7 @@ namespace KIM.Dev
 
         private void Update()
         {
-            if (!_isInitialized)
+            if (!CanReadTimeSystem())
                 return;
 
             _gameTimerUI?.SetElapsedTime(_timeSystem.ElapsedTime);
@@ -33,7 +33,16 @@ namespace KIM.Dev
             _gameTimerUI?.SetElapsedTime(0f);
             _waveTimerUI?.SetRemainingTime(0f);
 
-            _isInitialized = true;
+            _isInitialized = timeSystem != null;
+        }
+
+        private bool CanReadTimeSystem()
+        {
+            return _isInitialized &&
+                   _timeSystem != null &&
+                   _timeSystem.Object != null &&
+                   _timeSystem.Object.IsValid &&
+                   _timeSystem.Object.IsInSimulation;
         }
     }
 }

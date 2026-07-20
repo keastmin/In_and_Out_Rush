@@ -24,6 +24,12 @@ namespace Dev.Network
         [Networked] public NetworkBool IsBerserk { get; private set; }
 
         public float RoundDuration => _roundDuration;
+        public float WaveRemainingTime => Phase == RoundPhase.Combat
+            ? Mathf.Max(0f, _roundDuration - PhaseElapsedTime)
+            : 0f;
+        public float MaintenanceRemainingTime => Phase == RoundPhase.Maintenance
+            ? Mathf.Max(0f, _maintenanceDuration - PhaseElapsedTime)
+            : 0f;
 
         private bool _isRunning;
 

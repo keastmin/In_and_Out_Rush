@@ -15,6 +15,8 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     private const float DefaultMaxHealth = 100f;
     private const float DefaultMaxStamina = 100f;
     private const float LifelineReturnRadius = 2f;
+    private const float WeaponSupplyDamageScalerAmount = 0.1f;
+    private const RunnerSkillType DefaultSelectedSkill = RunnerSkillType.Tumble;
 
     [Header("Statistics")]
     [Networked, OnChangedRender(nameof(OnHealthChanged))]
@@ -35,6 +37,8 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     [Networked] public float WeaponReloadSpeedScaler { get; set; } = 1f;
     [Networked] public NetworkBool IsDead { get; set; }
     [Networked] public NetworkBool IsBiodecompositionDeviceActive { get; set; }
+    [Networked, OnChangedRender(nameof(OnSelectedSkillChanged))]
+    public int SelectedSkill { get; set; } = (int)DefaultSelectedSkill;
 
     [Header("Weapon")]
     [SerializeField] private MonoBehaviour _weaponBehaviour;
@@ -166,9 +170,11 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
 
             IsDead = false;
             IsBiodecompositionDeviceActive = false;
+            SelectedSkill = (int)DefaultSelectedSkill;
         }
         BuffReceiverRegistry.Register(this, transform, BuffTargetType.Runner);
         RefreshItemSlots();
+        RefreshSelectedSkillIcon();
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         AttachTestModeGUI();
@@ -324,12 +330,11 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
 
     private void HandleSkillInput(NetworkInputData data)
     {
-        UpdateSkillIcon(data.SelectedSkill);
         if (!data.SkillInput.IsSet(NetworkInputData.SKILL_INPUT)) return;
         if (_outOfBodyController.IsOutOfBodyActive)
             _outOfBodyController.EndOutOfBody();
         else
-            _skillCaster.Cast((RunnerSkillType)data.SelectedSkill, this);
+            _skillCaster.Cast(GetCurrentSelectedSkill(), this);
     }
 
     private void HandleInteractInput(NetworkInputData data)
@@ -358,9 +363,20 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
 
     private void UpdateSkillIcon(int skillIndex)
     {
+        if (!HasInputAuthority) return;
         if (skillIndex < 1 || skillIndex > skillIcons.Length) return;
         StageBootstrapper.Instance.UIController.RunnerUI.Display.Player
             .SetSkillIcon(skillIcons[skillIndex - 1]);
+    }
+
+    private void OnSelectedSkillChanged()
+    {
+        RefreshSelectedSkillIcon();
+    }
+
+    private void RefreshSelectedSkillIcon()
+    {
+        UpdateSkillIcon(SelectedSkill);
     }
 
     private void UpdateSelectedItemSlot(int slotIndex)
@@ -525,5 +541,93 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     public void TeleportTo(Vector3 position) => _teleporter.TeleportTo(position);
     public void AttackUp(float amount) => _upgradeHandler.AttackUp(this, amount);
     public void SpeedUp(float amount) => _upgradeHandler.SpeedUp(this, amount);
-    public void Supply(IObtainable obtainable) => _upgradeHandler.Supply(this, obtainable);
+    public bool Supply(IObtainable obtainable) => _upgradeHandler.Supply(this, obtainable);
+
+    public bool TryReceiveRandomItemSupply()
+    {
+        if (!HasStateAuthority)
+            return false;
+
+        int[] availableSlotIndices = new int[RunnerItemInventory.SlotCount];
+        int availableSlotCount = 0;
+        for (int i = 0; i < RunnerItemInventory.SlotCount; i++)
+        {
+            RunnerItemSlot slot = _itemInventory.GetSlot(i);
+            if (slot.HasUnlimitedCapacity || slot.Count < slot.MaxCount)
+            {
+                availableSlotIndices[availableSlotCount] = i;
+                availableSlotCount++;
+            }
+        }
+
+        if (availableSlotCount == 0)
+            return false;
+
+        int randomIndex = UnityEngine.Random.Range(0, availableSlotCount);
+        bool added = _itemInventory.TryAdd(availableSlotIndices[randomIndex], 1);
+        if (added)
+            RefreshItemSlots();
+
+        return added;
+    }
+
+    public bool TryReceiveWeaponSupply()
+    {
+        if (!HasStateAuthority)
+            return false;
+
+        AttackUp(WeaponSupplyDamageScalerAmount);
+        return true;
+    }
+
+    public bool TryReceiveRandomSkillSupply()
+    {
+        if (!HasStateAuthority)
+            return false;
+
+        RunnerSkillType currentSkill = GetCurrentSelectedSkill();
+        RunnerSkillType[] availableSkills =
+        {
+            RunnerSkillType.Tumble,
+            RunnerSkillType.OutOfBody,
+            RunnerSkillType.Swiftness,
+        };
+
+        int selectableCount = 0;
+        for (int i = 0; i < availableSkills.Length; i++)
+        {
+            if (availableSkills[i] != currentSkill)
+                selectableCount++;
+        }
+
+        if (selectableCount == 0)
+            return true;
+
+        int selectedIndex = UnityEngine.Random.Range(0, selectableCount);
+        for (int i = 0; i < availableSkills.Length; i++)
+        {
+            if (availableSkills[i] == currentSkill)
+                continue;
+
+            if (selectedIndex == 0)
+            {
+                SelectedSkill = (int)availableSkills[i];
+                RefreshSelectedSkillIcon();
+                return true;
+            }
+
+            selectedIndex--;
+        }
+
+        return true;
+    }
+
+    private RunnerSkillType GetCurrentSelectedSkill()
+    {
+        RunnerSkillType selectedSkill = (RunnerSkillType)SelectedSkill;
+        if (!Enum.IsDefined(typeof(RunnerSkillType), selectedSkill) || selectedSkill == RunnerSkillType.None)
+            return DefaultSelectedSkill;
+
+        return selectedSkill;
+    }
 }

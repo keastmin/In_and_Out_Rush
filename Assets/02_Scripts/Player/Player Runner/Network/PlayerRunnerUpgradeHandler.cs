@@ -60,22 +60,22 @@ public class PlayerRunnerUpgradeHandler
         runner.StaminaRecoveryRate += amount;
     }
 
-    public void Supply(PlayerRunner runner, IObtainable obtainable)
+    public bool Supply(PlayerRunner runner, IObtainable obtainable)
     {
+        if (runner == null || obtainable == null)
+            return false;
+
         switch (obtainable)
         {
-            case Item item:
-                Debug.Log("아이템 획득");
-                break;
-            case Weapon weapon:
-                Debug.Log("무기 획득");
-                break;
-            case Skill skill:
-                Debug.Log("스킬 획득");
-                break;
+            case Item:
+                return runner.TryReceiveRandomItemSupply();
+            case Weapon:
+                return runner.TryReceiveWeaponSupply();
+            case Skill:
+                return runner.TryReceiveRandomSkillSupply();
             default:
-                Debug.Log("알 수 없는 획득물");
-                break;
+                Debug.LogWarning($"Unsupported obtainable type: {obtainable.GetType().Name}");
+                return false;
         }
     }
 }

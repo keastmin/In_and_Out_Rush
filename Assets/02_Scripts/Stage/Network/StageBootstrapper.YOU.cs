@@ -14,6 +14,9 @@ namespace Dev.Network
         [SerializeField] private TerritorySystem territorySystem;
         [SerializeField] private TrackMonsterSpawnSystem trackMonsterSpawnSystem;
 
+        [Header("Sacred Zone")]
+        [SerializeField] private SacredZoneSystem sacredZoneSystem;
+
         [Header("Sanctuary")]
         [SerializeField] private SanctuaryView sanctuaryPrefab;
         [SerializeField] private int sanctuaryRandomSeed = 20260712;
@@ -36,6 +39,7 @@ namespace Dev.Network
         private bool _isReturningToTitle = false;
         private readonly List<SanctuaryView> sanctuaries = new();
         private int queuedInternalizedMonsterCount;
+        private Gate activeGate;
 
         public event global::System.Action<PlayerRunner, Gate, object> OnGateEntered;
         public TrackSystem RoundTrackSystem => roundTrackSystem;
@@ -57,6 +61,7 @@ namespace Dev.Network
         private void YOUDisposeRoundSystems()
         {
             UnbindRoundSystemEvents();
+            UnbindSacredZoneEvents();
         }
 
         private void ResolveRoundSystemReferences(NetworkSystemBase[] systems)
@@ -204,6 +209,7 @@ namespace Dev.Network
             _stageResultView.Hide();
 
             YOUSetUpRoundSystems(systems);
+            SetUpSacredZone();
         }
 
         private void YOUBindObjects()
@@ -227,6 +233,9 @@ namespace Dev.Network
                 Mathf.Sin(randomAngle * Mathf.Deg2Rad) * randomDistance
             );
             var gate = Runner.Spawn(_gatePrefab, gatePosition, Quaternion.identity);
+            activeGate = gate;
+            activeGate.SetUnlocked(false);
+            SetSacredZoneGate(activeGate);
             gate.OnPlayerRunnerEntered += HandleGateEntered;
         }
 
@@ -440,6 +449,44 @@ namespace Dev.Network
             }
 
             trackMonsterSpawnSystem.SpawnInternalizedMonsters(roundTrackSystem.Track, count);
+        }
+
+        private void SetUpSacredZone()
+        {
+            if (sacredZoneSystem == null)
+            {
+                Debug.LogWarning("StageBootstrapper requires a SacredZoneSystem reference. Create it in the hierarchy and assign it in the inspector.");
+                return;
+            }
+
+            sacredZoneSystem.OnQuotaReached -= HandleSacredZoneQuotaReached;
+            sacredZoneSystem.OnQuotaReached += HandleSacredZoneQuotaReached;
+            sacredZoneSystem.Initialize(TerritorySystem, _worldBoundaryRadius);
+
+            if (activeGate != null)
+                SetSacredZoneGate(activeGate);
+        }
+
+        private void SetSacredZoneGate(Gate gate)
+        {
+            if (sacredZoneSystem == null)
+                return;
+
+            sacredZoneSystem.SetGate(gate);
+        }
+
+        private void UnbindSacredZoneEvents()
+        {
+            if (sacredZoneSystem != null)
+                sacredZoneSystem.OnQuotaReached -= HandleSacredZoneQuotaReached;
+
+            if (activeGate != null)
+                activeGate.OnPlayerRunnerEntered -= HandleGateEntered;
+        }
+
+        private void HandleSacredZoneQuotaReached(SacredZoneSystem sender)
+        {
+            Debug.Log("Sacred zone quota reached. Gate unlocked.");
         }
 
         private void HandlePlayerDied(PlayerRunner runner, object sender)

@@ -75,6 +75,7 @@ namespace Dev.Network
 
             yield return new WaitUntil(ArePlayersReady);
 
+            InitCinemachineSystem();
             SetUpNetworkSystems();
             InitUIController();
             LaboratoryUIInjectionPlayerRunner(UIController.BuilderUI, PlayerRunner);
@@ -155,6 +156,19 @@ namespace Dev.Network
         {
             var playerPosition = NetworkManager.Instance.Registry.RefToPosition[Runner.LocalPlayer];
             UIController.SetPlayerUI(playerPosition);
+        }
+
+        private void InitCinemachineSystem()
+        {
+            if (cinemachineSystemPrefab == null || !cinemachineSystemPrefab.gameObject.scene.IsValid())
+            {
+                Debug.LogError("StageBootstrapper requires a scene CinemachineSystem reference.", this);
+                return;
+            }
+
+            CinemachineSystem = cinemachineSystemPrefab;
+            var playerPosition = NetworkManager.Instance.Registry.RefToPosition[Runner.LocalPlayer];
+            CinemachineSystem.Initialize(playerPosition, PlayerRunner, PlayerBuilder);
         }
 
         private void LaboratoryUIInjectionPlayerRunner(PlayerBuilderUI builderUI, PlayerRunner runner)

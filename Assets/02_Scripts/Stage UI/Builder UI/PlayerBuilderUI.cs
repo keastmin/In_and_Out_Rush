@@ -12,6 +12,7 @@ namespace KIM.Dev
         [SerializeField] private TimerUI _timerUI;
         [SerializeField] private GameObject _towerBuildUI;
         [SerializeField] private LaboratoryUI _laboratoryUI;
+        [SerializeField] private RadioSignalUI _radioSignalUI;
         [SerializeField] private GameObject _towerSelectUI;
         [SerializeField] private DragSystem _dragSystem;
         [SerializeField] private Slider _runnerHPSlider;
@@ -79,6 +80,9 @@ namespace KIM.Dev
         {
             // 타이머 UI 초기화
             _timerUI.InitializeTimerUI(timeSystem);
+
+            // 무전 신호 UI 초기화
+            _radioSignalUI.InitializeRadioSignalUI();
 
             // 연구소 UI 초기화
             _laboratoryUI.InitializeLaboratoryUI(towerUpgradeManager);

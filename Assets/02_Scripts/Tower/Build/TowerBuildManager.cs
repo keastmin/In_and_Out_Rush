@@ -16,6 +16,8 @@ namespace KIM.Dev
         public override void Spawned()
         {
             Instance = this;
+            ResolveTowerUpgradeManager();
+            InjectTowerDependenciesToSpawnedTowers();
         }
 
         public override void Despawned(NetworkRunner runner, bool hasState)
@@ -26,11 +28,11 @@ namespace KIM.Dev
 
         public void Initialize(TowerUpgradeManager towerUpgradeManager)
         {
-            _towerUpgradeManager = towerUpgradeManager;
+            _towerUpgradeManager = towerUpgradeManager != null
+                ? towerUpgradeManager
+                : GetComponent<TowerUpgradeManager>();
 
-            Tower[] spawnedTowers = FindObjectsByType<Tower>(FindObjectsSortMode.None);
-            foreach (Tower tower in spawnedTowers)
-                InjectTowerDependencies(tower);
+            InjectTowerDependenciesToSpawnedTowers();
         }
 
         public bool CanBuildAt(TowerData towerData, PlayerBuilder builder, Vector2Int index)
@@ -81,8 +83,27 @@ namespace KIM.Dev
 
         public void InjectTowerDependencies(Tower tower)
         {
-            if (tower != null)
+            ResolveTowerUpgradeManager();
+
+            if (tower != null && _towerUpgradeManager != null)
                 tower.InitializeTowerUpgradeManager(_towerUpgradeManager);
+        }
+
+        private void ResolveTowerUpgradeManager()
+        {
+            if (_towerUpgradeManager == null)
+                TryGetComponent(out _towerUpgradeManager);
+        }
+
+        private void InjectTowerDependenciesToSpawnedTowers()
+        {
+            ResolveTowerUpgradeManager();
+            if (_towerUpgradeManager == null)
+                return;
+
+            Tower[] spawnedTowers = FindObjectsByType<Tower>(FindObjectsSortMode.None);
+            foreach (Tower tower in spawnedTowers)
+                InjectTowerDependencies(tower);
         }
 
         private bool TryBuildTower(

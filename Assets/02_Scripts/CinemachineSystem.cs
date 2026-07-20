@@ -7,21 +7,45 @@ public class CinemachineSystem : MonoBehaviour
     [SerializeField] private CinemachineCamera _playerRunnerCamera;
     [SerializeField] private CinemachineCamera _playerBuilderCamera;
 
-    private CinemachineCamera _runnerCamera;
-    private CinemachineCamera _builderCamera;
+    private PlayerPosition _localPlayerPosition;
+    private bool _isInitialized;
+    private bool _isLookingAtRunner;
 
-    public void InitCinemachineCamera(PlayerPosition myPosition, PlayerRunner runner, PlayerBuilder builder)
+    public void Initialize(PlayerPosition myPosition, PlayerRunner runner, PlayerBuilder builder)
     {
-        InstantiateCinemachineCamera();
+        _localPlayerPosition = myPosition;
+
+        if (_playerRunnerCamera == null || _playerBuilderCamera == null)
+        {
+            Debug.LogError("CinemachineSystem requires scene camera references.", this);
+            return;
+        }
+
+        if (runner == null || builder == null)
+        {
+            Debug.LogError("CinemachineSystem requires player references.", this);
+            return;
+        }
+
         SetPriority(myPosition);
         SetTrackingTarget(runner);
+        builder.InitializeCinemachineCamera(_playerBuilderCamera);
+        _isLookingAtRunner = myPosition == PlayerPosition.Runner;
+        _isInitialized = true;
     }
 
-    // 시네머신 생성
-    private void InstantiateCinemachineCamera()
+    // 빌더의 러너 카메라 전환 입력 처리
+    private void Update()
     {
-        _runnerCamera = Instantiate(_playerRunnerCamera);
-        _builderCamera = Instantiate(_playerBuilderCamera);
+        if (!_isInitialized || _localPlayerPosition != PlayerPosition.Builder)
+            return;
+
+        bool isLookingAtRunner = Input.GetKey(KeyCode.Space);
+        if (_isLookingAtRunner == isLookingAtRunner)
+            return;
+
+        _isLookingAtRunner = isLookingAtRunner;
+        SetPriority(isLookingAtRunner ? PlayerPosition.Runner : PlayerPosition.Builder);
     }
 
     // 내 역할군에 따라 시네머신 우선순위 결정
@@ -30,12 +54,12 @@ public class CinemachineSystem : MonoBehaviour
         switch (myPosition)
         {
             case PlayerPosition.Runner:
-                _runnerCamera.Priority = 1;
-                _builderCamera.Priority = 0;
+                _playerRunnerCamera.Priority = 1;
+                _playerBuilderCamera.Priority = 0;
                 break;
             case PlayerPosition.Builder:
-                _runnerCamera.Priority = 0;
-                _builderCamera.Priority = 1;
+                _playerRunnerCamera.Priority = 0;
+                _playerBuilderCamera.Priority = 1;
                 break;
         }
     }
@@ -43,10 +67,11 @@ public class CinemachineSystem : MonoBehaviour
     // 시네머신의 타겟을 설정
     public void SetTrackingTarget(Transform transform)
     {
-        _runnerCamera.Target.TrackingTarget = transform;
+        if (_playerRunnerCamera != null)
+            _playerRunnerCamera.Target.TrackingTarget = transform;
     }
     private void SetTrackingTarget(PlayerRunner runner)
     {
-        _runnerCamera.Target.TrackingTarget = runner.transform;
+        SetTrackingTarget(runner.transform);
     }
 }

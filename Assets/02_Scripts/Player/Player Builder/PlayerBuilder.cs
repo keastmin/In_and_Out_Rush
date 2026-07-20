@@ -111,7 +111,11 @@ namespace KIM.Dev
         public override void Spawned()
         {
             base.Spawned();
-            _cameraMover.SetCamera(_playerCineCam);
+        }
+
+        public void InitializeCinemachineCamera(CinemachineCamera cinemachineCamera)
+        {
+            _cameraMover.SetCamera(cinemachineCamera);
         }
 
         private void Awake()

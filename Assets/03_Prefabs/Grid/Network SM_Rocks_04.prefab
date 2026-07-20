@@ -12,9 +12,9 @@ GameObject:
   - component: {fileID: 7185933597935361874}
   - component: {fileID: 9062827676743769313}
   - component: {fileID: 975248174633126166}
-  - component: {fileID: 7156324429535346935}
+  - component: {fileID: 5215269356588812288}
   m_Layer: 0
-  m_Name: SM_Rocks_04
+  m_Name: Network SM_Rocks_04
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -110,7 +110,7 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -5918248661747335646, guid: 2767b4c56e91d1e4695c7429b1d379b9, type: 3}
---- !u!114 &7156324429535346935
+--- !u!114 &5215269356588812288
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -120,9 +120,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  SortKey: 714839136
+  m_Name:
+  m_EditorClassIdentifier:
+  SortKey: 4173876080
   ObjectInterest: 1
   Flags: 262145
   NestedObjects: []

@@ -189,6 +189,7 @@ namespace Dev.Network
 
         private void InitializeObjects()
         {
+            SpawnRocks(); // 바위 오브젝트 스폰
             YOUInitializeObjects();
             KIMInitializeObjects();
         }

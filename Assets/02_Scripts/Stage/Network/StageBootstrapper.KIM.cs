@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Fusion;
 using UnityEngine;
 using KIM.Dev;
@@ -8,6 +10,7 @@ namespace Dev.Network
     {
         [Header("Scene Load Entities")]
         [SerializeField] private InfiniteGrid _grid;
+        [SerializeField] private InfiniteGridRockSpawner _rockSpawner;
 
         [Header("Prefabs")]
         [SerializeField] private Laboratory _laboratoryPrefab;
@@ -16,6 +19,10 @@ namespace Dev.Network
         [HideInInspector] [Networked] public Laboratory NetworkLaboratory { get; private set; }
         private Laboratory _localLaboratory;
         private TowerBuildManager _towerBuildManager;
+
+        public IReadOnlyList<WorldObstacle> RockList => _rockSpawner != null
+            ? _rockSpawner.SpawnedRocks
+            : Array.Empty<WorldObstacle>();
 
         private void KIMInitializeHost()
         {
@@ -58,6 +65,31 @@ namespace Dev.Network
         private void KIMSetUpObjects()
         {
 
+        }
+
+        private void SpawnRocks()
+        {
+            if (!HasStateAuthority)
+                return;
+
+            if (_rockSpawner == null && _grid != null)
+                _grid.TryGetComponent(out _rockSpawner);
+
+            if (_rockSpawner == null)
+            {
+                Debug.LogError("InfiniteGridRockSpawner 참조를 찾을 수 없습니다.");
+                return;
+            }
+
+            _rockSpawner.SpawnRocks();
+        }
+
+        private void KIMInitializeWorldObstacleConsumer(IWorldObstacleConsumer consumer)
+        {
+            if (!HasStateAuthority || consumer == null)
+                return;
+
+            consumer.InitializeWorldObstacles(RockList);
         }
 
         private void HandleKimRoundStarting(int round, TimeSystem sender, object context)

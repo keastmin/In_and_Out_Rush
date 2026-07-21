@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 975248174633126166}
   - component: {fileID: 5215269356588812288}
   - component: {fileID: 6410357482193765202}
+  - component: {fileID: 6410357482193765302}
   m_Layer: 0
   m_Name: Network SM_Rocks_04
   m_TagString: Untagged
@@ -147,3 +148,16 @@ MonoBehaviour:
   SyncParent: 0
   _autoAOIOverride: 1
   DisableSharedModeInterpolation: 0
+--- !u!114 &6410357482193765302
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1604413879457636381}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d2e7c1a8f4b04918a6f0c79d7c53e421, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  _collider: {fileID: 975248174633126166}

@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using Dev.Network;
 using Fusion;
@@ -23,11 +22,14 @@ namespace KIM.Dev
 
         private readonly List<NetworkObject> _validRockPrefabs = new();
         private readonly List<Vector3> _spawnedPositions = new();
+        private readonly List<WorldObstacle> _spawnedRocks = new();
         private InfiniteGrid _grid;
         private MeshRenderer _groundRenderer;
         private bool _spawnStarted;
 
-        private IEnumerator Start()
+        public IReadOnlyList<WorldObstacle> SpawnedRocks => _spawnedRocks;
+
+        public void SpawnRocks()
         {
             _grid = GetComponent<InfiniteGrid>();
             _groundRenderer = GetComponent<MeshRenderer>();
@@ -35,16 +37,25 @@ namespace KIM.Dev
             if (_grid == null || _groundRenderer == null)
             {
                 Debug.LogError("Infinite Grid 바위 배치에 필요한 InfiniteGrid 또는 MeshRenderer를 찾을 수 없습니다.");
-                yield break;
+                return;
             }
 
-            yield return new WaitUntil(() => _grid != null && _grid.Object != null && _grid.Object.IsValid);
+            if (_grid.Object == null || !_grid.Object.IsValid)
+            {
+                Debug.LogWarning("Infinite Grid NetworkObject가 준비되기 전이므로 바위를 스폰할 수 없습니다.");
+                return;
+            }
 
             if (!_grid.HasStateAuthority)
-                yield break;
+                return;
 
-            yield return new WaitUntil(IsPlacementContextReady);
-            SpawnRocks();
+            if (!IsPlacementContextReady())
+            {
+                Debug.LogWarning("바위 배치에 필요한 트랙 및 영역 정보가 준비되기 전이므로 바위를 스폰할 수 없습니다.");
+                return;
+            }
+
+            SpawnRocksInternal();
         }
 
         private bool IsPlacementContextReady()
@@ -62,7 +73,7 @@ namespace KIM.Dev
                    territorySystem.Territory != null;
         }
 
-        private void SpawnRocks()
+        private void SpawnRocksInternal()
         {
             if (_spawnStarted || _grid.Runner == null)
                 return;
@@ -86,6 +97,7 @@ namespace KIM.Dev
 
             var random = new System.Random(_randomSeed);
             _spawnedPositions.Clear();
+            _spawnedRocks.Clear();
 
             int columnCount = _validRockPrefabs.Count;
             int rowCount = Mathf.Max(1, _spawnCountPerPrefab);
@@ -125,8 +137,18 @@ namespace KIM.Dev
                         PlayerRef.None,
                         (_, spawnedObject) => spawnedObject.name = $"{prefab.name}_{instanceNumber:00}");
 
-                    if (spawnedRock != null)
-                        _spawnedPositions.Add(spawnPosition);
+                    if (spawnedRock == null)
+                        continue;
+
+                    _spawnedPositions.Add(spawnPosition);
+                    if (spawnedRock.TryGetComponent(out WorldObstacle worldObstacle))
+                    {
+                        _spawnedRocks.Add(worldObstacle);
+                    }
+                    else
+                    {
+                        Debug.LogError($"{spawnedRock.name}에 WorldObstacle 컴포넌트가 없어 바위 목록에 등록할 수 없습니다.", spawnedRock);
+                    }
                 }
             }
         }

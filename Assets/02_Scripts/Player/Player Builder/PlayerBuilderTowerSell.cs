@@ -76,6 +76,7 @@ namespace KIM.Dev
                 }
 
                 tower.ReleaseGridOccupation();
+                InfiniteGrid.Instance?.RemoveTowerFromTrackDestructionSchedule(tower);
 
                 Runner.Despawn(obj);
             }

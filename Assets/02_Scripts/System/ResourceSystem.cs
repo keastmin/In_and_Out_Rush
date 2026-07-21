@@ -20,16 +20,6 @@ namespace KIM.Dev
             Instance = this;
         }
 
-        private void Update()
-        {
-            // 자신이 빌더라면 작동
-            if (Input.GetKeyDown(KeyCode.Space) && NetworkManager.Instance.Registry.RefToPosition[Runner.LocalPlayer] == PlayerPosition.Builder)
-            {
-                RPC_GetMineral(50);
-                RPC_GetGas(50);
-            }
-        }
-
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
         public void RPC_GetMineral(int mineral)
         {

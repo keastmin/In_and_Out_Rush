@@ -1,4 +1,5 @@
 using Fusion;
+using Dev.Network;
 using Unity.Cinemachine;
 using UnityEngine;
 using System.Collections.Generic;
@@ -63,6 +64,7 @@ namespace KIM.Dev
         private PlayerBuilderTowerSell _builderTowerSell; // 타워 판매 도움 컴포넌트
         private PlayerBuilderTowerMove _builderTowerMove; // 타워 이전 도움 컴포넌트
         private PlayerBuilderTowerSystem _builderTowerSystem; // 설치된 타워들을 관리하는 컴포넌트
+        private readonly ResourceSystemTestInput _resourceSystemTestInput = new();
 
         #endregion
 
@@ -134,6 +136,7 @@ namespace KIM.Dev
         {
             CleanupInvalidTowerReferences();
             StateMachine.Update();
+            _resourceSystemTestInput.Tick(this);
         }
 
         private void LateUpdate()
@@ -189,6 +192,42 @@ namespace KIM.Dev
                 TryGetComponent(out _builderTowerBuild);
 
             _builderTowerBuild?.InitializeTowerBuildManager(towerBuildManager);
+        }
+
+        public void InjectTowerMoveDependencies(
+            TimeSystem timeSystem,
+            ResourceSystem resourceSystem,
+            InfiniteGrid gridManager)
+        {
+            if (_builderTowerMove == null)
+                TryGetComponent(out _builderTowerMove);
+
+            _builderTowerMove?.InitializeDependencies(timeSystem, resourceSystem, gridManager);
+        }
+
+        internal void RequestTestResourceGrant(int mineral, int gas)
+        {
+            if (Object == null || !Object.IsValid || !Object.IsInSimulation || !HasInputAuthority)
+                return;
+
+            RPC_RequestTestResourceGrant(mineral, gas);
+        }
+
+        [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+        private void RPC_RequestTestResourceGrant(int mineral, int gas)
+        {
+            ResourceSystem resourceSystem = ResourceSystem.Instance;
+            if (resourceSystem == null ||
+                resourceSystem.Object == null ||
+                !resourceSystem.Object.IsValid ||
+                !resourceSystem.Object.IsInSimulation ||
+                !resourceSystem.Object.HasStateAuthority)
+            {
+                return;
+            }
+
+            resourceSystem.Mineral += Mathf.Max(0, mineral);
+            resourceSystem.Gas += Mathf.Max(0, gas);
         }
 
         #endregion
@@ -447,6 +486,9 @@ namespace KIM.Dev
         private void ActiveTowerMoveState()
         {
             if ((GetSelectedTowerCapabilities() & TowerCapability.Move) == 0)
+                return;
+
+            if (_builderTowerMove == null || !_builderTowerMove.CanMoveInCurrentPhase())
                 return;
 
             StateMachine.TransitionToState(StateMachine.TowerMoveState);

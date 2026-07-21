@@ -19,9 +19,9 @@ namespace KIM.Dev
 
             _gameTimerUI?.SetElapsedTime(_timeSystem.ElapsedTime);
 
-            float remainingTime = _timeSystem.Phase == RoundPhase.Combat
-                ? Mathf.Max(0f, _timeSystem.RoundDuration - _timeSystem.PhaseElapsedTime)
-                : 0f;
+            float remainingTime = _timeSystem.Phase == RoundPhase.Maintenance
+                ? _timeSystem.MaintenanceRemainingTime
+                : _timeSystem.WaveRemainingTime;
 
             _waveTimerUI?.SetRemainingTime(remainingTime);
         }
@@ -41,8 +41,7 @@ namespace KIM.Dev
             return _isInitialized &&
                    _timeSystem != null &&
                    _timeSystem.Object != null &&
-                   _timeSystem.Object.IsValid &&
-                   _timeSystem.Object.IsInSimulation;
+                   _timeSystem.Object.IsValid;
         }
     }
 }

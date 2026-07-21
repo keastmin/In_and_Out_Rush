@@ -100,6 +100,8 @@ MonoBehaviour:
   _buildRange: 1
   _requireTerritory: 1
   _BuiltIndex: {x: 0, y: 0}
+  _capabilities: 2
+  _includeLegacyCapabilities: 1
   _cost:
     Mineral: 500
     Gas: 0
@@ -108,10 +110,11 @@ MonoBehaviour:
   _towerId: 
   _selectedChecker: {fileID: 1219560907678390276}
   _selectedImage: {fileID: 0}
+  _PropertyType: 0
   _bullet: {fileID: 3383989042019545065, guid: b09406aae9916994e8ce9e5cadb1e573, type: 3}
   _bulletSpeed: 40
   _firePosition: {fileID: 5158920055649005697}
-  _damage: 2
+  _damage: 5
   _fireRate: 0.5
   _layer:
     serializedVersion: 2

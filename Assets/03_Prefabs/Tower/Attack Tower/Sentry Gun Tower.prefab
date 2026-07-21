@@ -1124,6 +1124,8 @@ MonoBehaviour:
   _buildRange: 0
   _requireTerritory: 1
   _BuiltIndex: {x: 0, y: 0}
+  _capabilities: 2
+  _includeLegacyCapabilities: 1
   _cost:
     Mineral: 150
     Gas: 0
@@ -1132,6 +1134,7 @@ MonoBehaviour:
   _towerId: 
   _selectedChecker: {fileID: 1219560907678390276}
   _selectedImage: {fileID: 0}
+  _PropertyType: 0
   _attackSpeed: 1
   _attackPosition: {fileID: 446309441676886603}
   _enemyLayer:
@@ -1145,7 +1148,7 @@ MonoBehaviour:
   _currTarget: {fileID: 0}
   _bullet: {fileID: 4963649366916377928, guid: 022974b8ab27faa45b10e7989d5d7305, type: 3}
   _bulletSpeed: 20
-  _bulletDamage: 10
+  _bulletDamage: 3
 --- !u!114 &2502629201869543890
 MonoBehaviour:
   m_ObjectHideFlags: 0

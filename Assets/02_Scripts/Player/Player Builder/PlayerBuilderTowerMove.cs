@@ -9,6 +9,7 @@ namespace KIM.Dev
     {
         [Header("Move")]
         [SerializeField, Min(0)] private int _mineralCostPerTower = 25;
+        [Networked] private NetworkBool IsMoveAvailable { get; set; }
 
         private List<TowerGhost> _ghosts;
         private Dictionary<TowerGhost, Tower> _ghostToTowerDic;
@@ -26,7 +27,17 @@ namespace KIM.Dev
 
         public bool CanMoveInCurrentPhase()
         {
-            return _moveAvailabilityPolicy.IsMaintenanceActive();
+            return HasStateAuthority
+                ? _moveAvailabilityPolicy.IsMaintenanceActive()
+                : IsMoveAvailable;
+        }
+
+        public override void FixedUpdateNetwork()
+        {
+            if (HasStateAuthority)
+            {
+                IsMoveAvailable = _moveAvailabilityPolicy.IsMaintenanceActive();
+            }
         }
 
         public void InitTowerMove(PlayerBuilderTowerSystem towerSystem)

@@ -2380,6 +2380,10 @@ PrefabInstance:
       propertyPath: _territorySystem
       value: 
       objectReference: {fileID: 1028244186}
+    - target: {fileID: 4082752266359308800, guid: 4860868dac3037343a9034cbfef85387, type: 3}
+      propertyPath: _spawnCountPerPrefab
+      value: 6
+      objectReference: {fileID: 0}
     - target: {fileID: 5379209773506943472, guid: 4860868dac3037343a9034cbfef85387, type: 3}
       propertyPath: m_Name
       value: Infinite Grid Ground

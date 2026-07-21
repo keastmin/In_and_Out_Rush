@@ -39,16 +39,19 @@ namespace KIM.Dev
                 return;
 
             Transform cameraTransform = _cineCam.transform;
-            Vector3 moveDir = GetMoveDirection(Input.mousePosition, Screen.width, Screen.height, _cameraBorderThickness);
-            if (moveDir.sqrMagnitude > 0f)
+            if (!Input.GetKey(KeyCode.Space))
             {
-                if (moveDir.sqrMagnitude > 1f)
+                Vector3 moveDir = GetMoveDirection(Input.mousePosition, Screen.width, Screen.height, _cameraBorderThickness);
+                if (moveDir.sqrMagnitude > 0f)
                 {
-                    moveDir.Normalize();
-                }
+                    if (moveDir.sqrMagnitude > 1f)
+                    {
+                        moveDir.Normalize();
+                    }
 
-                Vector3 move = moveDir * (_cameraMoveSpeed * Time.deltaTime);
-                cameraTransform.position += new Vector3(move.x, 0f, move.z);
+                    Vector3 move = moveDir * (_cameraMoveSpeed * Time.deltaTime);
+                    cameraTransform.position += new Vector3(move.x, 0f, move.z);
+                }
             }
 
             if (!_allowZoom)

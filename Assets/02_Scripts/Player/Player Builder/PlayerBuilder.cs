@@ -1,4 +1,5 @@
 using Fusion;
+using Dev.Network;
 using Unity.Cinemachine;
 using UnityEngine;
 using System.Collections.Generic;
@@ -191,6 +192,17 @@ namespace KIM.Dev
                 TryGetComponent(out _builderTowerBuild);
 
             _builderTowerBuild?.InitializeTowerBuildManager(towerBuildManager);
+        }
+
+        public void InjectTowerMoveDependencies(
+            TimeSystem timeSystem,
+            ResourceSystem resourceSystem,
+            InfiniteGrid gridManager)
+        {
+            if (_builderTowerMove == null)
+                TryGetComponent(out _builderTowerMove);
+
+            _builderTowerMove?.InitializeDependencies(timeSystem, resourceSystem, gridManager);
         }
 
         internal void RequestTestResourceGrant(int mineral, int gas)

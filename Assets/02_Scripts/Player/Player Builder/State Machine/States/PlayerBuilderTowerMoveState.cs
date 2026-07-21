@@ -13,9 +13,10 @@ namespace KIM.Dev
 
         public void Enter()
         {
-            InfiniteGrid.Instance.SetCellStateOverlayEnabled(true);
-            InfiniteGrid.Instance.ClearBuildRangePreview();
-            InfiniteGrid.Instance.ClearBuffPreviewSources();
+            InfiniteGrid gridManager = _player.BuilderTowerMove.GridManager;
+            gridManager?.SetCellStateOverlayEnabled(true);
+            gridManager?.ClearBuildRangePreview();
+            gridManager?.ClearBuffPreviewSources();
 
             _player.BuilderUI.ActivationTowerBuildUI(true, "Left Mouse: Complete, RightMouse: Cancel");
             _player.BuilderTowerMove.TowerMoveSet(_player.SelectedTowers);
@@ -55,8 +56,9 @@ namespace KIM.Dev
 
         public void Exit()
         {
-            InfiniteGrid.Instance.ClearBuildRangePreview();
-            InfiniteGrid.Instance.SetCellStateOverlayEnabled(false);
+            InfiniteGrid gridManager = _player.BuilderTowerMove.GridManager;
+            gridManager?.ClearBuildRangePreview();
+            gridManager?.SetCellStateOverlayEnabled(false);
 
             _player.BuilderTowerMove.TowerMoveClear();
             _player.BuilderUI.ActivationTowerBuildUI(false);
@@ -77,10 +79,11 @@ namespace KIM.Dev
         private Vector3 GetMouseWorldPos()
         {
             Vector3 pos = Vector3.zero;
-            if (InfiniteGrid.Instance == null || Camera.main == null)
+            InfiniteGrid gridManager = _player.BuilderTowerMove.GridManager;
+            if (gridManager == null || Camera.main == null)
                 return pos;
 
-            float height = InfiniteGrid.Instance.GridHeight;
+            float height = gridManager.GridHeight;
             Plane plane = new Plane(Vector3.up, height);
 
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);

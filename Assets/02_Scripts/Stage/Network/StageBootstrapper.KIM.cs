@@ -42,6 +42,7 @@ namespace Dev.Network
                 PlayerBuilder?.InjectTowerBuildManager(_towerBuildManager);
             }
 
+            PlayerBuilder?.InjectTowerMoveDependencies(timeSystem, ResourceSystem, Grid);
             UIController.InitializeStageUIController(_towerUpgradeManager, ResourceSystem, timeSystem);
         }
 

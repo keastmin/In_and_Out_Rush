@@ -1,5 +1,4 @@
 using Dev.Network;
-using UnityEngine;
 
 namespace KIM.Dev
 {
@@ -7,11 +6,13 @@ namespace KIM.Dev
     {
         private TimeSystem _timeSystem;
 
+        public void Initialize(TimeSystem timeSystem)
+        {
+            _timeSystem = timeSystem;
+        }
+
         public bool IsMaintenanceActive()
         {
-            if (!CanReadTimeSystem(_timeSystem))
-                _timeSystem = Object.FindFirstObjectByType<TimeSystem>();
-
             return CanReadTimeSystem(_timeSystem) &&
                    _timeSystem.Phase == RoundPhase.Maintenance;
         }

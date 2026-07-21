@@ -5,6 +5,13 @@ namespace KIM.Dev
 {
     public sealed class TowerMoveCostPolicy
     {
+        private ResourceSystem _resourceSystem;
+
+        public void Initialize(ResourceSystem resourceSystem)
+        {
+            _resourceSystem = resourceSystem;
+        }
+
         public Cost CalculateCost(
             IReadOnlyList<Tower> towers,
             InfiniteGrid gridManager,
@@ -30,9 +37,8 @@ namespace KIM.Dev
             if (cost.Mineral <= 0 && cost.Gas <= 0)
                 return true;
 
-            ResourceSystem resourceSystem = ResourceSystem.Instance;
-            return CanAccessResourceSystem(resourceSystem) &&
-                   resourceSystem.IsResourceSufficient(cost);
+            return CanAccessResourceSystem(_resourceSystem) &&
+                   _resourceSystem.IsResourceSufficient(cost);
         }
 
         public bool TryPay(Cost cost)
@@ -40,16 +46,15 @@ namespace KIM.Dev
             if (cost.Mineral <= 0 && cost.Gas <= 0)
                 return true;
 
-            ResourceSystem resourceSystem = ResourceSystem.Instance;
-            if (!CanAccessResourceSystem(resourceSystem) ||
-                !resourceSystem.Object.HasStateAuthority ||
-                !resourceSystem.IsResourceSufficient(cost))
+            if (!CanAccessResourceSystem(_resourceSystem) ||
+                !_resourceSystem.Object.HasStateAuthority ||
+                !_resourceSystem.IsResourceSufficient(cost))
             {
                 return false;
             }
 
-            resourceSystem.Mineral -= cost.Mineral;
-            resourceSystem.Gas -= cost.Gas;
+            _resourceSystem.Mineral -= cost.Mineral;
+            _resourceSystem.Gas -= cost.Gas;
             return true;
         }
 

@@ -1,4 +1,5 @@
 using Fusion;
+using Dev.Network;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -18,8 +19,10 @@ namespace KIM.Dev
         private readonly TowerMoveCostPolicy _moveCostPolicy = new();
 
         private PlayerBuilderTowerSystem _towerSystem;
+        private InfiniteGrid _gridManager;
 
         public bool HasMoveTargets => _ghostToTowerDic != null && _ghostToTowerDic.Count > 0;
+        public InfiniteGrid GridManager => _gridManager;
 
         public bool CanMoveInCurrentPhase()
         {
@@ -29,6 +32,16 @@ namespace KIM.Dev
         public void InitTowerMove(PlayerBuilderTowerSystem towerSystem)
         {
             _towerSystem = towerSystem;
+        }
+
+        public void InitializeDependencies(
+            TimeSystem timeSystem,
+            ResourceSystem resourceSystem,
+            InfiniteGrid gridManager)
+        {
+            _moveAvailabilityPolicy.Initialize(timeSystem);
+            _moveCostPolicy.Initialize(resourceSystem);
+            _gridManager = gridManager;
         }
 
         public void TowerMoveSet(HashSet<Tower> towers)
@@ -44,14 +57,14 @@ namespace KIM.Dev
             PruneInvalidTowers();
             if (!HasMoveTargets)
             {
-                InfiniteGrid.Instance?.ClearBuildRangePreview();
+                _gridManager?.ClearBuildRangePreview();
                 return false;
             }
 
             bool canMoveAll = true;
             _previewValidIndices.Clear();
             _previewBlockedIndices.Clear();
-            var gridManager = InfiniteGrid.Instance;
+            var gridManager = _gridManager;
             if (gridManager == null)
                 return false;
             var selectedOccupied = CollectSelectedOccupiedIndices();
@@ -157,7 +170,7 @@ namespace KIM.Dev
             if (!HasMoveTargets)
                 return;
 
-            var gridManager = InfiniteGrid.Instance;
+            var gridManager = _gridManager;
             if (gridManager == null) return;
 
             var selectedOccupied = CollectSelectedOccupiedIndices();
@@ -242,8 +255,8 @@ namespace KIM.Dev
 
         public void TowerMoveClear()
         {
-            InfiniteGrid.Instance?.ClearBuildRangePreview();
-            InfiniteGrid.Instance?.ClearBuffPreviewSources();
+            _gridManager?.ClearBuildRangePreview();
+            _gridManager?.ClearBuffPreviewSources();
 
             if (_ghosts != null)
             {
@@ -295,13 +308,13 @@ namespace KIM.Dev
 
             if (removeGhost is not null)
             {
-                InfiniteGrid.Instance?.RemoveBuffPreviewSource(removeGhost.GetInstanceID());
+                _gridManager?.RemoveBuffPreviewSource(removeGhost.GetInstanceID());
                 Destroy(removeGhost.gameObject);
             }
 
             if (!HasMoveTargets)
             {
-                InfiniteGrid.Instance?.ClearBuildRangePreview();
+                _gridManager?.ClearBuildRangePreview();
             }
         }
 
@@ -329,7 +342,7 @@ namespace KIM.Dev
 
                 if (ghost is not null)
                 {
-                    InfiniteGrid.Instance?.RemoveBuffPreviewSource(ghost.GetInstanceID());
+                    _gridManager?.RemoveBuffPreviewSource(ghost.GetInstanceID());
                     _ghostToTowerDic.Remove(ghost);
                     _ghosts?.Remove(ghost);
                     Destroy(ghost.gameObject);
@@ -462,7 +475,7 @@ namespace KIM.Dev
             if (!CanMoveInCurrentPhase())
                 return;
 
-            var gridManager = InfiniteGrid.Instance;
+            var gridManager = _gridManager;
             if (gridManager == null)
                 return;
 

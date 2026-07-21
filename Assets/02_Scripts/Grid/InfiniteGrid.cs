@@ -8,14 +8,6 @@ namespace KIM.Dev
 {
     public class InfiniteGrid : NetworkBehaviour
     {
-        private struct BuffSourceState
-        {
-            public Vector2Int CenterIndex;
-            public int Range;
-            public Color Color;
-            public HashSet<Vector2Int> Cells;
-        }
-
         public static InfiniteGrid Instance;
 
         [SerializeField] private TerritorySystem _territorySystem;
@@ -45,6 +37,7 @@ namespace KIM.Dev
         private readonly Dictionary<int, BuffSourceState> _buffPreviewSources = new();
         private readonly Dictionary<Vector2Int, int> _buffCellRefCount = new();
         private readonly Dictionary<Vector2Int, Color> _buffCellColorSum = new();
+        private readonly TowerTrackDestructionSchedule _trackDestructionSchedule = new();
         private bool _hasSpawned;
 
         private void OnValidate()
@@ -582,6 +575,7 @@ namespace KIM.Dev
         private void OnTrackChanged(Vector3[] vertices, TrackSystem trackSystem, object sender)
         {
             RefreshTrackBlockedCells();
+            RefreshTrackDestructionSchedule();
         }
 
         private void RefreshTrackBlockedCells()
@@ -691,10 +685,39 @@ namespace KIM.Dev
             RefreshVisuals();
         }
 
+        public bool IsTowerPendingTrackDestruction(Tower tower)
+        {
+            return _trackDestructionSchedule.IsPendingDestruction(tower);
+        }
+
+        public bool HasFreeTrackRelocation(Tower tower)
+        {
+            return _trackDestructionSchedule.HasFreeRelocation(tower);
+        }
+
+        public bool TryConsumeFreeTrackRelocation(Tower tower)
+        {
+            if (!HasStateAuthority || IsTowerBlockedByTrack(tower))
+                return false;
+
+            return _trackDestructionSchedule.TryConsumeFreeRelocation(tower);
+        }
+
+        public void RemoveTowerFromTrackDestructionSchedule(Tower tower)
+        {
+            _trackDestructionSchedule.Remove(tower);
+        }
+
         private void DestroyBlockedTowers()
         {
-            if (!HasStateAuthority || HostOnlyReadTowers.Count == 0 || Runner == null)
+            if (!HasStateAuthority || Runner == null)
             {
+                return;
+            }
+
+            if (HostOnlyReadTowers.Count == 0)
+            {
+                _trackDestructionSchedule.Clear();
                 return;
             }
 
@@ -702,20 +725,8 @@ namespace KIM.Dev
 
             foreach (Tower tower in HostOnlyReadTowers)
             {
-                if (tower == null || !tower.HasGridOccupation)
-                {
-                    continue;
-                }
-
-                IReadOnlyList<Vector2Int> occupiedIndices = tower.OccupiedIndices;
-                for (int i = 0; i < occupiedIndices.Count; i++)
-                {
-                    if (IsCellBlockedByTrack(occupiedIndices[i]))
-                    {
-                        towersToDestroy.Add(tower);
-                        break;
-                    }
-                }
+                if (IsTowerBlockedByTrack(tower))
+                    towersToDestroy.Add(tower);
             }
 
             for (int i = 0; i < towersToDestroy.Count; i++)
@@ -733,8 +744,34 @@ namespace KIM.Dev
                 }
 
                 tower.ReleaseGridOccupation();
+                _trackDestructionSchedule.Remove(tower);
                 Runner.Despawn(tower.Object);
             }
+
+            _trackDestructionSchedule.Clear();
+        }
+
+        private void RefreshTrackDestructionSchedule()
+        {
+            if (!CanUseNetworkGrid() || !HasStateAuthority)
+                return;
+
+            _trackDestructionSchedule.Refresh(HostOnlyReadTowers, IsTowerBlockedByTrack);
+        }
+
+        private bool IsTowerBlockedByTrack(Tower tower)
+        {
+            if (tower == null || !tower.HasGridOccupation)
+                return false;
+
+            IReadOnlyList<Vector2Int> occupiedIndices = tower.OccupiedIndices;
+            for (int i = 0; i < occupiedIndices.Count; i++)
+            {
+                if (IsCellBlockedByTrack(occupiedIndices[i]))
+                    return true;
+            }
+
+            return false;
         }
 
         private void AddBuffCells(IEnumerable<Vector2Int> indices, Color color)

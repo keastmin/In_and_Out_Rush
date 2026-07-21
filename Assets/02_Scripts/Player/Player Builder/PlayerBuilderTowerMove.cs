@@ -6,25 +6,25 @@ namespace KIM.Dev
 {
     public class PlayerBuilderTowerMove : NetworkBehaviour
     {
-        private struct PlannedTowerMove
-        {
-            public Tower Tower;
-            public TowerGhost Ghost;
-            public Vector2Int CurrentCenter;
-            public Vector2Int TargetCenter;
-            public Vector3 TargetPosition;
-            public List<Vector2Int> TargetIndices;
-        }
+        [Header("Move")]
+        [SerializeField, Min(0)] private int _mineralCostPerTower = 25;
 
         private List<TowerGhost> _ghosts;
         private Dictionary<TowerGhost, Tower> _ghostToTowerDic;
         private Dictionary<Tower, Vector3> _towerToVecDic;
         private readonly HashSet<Vector2Int> _previewValidIndices = new();
         private readonly HashSet<Vector2Int> _previewBlockedIndices = new();
+        private readonly TowerMoveAvailabilityPolicy _moveAvailabilityPolicy = new();
+        private readonly TowerMoveCostPolicy _moveCostPolicy = new();
 
         private PlayerBuilderTowerSystem _towerSystem;
 
         public bool HasMoveTargets => _ghostToTowerDic != null && _ghostToTowerDic.Count > 0;
+
+        public bool CanMoveInCurrentPhase()
+        {
+            return _moveAvailabilityPolicy.IsMaintenanceActive();
+        }
 
         public void InitTowerMove(PlayerBuilderTowerSystem towerSystem)
         {
@@ -150,6 +150,9 @@ namespace KIM.Dev
 
         public void TowerMove()
         {
+            if (!CanMoveInCurrentPhase())
+                return;
+
             PruneInvalidTowers();
             if (!HasMoveTargets)
                 return;
@@ -456,6 +459,9 @@ namespace KIM.Dev
             if (netId == null || positions == null || netId.Length != positions.Length)
                 return;
 
+            if (!CanMoveInCurrentPhase())
+                return;
+
             var gridManager = InfiniteGrid.Instance;
             if (gridManager == null)
                 return;
@@ -463,6 +469,7 @@ namespace KIM.Dev
             var claimedTargets = new Dictionary<Vector2Int, Tower>();
             var conflictedTowers = new HashSet<Tower>();
             var plannedMoves = new List<PlannedTowerMove>(netId.Length);
+            var plannedTowers = new HashSet<Tower>();
 
             for (int i = 0; i < netId.Length; i++)
             {
@@ -475,6 +482,12 @@ namespace KIM.Dev
                 if (!tower.HasCapability(TowerCapability.Move))
                     return;
 
+                if (!plannedTowers.Add(tower))
+                    return;
+
+                if (!tower.Object.TryGetComponent(out NetworkTransform networkTransform))
+                    return;
+
                 Vector2Int currentCenter = tower.HasGridOccupation
                     ? tower.BuiltIndex
                     : gridManager.GetCellIndexFromWorldPosition(tower.transform.position);
@@ -483,6 +496,7 @@ namespace KIM.Dev
                 plannedMoves.Add(new PlannedTowerMove
                 {
                     Tower = tower,
+                    NetworkTransform = networkTransform,
                     CurrentCenter = currentCenter,
                     TargetCenter = targetCenter,
                     TargetPosition = gridManager.GetCellCenterPositionFromCellIndex(targetCenter),
@@ -491,6 +505,19 @@ namespace KIM.Dev
             }
 
             if (plannedMoves.Count == 0)
+                return;
+
+            var movingTowers = new List<Tower>(plannedMoves.Count);
+            for (int i = 0; i < plannedMoves.Count; i++)
+            {
+                movingTowers.Add(plannedMoves[i].Tower);
+            }
+
+            Cost moveCost = _moveCostPolicy.CalculateCost(
+                movingTowers,
+                gridManager,
+                _mineralCostPerTower);
+            if (!_moveCostPolicy.CanAfford(moveCost))
                 return;
 
             var selectedOccupied = CollectOccupiedIndices(plannedMoves);
@@ -545,29 +572,40 @@ namespace KIM.Dev
                 bool occupied = move.Tower.TryOccupyAtIndex(move.TargetCenter, requireTerritory: true, requireEmpty: true);
                 if (!occupied)
                 {
-                    for (int j = 0; j < plannedMoves.Count; j++)
-                    {
-                        plannedMoves[j].Tower.ReleaseGridOccupation();
-                    }
-
-                    for (int j = 0; j < plannedMoves.Count; j++)
-                    {
-                        var rollback = plannedMoves[j];
-                        rollback.Tower.TryOccupyAtIndex(rollback.CurrentCenter, requireTerritory: true, requireEmpty: true);
-                    }
-
+                    RollbackTowerOccupation(plannedMoves);
                     return;
                 }
+            }
+
+            if (!_moveCostPolicy.TryPay(moveCost))
+            {
+                RollbackTowerOccupation(plannedMoves);
+                return;
             }
 
             for (int i = 0; i < plannedMoves.Count; i++)
             {
                 var move = plannedMoves[i];
-                if (!move.Tower.Object.TryGetComponent(out NetworkTransform nt))
-                    continue;
-
-                nt.Teleport(move.TargetPosition);
+                move.NetworkTransform.Teleport(move.TargetPosition);
+                gridManager.TryConsumeFreeTrackRelocation(move.Tower);
                 TowerMoveProcess(move.Tower);
+            }
+        }
+
+        private static void RollbackTowerOccupation(List<PlannedTowerMove> plannedMoves)
+        {
+            for (int i = 0; i < plannedMoves.Count; i++)
+            {
+                plannedMoves[i].Tower.ReleaseGridOccupation();
+            }
+
+            for (int i = 0; i < plannedMoves.Count; i++)
+            {
+                var rollback = plannedMoves[i];
+                rollback.Tower.TryOccupyAtIndex(
+                    rollback.CurrentCenter,
+                    requireTerritory: true,
+                    requireEmpty: true);
             }
         }
 

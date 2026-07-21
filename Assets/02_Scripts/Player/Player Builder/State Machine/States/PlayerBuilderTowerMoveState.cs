@@ -23,6 +23,12 @@ namespace KIM.Dev
 
         public void Update()
         {
+            if (!_player.BuilderTowerMove.CanMoveInCurrentPhase())
+            {
+                _player.StateMachine.TransitionToState(_player.StateMachine.OriginState);
+                return;
+            }
+
             if (_player.SelectedTowersCount <= 0 || !_player.BuilderTowerMove.HasMoveTargets)
             {
                 _player.StateMachine.TransitionToState(_player.StateMachine.OriginState);

@@ -449,6 +449,9 @@ namespace KIM.Dev
             if ((GetSelectedTowerCapabilities() & TowerCapability.Move) == 0)
                 return;
 
+            if (_builderTowerMove == null || !_builderTowerMove.CanMoveInCurrentPhase())
+                return;
+
             StateMachine.TransitionToState(StateMachine.TowerMoveState);
         }
 

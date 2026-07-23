@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace KIM.Dev
 {
@@ -16,6 +18,10 @@ namespace KIM.Dev
 
         public JoinSessionPanel JoinSession;
         public LobbyUI Lobby;
+
+        private readonly List<Button> _sessionOperationButtons = new();
+        private readonly List<bool> _sessionOperationButtonStates = new();
+        private bool _isSessionOperationPending;
 
         private void Awake()
         {
@@ -90,6 +96,42 @@ namespace KIM.Dev
         {
             var notificationWindow = Instantiate(_notificationWindowPrefab, _canvas.transform);
             notificationWindow.SetDescript(descript);
+        }
+
+        public bool TryBeginSessionOperation()
+        {
+            if (_isSessionOperationPending || _currFocusUI == null)
+                return false;
+
+            _isSessionOperationPending = true;
+            _sessionOperationButtons.Clear();
+            _sessionOperationButtonStates.Clear();
+
+            Button[] buttons = _currFocusUI.GetComponentsInChildren<Button>(true);
+            foreach (Button button in buttons)
+            {
+                _sessionOperationButtons.Add(button);
+                _sessionOperationButtonStates.Add(button.interactable);
+                button.interactable = false;
+            }
+
+            return true;
+        }
+
+        public void EndSessionOperation()
+        {
+            if (!_isSessionOperationPending)
+                return;
+
+            for (int i = 0; i < _sessionOperationButtons.Count; i++)
+            {
+                if (_sessionOperationButtons[i] != null)
+                    _sessionOperationButtons[i].interactable = _sessionOperationButtonStates[i];
+            }
+
+            _sessionOperationButtons.Clear();
+            _sessionOperationButtonStates.Clear();
+            _isSessionOperationPending = false;
         }
 
         public void CloseInGameSettingUI()

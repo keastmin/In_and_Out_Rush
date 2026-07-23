@@ -2,10 +2,13 @@
 using UnityEditor;
 #endif
 using Dev;
+using KIM.Dev;
 using UnityEngine;
 
-public class LocalTrackMonster : LocalMonster
+public class LocalTrackMonster : LocalMonster, IFogOfWarAlwaysVisible
 {
+    [SerializeField, Min(1f)] private float _outsideTerritorySpeedMultiplier = 1.5f;
+
     protected Track track;
     protected int currentPointIndex;
 
@@ -41,9 +44,14 @@ public class LocalTrackMonster : LocalMonster
             return;
         }
 
-        Vector3 move = movementSpeed * Time.deltaTime * moveDir.normalized;
+        Vector3 move = EffectiveMovementSpeed * Time.deltaTime * moveDir.normalized;
         if (move.magnitude > distance) { move = moveDir; } // 목표점 초과 방지
         transform.position += move;
         transform.LookAt(target);
     }
+
+    private float EffectiveMovementSpeed
+        => IsPositionOutsideTerritory(transform.position)
+            ? movementSpeed * Mathf.Max(1f, _outsideTerritorySpeedMultiplier)
+            : movementSpeed;
 }

@@ -126,7 +126,10 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
     protected bool IsTargetInRunnerSafeZone(Transform target)
         => target != null && IsPositionInRunnerSafeZone(target.position);
 
-    private bool IsPositionInTerritory(Vector2 position)
+    protected bool IsPositionOutsideTerritory(Vector3 position)
+        => territory != null && !IsPositionInTerritory(new Vector2(position.x, position.z));
+
+    protected bool IsPositionInTerritory(Vector2 position)
         => territory != null && territory.IsPointInPolygon(position);
 
     private static bool IsPositionInActiveSanctuary(Vector3 position)

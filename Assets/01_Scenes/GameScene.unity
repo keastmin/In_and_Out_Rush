@@ -626,6 +626,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   trackSystem: {fileID: 896837533}
+  territorySystem: {fileID: 0}
   monsterParentTransform: {fileID: 636045684}
   monsterPrefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
   spawnInterval: 1

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Dev;
+using Dev.Network;
 using Fusion;
 using UnityEngine;
 
@@ -9,6 +10,7 @@ public class TrackMonsterSpawnSystem : NetworkSystemBase
     const float TrackMonsterSettlementInterval = 0.2f;
 
     [SerializeField] TrackSystem trackSystem;
+    [SerializeField] TerritorySystem territorySystem;
     [SerializeField] Transform monsterParentTransform;
     [SerializeField] TrackMonster monsterPrefab;
     [SerializeField] float spawnInterval;
@@ -23,6 +25,7 @@ public class TrackMonsterSpawnSystem : NetworkSystemBase
     public override void SetUp()
     {
         if (!Object.HasStateAuthority) { return; }
+        ResolveTerritorySystem();
     }
 
     public void SpawnMonsters(Track track)
@@ -100,6 +103,7 @@ public class TrackMonsterSpawnSystem : NetworkSystemBase
             obj.transform.SetParent(monsterParentTransform);
         });
 
+        monster.SetTerritory(ResolveTerritory());
         monster.SetTrack(track);
         monster.Initialize();
         monster.SetTrackMonsterPriority(priority);
@@ -110,6 +114,18 @@ public class TrackMonsterSpawnSystem : NetworkSystemBase
             ApplyCurrentStrength(monster);
 
         return monster;
+    }
+
+    Territory ResolveTerritory()
+    {
+        ResolveTerritorySystem();
+        return territorySystem != null ? territorySystem.Territory : null;
+    }
+
+    void ResolveTerritorySystem()
+    {
+        if (territorySystem == null && StageBootstrapper.Instance != null)
+            territorySystem = StageBootstrapper.Instance.TerritorySystem;
     }
 
     void RegisterTrackMonster(TrackMonster monster)

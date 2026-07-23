@@ -56,6 +56,7 @@ namespace Dev.Local
             {
                 var monster = Instantiate(_trackMonsterPrefab, startPosition, Quaternion.identity);
                 monster.name = $"Monster_{i}";
+                monster.SetTerritory(StageInstance.Instance.Territory);
                 monster.SetTrack(track);
                 monster.Initialize();
 

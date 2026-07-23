@@ -16,6 +16,7 @@ namespace KIM.Dev
         private readonly Dictionary<Canvas, bool> _canvasOriginalStates = new();
         private readonly List<Renderer> _knownHiddenRenderers = new();
         private readonly List<Canvas> _knownHiddenCanvases = new();
+        private readonly List<MonoBehaviour> _visibilityComponents = new();
 
         private RenderTexture _visionMask;
         private RenderTexture _territoryMask;
@@ -451,8 +452,12 @@ namespace KIM.Dev
             for (int i = 0; i < renderers.Length; i++)
             {
                 Renderer hiddenRenderer = renderers[i];
-                if (hiddenRenderer == null || !IsObjectOrParentLayerInMask(hiddenRenderer.transform, fogHiddenLayers))
+                if (hiddenRenderer == null ||
+                    !IsObjectOrParentLayerInMask(hiddenRenderer.transform, fogHiddenLayers) ||
+                    IsFogOfWarAlwaysVisible(hiddenRenderer.transform))
+                {
                     continue;
+                }
 
                 _knownHiddenRenderers.Add(hiddenRenderer);
                 if (!_rendererOriginalStates.ContainsKey(hiddenRenderer))
@@ -466,8 +471,12 @@ namespace KIM.Dev
             for (int i = 0; i < canvases.Length; i++)
             {
                 Canvas hiddenCanvas = canvases[i];
-                if (hiddenCanvas == null || !IsObjectOrParentLayerInMask(hiddenCanvas.transform, fogHiddenLayers))
+                if (hiddenCanvas == null ||
+                    !IsObjectOrParentLayerInMask(hiddenCanvas.transform, fogHiddenLayers) ||
+                    IsFogOfWarAlwaysVisible(hiddenCanvas.transform))
+                {
                     continue;
+                }
 
                 _knownHiddenCanvases.Add(hiddenCanvas);
                 if (!_canvasOriginalStates.ContainsKey(hiddenCanvas))
@@ -521,6 +530,24 @@ namespace KIM.Dev
                 {
                     return true;
                 }
+            }
+
+            return false;
+        }
+
+        private bool IsFogOfWarAlwaysVisible(Transform target)
+        {
+            while (target != null)
+            {
+                _visibilityComponents.Clear();
+                target.GetComponents<MonoBehaviour>(_visibilityComponents);
+                for (int i = 0; i < _visibilityComponents.Count; i++)
+                {
+                    if (_visibilityComponents[i] is IFogOfWarAlwaysVisible)
+                        return true;
+                }
+
+                target = target.parent;
             }
 
             return false;

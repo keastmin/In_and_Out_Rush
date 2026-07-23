@@ -4,11 +4,13 @@ using UnityEditor;
 using System;
 using Dev;
 using Dev.Network;
+using KIM.Dev;
 using UnityEngine;
 
-public class TrackMonster : Monster
+public class TrackMonster : Monster, IFogOfWarAlwaysVisible
 {
     [SerializeField] private float _completionDamage = 10f;
+    [SerializeField, Min(1f)] private float _outsideTerritorySpeedMultiplier = 1.5f;
 
     protected Track track;
     protected int currentPointIndex;
@@ -85,13 +87,18 @@ public class TrackMonster : Monster
             return;
         }
 
-        Vector3 move = movementSpeed * Time.deltaTime * moveDir.normalized;
+        Vector3 move = EffectiveMovementSpeed * Time.deltaTime * moveDir.normalized;
         if (move.magnitude > distance)
             move = moveDir;
 
         transform.position += move;
         transform.LookAt(target);
     }
+
+    private float EffectiveMovementSpeed
+        => !_isInternalized && IsPositionOutsideTerritory(transform.position)
+            ? movementSpeed * Mathf.Max(1f, _outsideTerritorySpeedMultiplier)
+            : movementSpeed;
 
     private void CompleteLap()
     {

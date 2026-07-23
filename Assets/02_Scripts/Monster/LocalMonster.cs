@@ -32,6 +32,9 @@ public class LocalMonster : MonoBehaviour, IMonster, IDamageable
     protected virtual void Update() => UpdateMonster();
     public virtual void UpdateMonster() =>  throw new System.NotImplementedException();
 
+    protected bool IsPositionOutsideTerritory(Vector3 position)
+        => territory != null && !territory.IsPointInPolygon(new Vector2(position.x, position.z));
+
     public void OnTerritoryExpanded(List<Vector2> vertices, Territory territory, object sender)
     {
         var xzPosition = new Vector2(transform.position.x, transform.position.z);

@@ -25,6 +25,8 @@ namespace KIM.Dev
         private const string HostDisconnectedMessage = "Disconnected from host";
         private const string TeammateQuitGameMessage = "Teammate quit game";
         private const string TeammateDisconnectedMessage = "Disconnected from teammate";
+        private const string CreateRoomFailedMessage = "Failed to create session. Please try again.";
+        private const string JoinRoomFailedMessage = "Failed to join session. Please check the room code and try again.";
         private const string LobbySceneName = "LobbyScene";
         private const string GameSceneName = "GameScene";
 
@@ -72,76 +74,128 @@ namespace KIM.Dev
         // 호스트가 룸을 생성하는 메서드
         public async void CreateRoom()
         {
-            // 러너가 없을 때 러너를 생성
-            if (!Runner)
-            {
-                // 러너 프리팹 생성
-                Runner = Instantiate(RunnerPrefab);
+            InterfaceManager interfaceManager = InterfaceManager.Instance;
+            if (interfaceManager == null || !interfaceManager.TryBeginSessionOperation())
+                return;
 
-                // 러너의 NetworkEvents 컴포넌트를 찾아 PlayerJoined에 이벤트 리스너 추가
-                Runner.GetComponent<NetworkEvents>().PlayerJoined.AddListener((runner, player) =>
+            bool roomCreated = false;
+            string failureDetail = null;
+
+            try
+            {
+                // 러너가 없을 때 러너를 생성
+                if (!Runner)
                 {
-                    if (runner.IsServer && runner.LocalPlayer == player)
+                    // 러너 프리팹 생성
+                    Runner = Instantiate(RunnerPrefab);
+
+                    // 러너의 NetworkEvents 컴포넌트를 찾아 PlayerJoined에 이벤트 리스너 추가
+                    Runner.GetComponent<NetworkEvents>().PlayerJoined.AddListener((runner, player) =>
                     {
-                        Debug.Log("네트워크 매니저 스폰");
-                        runner.Spawn(NetworkManagerPrefab);
-                    }
+                        if (runner.IsServer && runner.LocalPlayer == player)
+                        {
+                            Debug.Log("네트워크 매니저 스폰");
+                            runner.Spawn(NetworkManagerPrefab);
+                        }
+                    });
+                }
+
+                // 러너에 콜백 추가
+                Runner.AddCallbacks(this);
+
+                // 입력을 제공하도록 설정
+                Runner.ProvideInput = true;
+
+                // 게임 시작 인자 설정
+                var result = await Runner.StartGame(new StartGameArgs
+                {
+                    GameMode = GameMode.Host, // 호스트 모드로 시작
+                    PlayerCount = _maxPlayerCount, // 최대 2명으로 설정
+                    SessionName = GenerateRoomCode(), // 룸 코드 랜덤 생성
+                    SceneManager = Runner.GetComponent<NetworkSceneManagerDefault>() // 기본 씬 매니저 사용
                 });
+
+                roomCreated = result.Ok;
+                if (!result.Ok)
+                    failureDetail = result.ShutdownReason.ToString();
+            }
+            catch (Exception exception)
+            {
+                failureDetail = exception.Message;
+                Debug.LogException(exception);
+            }
+            finally
+            {
+                interfaceManager.EndSessionOperation();
             }
 
-            // 러너에 콜백 추가
-            Runner.AddCallbacks(this);
-
-            // 입력을 제공하도록 설정
-            Runner.ProvideInput = true;
-
-            // 게임 시작 인자 설정
-            var result = await Runner.StartGame(new StartGameArgs
-            {
-                GameMode = GameMode.Host, // 호스트 모드로 시작
-                PlayerCount = _maxPlayerCount, // 최대 2명으로 설정
-                SessionName = GenerateRoomCode(), // 룸 코드 랜덤 생성
-                SceneManager = Runner.GetComponent<NetworkSceneManagerDefault>() // 기본 씬 매니저 사용
-            });
-
-            // 룸 생성에 성공하면 룸 생성 이벤트 호출
-            if (result.Ok)
+            if (roomCreated)
             {
                 OnRoomCreated?.Invoke();
+                return;
             }
+
+            Debug.LogWarning($"{CreateRoomFailedMessage} {failureDetail}");
+            interfaceManager.PopupNotificationWindow(CreateRoomFailedMessage);
         }
 
         // 클라이언트가 룸에 참여하는 메서드
         public async void JoinRoom()
         {
-            // 러너가 없을 때 러너를 생성
-            if (!Runner)
+            InterfaceManager interfaceManager = InterfaceManager.Instance;
+            if (interfaceManager == null || !interfaceManager.TryBeginSessionOperation())
+                return;
+
+            bool roomJoined = false;
+            string failureDetail = null;
+
+            try
             {
-                // 러너 프리팹 생성
-                Runner = Instantiate(RunnerPrefab);
+                // 러너가 없을 때 러너를 생성
+                if (!Runner)
+                {
+                    // 러너 프리팹 생성
+                    Runner = Instantiate(RunnerPrefab);
+                }
+
+                // 러너에 콜백 추가
+                Runner.AddCallbacks(this);
+
+                // 입력을 제공하도록 설정
+                Runner.ProvideInput = true;
+
+                // 게임 시작 인자 설정
+                var result = await Runner.StartGame(new StartGameArgs
+                {
+                    GameMode = GameMode.Client, // 클라이언트 모드로 시작
+                    SessionName = interfaceManager.JoinSession.RoomCode, // 참여할 룸 코드를 받아옴
+                    SceneManager = Runner.GetComponent<NetworkSceneManagerDefault>(), // 기본 씬 매니저 사용
+                    EnableClientSessionCreation = false // 클라이언트 세션 생성 비활성화
+                });
+
+                roomJoined = result.Ok;
+                if (!result.Ok)
+                    failureDetail = result.ShutdownReason.ToString();
+            }
+            catch (Exception exception)
+            {
+                failureDetail = exception.Message;
+                Debug.LogException(exception);
+            }
+            finally
+            {
+                interfaceManager.EndSessionOperation();
             }
 
-            // 러너에 콜백 추가
-            Runner.AddCallbacks(this);
-
-            // 입력을 제공하도록 설정
-            Runner.ProvideInput = true;
-
-            // 게임 시작 인자 설정
-            var result = await Runner.StartGame(new StartGameArgs
-            {
-                GameMode = GameMode.Client, // 클라이언트 모드로 시작
-                SessionName = InterfaceManager.Instance.JoinSession.RoomCode, // 참여할 룸 코드를 받아옴
-                SceneManager = Runner.GetComponent<NetworkSceneManagerDefault>(), // 기본 씬 매니저 사용
-                EnableClientSessionCreation = false // 클라이언트 세션 생성 비활성화
-            });
-
-            // 룸 참여에 성공하면 룸 참여 이벤트 호출
-            if (result.Ok)
+            if (roomJoined)
             {
                 Debug.Log("방 참여 성공");
                 OnRoomJoined?.Invoke();
+                return;
             }
+
+            Debug.LogWarning($"{JoinRoomFailedMessage} {failureDetail}");
+            interfaceManager.PopupNotificationWindow(JoinRoomFailedMessage);
         }
 
         // 룸을 떠나는 메서드

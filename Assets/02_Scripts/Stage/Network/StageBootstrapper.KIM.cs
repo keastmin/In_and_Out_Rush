@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using Fusion;
 using UnityEngine;
 using KIM.Dev;
@@ -19,10 +17,6 @@ namespace Dev.Network
         [HideInInspector] [Networked] public Laboratory NetworkLaboratory { get; private set; }
         private Laboratory _localLaboratory;
         private TowerBuildManager _towerBuildManager;
-
-        public IReadOnlyList<WorldObstacle> RockList => _rockSpawner != null
-            ? _rockSpawner.SpawnedRocks
-            : Array.Empty<WorldObstacle>();
 
         private void KIMInitializeHost()
         {
@@ -72,15 +66,6 @@ namespace Dev.Network
             if (!HasStateAuthority)
                 return;
 
-            if (_rockSpawner == null && _grid != null)
-                _grid.TryGetComponent(out _rockSpawner);
-
-            if (_rockSpawner == null)
-            {
-                Debug.LogError("InfiniteGridRockSpawner 참조를 찾을 수 없습니다.");
-                return;
-            }
-
             _rockSpawner.SpawnRocks();
         }
 
@@ -89,7 +74,7 @@ namespace Dev.Network
             if (!HasStateAuthority || consumer == null)
                 return;
 
-            consumer.InitializeWorldObstacles(RockList);
+            consumer.InitializeWorldObstacles(_rockSpawner.SpawnedRocks);
         }
 
         private void HandleKimRoundStarting(int round, TimeSystem sender, object context)

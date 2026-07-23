@@ -28,7 +28,6 @@ namespace KIM.Dev
         [Header("Reference")]
         [SerializeField] private PlayerBuilderUI _builderUI; // UI 참조
         [SerializeField] private DragSystem _dragSystem; // 드래그 시스템 참조
-        [SerializeField] private PlayerBuilderMover _builderMover; // 빌더 무버 참조
         [SerializeField] private Laboratory _laboratory; // 연구실 참조
 
         [Space(10)]
@@ -124,7 +123,6 @@ namespace KIM.Dev
         {
             DragSelectedColliders = new Collider[100];
             StateMachine = new PlayerBuilderStateMachine(this);
-            InitializeReference();
         }
 
         private void Start()
@@ -145,11 +143,6 @@ namespace KIM.Dev
         }
 
         #region 초기화 로직
-
-        private void InitializeReference()
-        {
-            TryGetComponent(out _builderMover);
-        }
 
         // 외부에서 참조를 주입하는 함수
         public void PlayerBuilderReferenceInjection(PlayerBuilderUI builderUI)

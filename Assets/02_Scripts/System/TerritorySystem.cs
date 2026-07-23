@@ -173,6 +173,8 @@ public class TerritorySystem : NetworkSystemBase
                 StartExpanding();
                 AddExpandingPathPoint(previousPosition);
                 AddExpandingPathPoint(currentPosition);
+                previousPosition = currentPosition;
+                return;
             }
 
             if (Vector2.SqrMagnitude(currentPosition - previousPosition) > 0.01f)

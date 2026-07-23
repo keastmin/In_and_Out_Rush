@@ -16,10 +16,13 @@ namespace Dev.Network
         private TerritorySystem territorySystem;
         private Gate gate;
         private float worldBoundaryRadius;
+        private float innerRadius;
         private float sampleArea;
         private bool isQuotaReached;
         private bool isInitialized;
 
+        public Vector3 Center => transform.position;
+        public float InnerRadius => innerRadius;
         public float CapturedArea { get; private set; }
         public float TotalArea { get; private set; }
         public float ProgressRatio => TotalArea > 0f ? Mathf.Clamp01(CapturedArea / TotalArea) : 0f;
@@ -58,10 +61,13 @@ namespace Dev.Network
             ApplyGateUnlockState();
         }
 
+        public float CalculateInnerRadius(float outerRadius)
+            => Mathf.Max(0f, outerRadius) * Mathf.Clamp01(innerRadiusRatio);
+
         private void RebuildSacredZone()
         {
             float outerRadius = worldBoundaryRadius;
-            float innerRadius = outerRadius * Mathf.Clamp01(innerRadiusRatio);
+            innerRadius = CalculateInnerRadius(outerRadius);
 
             if (view != null)
                 view.Initialize(innerRadius, outerRadius, meshSegmentCount);

@@ -34,6 +34,12 @@ namespace Dev.Network
         [SerializeField] private Gate _gatePrefab;
         [SerializeField] private StageResultView _stageResultView;
         [SerializeField] private float _worldBoundaryRadius = 1000f;
+        [SerializeField] private bool showGateCandidateGizmos = true;
+        [SerializeField, Min(0.1f)] private float gateCandidateGizmoRadius = 2f;
+
+        private const int GateCandidateCountPerDirection = 4;
+        private const int GateDirectionCount = 4;
+        private const int GateCandidateCount = GateCandidateCountPerDirection * GateDirectionCount;
 
         private bool _isGameOverPresented = false;
         private bool _isReturningToTitle = false;
@@ -175,12 +181,6 @@ namespace Dev.Network
             }
         }
 
-        private void StartTrackMonsterSettlement()
-        {
-            if (trackMonsterSpawnSystem == null)
-            {
-                Debug.LogWarning("TrackMonsterSpawnSystem is missing. Track monster settlement skipped.");
-                return;
         private void HandleTrackChanged(Vector3[] vertices, TrackSystem trackSystem, object context)
         {
             if (!HasStateAuthority || vertices == null)
@@ -189,6 +189,12 @@ namespace Dev.Network
             _rockSpawner.DespawnRocksOverlappingTrack(Runner, vertices, trackSystem != null ? trackSystem.TrackLineWidth : 0f);
         }
 
+        private void StartTrackMonsterSettlement()
+        {
+            if (trackMonsterSpawnSystem == null)
+            {
+                Debug.LogWarning("TrackMonsterSpawnSystem is missing. Track monster settlement skipped.");
+                return;
             }
 
             if (PlayerRunner == null)
@@ -243,13 +249,7 @@ namespace Dev.Network
                 return;
 
             // TODO: Field Object 생성
-            var randomAngle = Random.value * 360f;
-            var randomDistance = _worldBoundaryRadius;
-            var gatePosition = new Vector3(
-                Mathf.Cos(randomAngle * Mathf.Deg2Rad) * randomDistance,
-                0f,
-                Mathf.Sin(randomAngle * Mathf.Deg2Rad) * randomDistance
-            );
+            Vector3 gatePosition = CreateGatePosition();
             var gate = Runner.Spawn(_gatePrefab, gatePosition, Quaternion.identity);
             activeGate = gate;
             activeGate.SetUnlocked(false);
@@ -257,9 +257,104 @@ namespace Dev.Network
             gate.OnPlayerRunnerEntered += HandleGateEntered;
         }
 
+        private Vector3 CreateGatePosition()
+        {
+            if (sacredZoneSystem == null || sacredZoneSystem.InnerRadius <= 0f)
+                return CreateFallbackGatePosition();
+
+            int candidateIndex = Random.Range(0, GateCandidateCount);
+            return CreateGateCandidatePosition(candidateIndex, sacredZoneSystem.InnerRadius);
+        }
+
+        private Vector3 CreateFallbackGatePosition()
+        {
+            float randomAngle = Random.value * Mathf.PI * 2f;
+            return new Vector3(
+                Mathf.Cos(randomAngle) * _worldBoundaryRadius,
+                0f,
+                Mathf.Sin(randomAngle) * _worldBoundaryRadius);
+        }
+
+        private static Vector2 CreateProjectedInscribedSquareDirection(int candidateIndex)
+        {
+            int sideIndex = Mathf.Clamp(candidateIndex / GateCandidateCountPerDirection, 0, GateDirectionCount - 1);
+            int positionIndex = Mathf.Clamp(candidateIndex % GateCandidateCountPerDirection, 0, GateCandidateCountPerDirection - 1);
+
+            float halfExtent = 1f / Mathf.Sqrt(2f);
+            float step = halfExtent * 2f / (GateCandidateCountPerDirection + 1);
+            float offset = -halfExtent + step * (positionIndex + 1);
+
+            Vector2 squarePoint = sideIndex switch
+            {
+                0 => new Vector2(halfExtent, offset),
+                1 => new Vector2(-offset, halfExtent),
+                2 => new Vector2(-halfExtent, -offset),
+                _ => new Vector2(offset, -halfExtent)
+            };
+
+            return squarePoint.normalized;
+        }
+
+        private Vector3 CreateGateCandidatePosition(int candidateIndex, float innerRadius)
+        {
+            Vector2 direction = CreateProjectedInscribedSquareDirection(candidateIndex);
+            Vector3 center = sacredZoneSystem != null ? sacredZoneSystem.Center : transform.position;
+            return center + new Vector3(
+                direction.x * innerRadius,
+                0f,
+                direction.y * innerRadius);
+        }
+
         private void Update()
         {
             TickSanctuaries();
+        }
+
+        private void OnDrawGizmos()
+        {
+            if (!showGateCandidateGizmos)
+                return;
+
+            DrawGateCandidateGizmos();
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            DrawGateCandidateGizmos();
+        }
+
+        private void DrawGateCandidateGizmos()
+        {
+            float innerRadius = GetGateCandidateGizmoInnerRadius();
+            if (innerRadius <= 0f)
+                return;
+
+            Vector3 center = sacredZoneSystem != null ? sacredZoneSystem.Center : transform.position;
+            Vector3 centerOffset = center + Vector3.up * 0.25f;
+
+            Gizmos.color = new Color(0.1f, 0.8f, 1f, 0.35f);
+            Gizmos.DrawWireSphere(centerOffset, innerRadius);
+
+            Gizmos.color = new Color(0.2f, 1f, 0.65f, 0.9f);
+            for (int i = 0; i < GateCandidateCount; i++)
+            {
+                Vector3 position = CreateGateCandidatePosition(i, innerRadius) + Vector3.up * 0.25f;
+                Gizmos.DrawLine(centerOffset, position);
+                Gizmos.DrawSphere(position, gateCandidateGizmoRadius);
+                Gizmos.DrawWireSphere(position, gateCandidateGizmoRadius * 2f);
+                Gizmos.DrawLine(position, position + Vector3.up * gateCandidateGizmoRadius * 4f);
+            }
+        }
+
+        private float GetGateCandidateGizmoInnerRadius()
+        {
+            if (Application.isPlaying && sacredZoneSystem != null && sacredZoneSystem.InnerRadius > 0f)
+                return sacredZoneSystem.InnerRadius;
+
+            if (sacredZoneSystem != null)
+                return sacredZoneSystem.CalculateInnerRadius(_worldBoundaryRadius);
+
+            return _worldBoundaryRadius;
         }
 
         public bool IsPointInActiveSanctuary(Vector3 worldPosition)

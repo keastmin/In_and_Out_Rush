@@ -6,33 +6,79 @@ namespace KIM.Dev
     public sealed class WorldObstacle : MonoBehaviour
     {
         [SerializeField] private Collider _collider;
+        private Collider[] _colliders;
 
         public Collider Collider => _collider;
         public Vector3 Position => transform.position;
-        public Bounds Bounds => _collider != null
-            ? _collider.bounds
-            : new Bounds(transform.position, Vector3.zero);
+        public Bounds Bounds => CreateBounds();
         public Vector3 Size => Bounds.size;
 
         private void Awake()
         {
-            ResolveCollider();
+            RefreshColliderCache();
         }
 
         private void Reset()
         {
-            ResolveCollider();
+            RefreshColliderCache();
         }
 
         private void OnValidate()
         {
-            ResolveCollider();
+            RefreshColliderCache();
         }
 
-        private void ResolveCollider()
+        private void RefreshColliderCache()
         {
             if (_collider == null)
                 TryGetComponent(out _collider);
+
+            _colliders = GetComponentsInChildren<Collider>();
+        }
+
+        private Bounds CreateBounds()
+        {
+            if (TryCreateCombinedColliderBounds(out Bounds bounds))
+                return bounds;
+
+            return new Bounds(transform.position, Vector3.zero);
+        }
+
+        private bool TryCreateCombinedColliderBounds(out Bounds bounds)
+        {
+            bounds = default;
+            bool hasBounds = false;
+
+            EncapsulateColliderBounds(_collider, ref bounds, ref hasBounds);
+
+            if (_colliders != null)
+            {
+                for (int i = 0; i < _colliders.Length; i++)
+                {
+                    EncapsulateColliderBounds(_colliders[i], ref bounds, ref hasBounds);
+                }
+            }
+
+            return hasBounds;
+        }
+
+        private static void EncapsulateColliderBounds(Collider targetCollider, ref Bounds bounds, ref bool hasBounds)
+        {
+            if (targetCollider == null || !targetCollider.enabled || !targetCollider.gameObject.activeInHierarchy)
+                return;
+
+            Bounds colliderBounds = targetCollider.bounds;
+            if (colliderBounds.size == Vector3.zero)
+                return;
+
+            if (!hasBounds)
+            {
+                bounds = colliderBounds;
+                hasBounds = true;
+                return;
+            }
+
+            bounds.Encapsulate(colliderBounds);
         }
     }
 }

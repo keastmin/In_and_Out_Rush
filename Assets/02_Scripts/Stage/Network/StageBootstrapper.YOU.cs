@@ -92,29 +92,39 @@ namespace Dev.Network
 
         private void BindRoundSystemEvents()
         {
-            if (timeSystem == null)
+            if (timeSystem != null)
+            {
+                timeSystem.OnRoundStarting -= HandleRoundStarting;
+                timeSystem.OnRoundEnded -= HandleRoundEnded;
+                timeSystem.OnBerserkStarted -= HandleBerserkStarted;
+
+                timeSystem.OnRoundStarting += HandleRoundStarting;
+                timeSystem.OnRoundEnded += HandleRoundEnded;
+                timeSystem.OnBerserkStarted += HandleBerserkStarted;
+            }
+            else
             {
                 Debug.LogWarning("StageBootstrapper could not find TimeSystem. Round progression will not run.");
-                return;
             }
 
-            timeSystem.OnRoundStarting -= HandleRoundStarting;
-            timeSystem.OnRoundEnded -= HandleRoundEnded;
-            timeSystem.OnBerserkStarted -= HandleBerserkStarted;
-
-            timeSystem.OnRoundStarting += HandleRoundStarting;
-            timeSystem.OnRoundEnded += HandleRoundEnded;
-            timeSystem.OnBerserkStarted += HandleBerserkStarted;
+            if (roundTrackSystem != null)
+            {
+                roundTrackSystem.OnTrackChanged -= HandleTrackChanged;
+                roundTrackSystem.OnTrackChanged += HandleTrackChanged;
+            }
         }
 
         private void UnbindRoundSystemEvents()
         {
-            if (timeSystem == null)
-                return;
+            if (timeSystem != null)
+            {
+                timeSystem.OnRoundStarting -= HandleRoundStarting;
+                timeSystem.OnRoundEnded -= HandleRoundEnded;
+                timeSystem.OnBerserkStarted -= HandleBerserkStarted;
+            }
 
-            timeSystem.OnRoundStarting -= HandleRoundStarting;
-            timeSystem.OnRoundEnded -= HandleRoundEnded;
-            timeSystem.OnBerserkStarted -= HandleBerserkStarted;
+            if (roundTrackSystem != null)
+                roundTrackSystem.OnTrackChanged -= HandleTrackChanged;
         }
 
         private void HandleRoundStarting(int round, TimeSystem sender, object context)
@@ -171,6 +181,14 @@ namespace Dev.Network
             {
                 Debug.LogWarning("TrackMonsterSpawnSystem is missing. Track monster settlement skipped.");
                 return;
+        private void HandleTrackChanged(Vector3[] vertices, TrackSystem trackSystem, object context)
+        {
+            if (!HasStateAuthority || vertices == null)
+                return;
+
+            _rockSpawner.DespawnRocksOverlappingTrack(Runner, vertices, trackSystem != null ? trackSystem.TrackLineWidth : 0f);
+        }
+
             }
 
             if (PlayerRunner == null)

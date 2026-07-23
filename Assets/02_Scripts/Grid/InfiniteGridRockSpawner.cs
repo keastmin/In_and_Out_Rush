@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Dev.Network;
 using Fusion;
 using UnityEngine;
 
@@ -14,6 +13,7 @@ namespace KIM.Dev
         [SerializeField, Min(1)] private int _spawnCountPerPrefab = 4;
         [SerializeField, Min(0f)] private float _maximumHalfExtent = 220f;
         [SerializeField, Range(0f, 0.45f)] private float _edgePaddingRatio = 0.08f;
+        [SerializeField, Min(0f)] private float _centerExclusionRadius = 40f;
         [SerializeField, Range(0f, 0.45f)] private float _cellJitterRatio = 0.2f;
         [SerializeField, Min(1)] private int _placementRetryCount = 24;
         [SerializeField, Min(0f)] private float _minimumSpacing = 24f;
@@ -28,6 +28,23 @@ namespace KIM.Dev
         private bool _spawnStarted;
 
         public IReadOnlyList<WorldObstacle> SpawnedRocks => _spawnedRocks;
+
+        public void DespawnRocksOverlappingTrack(NetworkRunner runner, IReadOnlyList<Vector3> trackVertices, float trackLineWidth)
+        {
+            if (runner == null || trackVertices == null || trackVertices.Count < 2)
+                return;
+
+            float trackRadius = Mathf.Max(0f, trackLineWidth * 0.5f);
+            for (int i = _spawnedRocks.Count - 1; i >= 0; i--)
+            {
+                WorldObstacle rock = _spawnedRocks[i];
+                if (!ShouldDespawnRock(rock, trackVertices, trackRadius))
+                    continue;
+
+                DespawnRock(runner, rock);
+                _spawnedRocks.RemoveAt(i);
+            }
+        }
 
         public void SpawnRocks()
         {
@@ -49,28 +66,7 @@ namespace KIM.Dev
             if (!_grid.HasStateAuthority)
                 return;
 
-            if (!IsPlacementContextReady())
-            {
-                Debug.LogWarning("바위 배치에 필요한 트랙 및 영역 정보가 준비되기 전이므로 바위를 스폰할 수 없습니다.");
-                return;
-            }
-
             SpawnRocksInternal();
-        }
-
-        private bool IsPlacementContextReady()
-        {
-            StageBootstrapper bootstrapper = StageBootstrapper.Instance;
-            if (bootstrapper == null || !bootstrapper.IsInitialized)
-                return false;
-
-            TrackSystem trackSystem = bootstrapper.RoundTrackSystem;
-            TerritorySystem territorySystem = bootstrapper.TerritorySystem;
-            return trackSystem != null &&
-                   trackSystem.Track?.Vertices != null &&
-                   trackSystem.Track.Vertices.Length >= 2 &&
-                   territorySystem != null &&
-                   territorySystem.Territory != null;
         }
 
         private void SpawnRocksInternal()
@@ -141,7 +137,7 @@ namespace KIM.Dev
                         continue;
 
                     _spawnedPositions.Add(spawnPosition);
-                    if (spawnedRock.TryGetComponent(out WorldObstacle worldObstacle))
+                    if (TryGetWorldObstacle(spawnedRock, out WorldObstacle worldObstacle))
                     {
                         _spawnedRocks.Add(worldObstacle);
                     }
@@ -165,6 +161,36 @@ namespace KIM.Dev
                 if (prefab != null && !_validRockPrefabs.Contains(prefab))
                     _validRockPrefabs.Add(prefab);
             }
+        }
+
+        private static bool TryGetWorldObstacle(NetworkObject spawnedRock, out WorldObstacle worldObstacle)
+        {
+            worldObstacle = null;
+            return spawnedRock != null &&
+                   (spawnedRock.TryGetComponent(out worldObstacle) ||
+                    spawnedRock.GetComponentInChildren<WorldObstacle>() is WorldObstacle childWorldObstacle &&
+                    (worldObstacle = childWorldObstacle) != null);
+        }
+
+        private static bool ShouldDespawnRock(
+            WorldObstacle rock,
+            IReadOnlyList<Vector3> trackVertices,
+            float trackRadius)
+        {
+            return rock == null ||
+                   DoesTrackOverlapObstacleBounds(trackVertices, trackRadius, rock.Bounds);
+        }
+
+        private static void DespawnRock(NetworkRunner runner, WorldObstacle rock)
+        {
+            if (rock == null)
+                return;
+
+            NetworkObject networkObject = rock.GetComponentInParent<NetworkObject>();
+            if (networkObject == null || !networkObject.IsValid || !networkObject.HasStateAuthority)
+                return;
+
+            runner.Despawn(networkObject);
         }
 
         private bool TryFindSpawnPosition(
@@ -195,7 +221,7 @@ namespace KIM.Dev
                     groundHeight,
                     centerZ + NextRange(random, -jitterZ, jitterZ));
 
-                if (IsValidPosition(position))
+                if (IsValidPosition(position, groundBounds.center))
                     return true;
             }
 
@@ -207,7 +233,7 @@ namespace KIM.Dev
                     groundHeight,
                     groundBounds.center.z + NextRange(random, -usableHalfExtentZ, usableHalfExtentZ));
 
-                if (IsValidPosition(position))
+                if (IsValidPosition(position, groundBounds.center))
                     return true;
             }
 
@@ -215,10 +241,12 @@ namespace KIM.Dev
             return false;
         }
 
-        private bool IsValidPosition(Vector3 position)
+        private bool IsValidPosition(Vector3 position, Vector3 mapCenter)
         {
-            Vector2Int cellIndex = _grid.GetCellIndexFromWorldPosition(position);
-            if (_grid.IsCellBlockedByTrack(cellIndex) || _grid.IsCellInTerritory(cellIndex))
+            Vector3 centerOffset = position - mapCenter;
+            centerOffset.y = 0f;
+            float centerExclusionRadiusSqr = _centerExclusionRadius * _centerExclusionRadius;
+            if (centerOffset.sqrMagnitude < centerExclusionRadiusSqr)
                 return false;
 
             float minimumSpacingSqr = _minimumSpacing * _minimumSpacing;
@@ -244,6 +272,116 @@ namespace KIM.Dev
         private static float NextRange(System.Random random, float min, float max)
         {
             return min + (float)random.NextDouble() * (max - min);
+        }
+
+        private static bool DoesTrackOverlapObstacleBounds(IReadOnlyList<Vector3> trackVertices, float trackRadius, Bounds bounds)
+        {
+            Vector2 boundsMin = ToXZ(bounds.min);
+            Vector2 boundsMax = ToXZ(bounds.max);
+            float trackRadiusSqr = trackRadius * trackRadius;
+
+            for (int i = 0; i < trackVertices.Count; i++)
+            {
+                Vector2 start = ToXZ(trackVertices[i]);
+                Vector2 end = ToXZ(trackVertices[(i + 1) % trackVertices.Count]);
+
+                if (GetSegmentBoundsDistanceSqr(start, end, boundsMin, boundsMax) <= trackRadiusSqr)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static Vector2 ToXZ(Vector3 position)
+        {
+            return new Vector2(position.x, position.z);
+        }
+
+        private static float GetSegmentBoundsDistanceSqr(Vector2 start, Vector2 end, Vector2 boundsMin, Vector2 boundsMax)
+        {
+            if (IsPointInsideBounds(start, boundsMin, boundsMax) ||
+                IsPointInsideBounds(end, boundsMin, boundsMax) ||
+                DoesSegmentIntersectBounds(start, end, boundsMin, boundsMax))
+            {
+                return 0f;
+            }
+
+            float minDistanceSqr = Mathf.Min(
+                GetPointBoundsDistanceSqr(start, boundsMin, boundsMax),
+                GetPointBoundsDistanceSqr(end, boundsMin, boundsMax));
+
+            Vector2 bottomLeft = new(boundsMin.x, boundsMin.y);
+            Vector2 bottomRight = new(boundsMax.x, boundsMin.y);
+            Vector2 topLeft = new(boundsMin.x, boundsMax.y);
+            Vector2 topRight = new(boundsMax.x, boundsMax.y);
+
+            minDistanceSqr = Mathf.Min(minDistanceSqr, GetDistanceToSegmentSqr(bottomLeft, start, end));
+            minDistanceSqr = Mathf.Min(minDistanceSqr, GetDistanceToSegmentSqr(bottomRight, start, end));
+            minDistanceSqr = Mathf.Min(minDistanceSqr, GetDistanceToSegmentSqr(topLeft, start, end));
+            minDistanceSqr = Mathf.Min(minDistanceSqr, GetDistanceToSegmentSqr(topRight, start, end));
+            return minDistanceSqr;
+        }
+
+        private static bool IsPointInsideBounds(Vector2 point, Vector2 boundsMin, Vector2 boundsMax)
+        {
+            return point.x >= boundsMin.x &&
+                   point.x <= boundsMax.x &&
+                   point.y >= boundsMin.y &&
+                   point.y <= boundsMax.y;
+        }
+
+        private static float GetPointBoundsDistanceSqr(Vector2 point, Vector2 boundsMin, Vector2 boundsMax)
+        {
+            float deltaX = Mathf.Max(boundsMin.x - point.x, 0f, point.x - boundsMax.x);
+            float deltaY = Mathf.Max(boundsMin.y - point.y, 0f, point.y - boundsMax.y);
+            return deltaX * deltaX + deltaY * deltaY;
+        }
+
+        private static bool DoesSegmentIntersectBounds(Vector2 start, Vector2 end, Vector2 boundsMin, Vector2 boundsMax)
+        {
+            Vector2 direction = end - start;
+            float minT = 0f;
+            float maxT = 1f;
+
+            return ClipSegmentAxis(start.x, direction.x, boundsMin.x, boundsMax.x, ref minT, ref maxT) &&
+                   ClipSegmentAxis(start.y, direction.y, boundsMin.y, boundsMax.y, ref minT, ref maxT);
+        }
+
+        private static bool ClipSegmentAxis(
+            float start,
+            float direction,
+            float min,
+            float max,
+            ref float minT,
+            ref float maxT)
+        {
+            if (Mathf.Abs(direction) <= Mathf.Epsilon)
+                return start >= min && start <= max;
+
+            float inverseDirection = 1f / direction;
+            float enter = (min - start) * inverseDirection;
+            float exit = (max - start) * inverseDirection;
+            if (enter > exit)
+            {
+                (enter, exit) = (exit, enter);
+            }
+
+            minT = Mathf.Max(minT, enter);
+            maxT = Mathf.Min(maxT, exit);
+            return minT <= maxT;
+        }
+
+        private static float GetDistanceToSegmentSqr(Vector2 point, Vector2 start, Vector2 end)
+        {
+            Vector2 segment = end - start;
+            float segmentLengthSqr = segment.sqrMagnitude;
+
+            if (segmentLengthSqr <= Mathf.Epsilon)
+                return (point - start).sqrMagnitude;
+
+            float t = Mathf.Clamp01(Vector2.Dot(point - start, segment) / segmentLengthSqr);
+            Vector2 closestPoint = start + segment * t;
+            return (point - closestPoint).sqrMagnitude;
         }
     }
 }

@@ -86,7 +86,12 @@ namespace Dev
 
         public void ExpandTerritory()
         {
-            _territory.Expand(PlayerPath);
+            if (!_territory.TryExpand(PlayerPath))
+            {
+                Debug.LogWarning($"Territory expansion rejected. Path point count: {PlayerPath.Count}");
+                return;
+            }
+
             OnTerritoryExpanded?.Invoke(_territory.Vertices, _territory, this);
         }
     }

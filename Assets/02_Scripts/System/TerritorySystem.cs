@@ -239,7 +239,12 @@ public class TerritorySystem : NetworkSystemBase
         Debug.Log($"{Runner.name} - Expanding territory with path: {playerPathArray.Length}");
 
         var playerPathFromHost = new List<Vector2>(playerPathArray);
-        Territory.Expand(playerPathFromHost);
+        if (!Territory.TryExpand(playerPathFromHost))
+        {
+            Debug.LogWarning($"{Runner.name} - Territory expansion rejected. Path point count: {playerPathArray.Length}");
+            return;
+        }
+
         TerritoryVisible.SetVertices(Territory.Vertices);
 
         if (Object.HasStateAuthority)

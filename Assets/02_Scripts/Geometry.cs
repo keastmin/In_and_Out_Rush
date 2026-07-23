@@ -2,74 +2,105 @@ using UnityEngine;
 
 public static class Geometry
 {
-    const float EPS = 1e-7f;
+    const float EPS = 1e-6f;
 
-    private static float Cross(Vector2 a, Vector2 b) => a.x * b.y - a.y * b.x;
+    static float Cross(Vector2 a, Vector2 b) => a.x * b.y - a.y * b.x;
 
-    public static bool SegmentIntersection(Vector2 A, Vector2 B, Vector2 C, Vector2 D, bool includeEndpoints, out Vector2 intersection)
+    public static bool SegmentIntersection(
+        Vector2 A,
+        Vector2 B,
+        Vector2 C,
+        Vector2 D,
+        bool includeEndpoints,
+        out Vector2 intersection)
     {
         intersection = default;
 
         Vector2 r = B - A;
         Vector2 s = D - C;
+        float rr = Vector2.Dot(r, r);
+        float ss = Vector2.Dot(s, s);
+
+        if (rr <= EPS * EPS && ss <= EPS * EPS)
+        {
+            if (!includeEndpoints || !AreSamePoint(A, C))
+                return false;
+
+            intersection = A;
+            return true;
+        }
+
+        if (rr <= EPS * EPS)
+        {
+            if (!includeEndpoints || !PointOnSegment(A, C, D))
+                return false;
+
+            intersection = A;
+            return true;
+        }
+
+        if (ss <= EPS * EPS)
+        {
+            if (!includeEndpoints || !PointOnSegment(C, A, B))
+                return false;
+
+            intersection = C;
+            return true;
+        }
+
         float rxs = Cross(r, s);
         Vector2 AC = C - A;
         float ACxr = Cross(AC, r);
 
-        // 평행
-        if (Mathf.Abs(rxs) < EPS)
+        if (Mathf.Abs(rxs) <= EPS)
         {
-            // 공선 여부
-            if (Mathf.Abs(ACxr) < EPS)
-            {
-                // 매개변수로 투영해 구간 겹침 확인
-                float rr = Vector2.Dot(r, r);
-                if (rr < EPS) // A==B(퇴화)
-                {
-                    // 점 A가 CD 위에 있나?
-                    if (PointOnSegment(A, C, D))
-                    {
-                        intersection = A;
-                        return true;
-                    }
-                    return false;
-                }
+            if (Mathf.Abs(ACxr) > EPS)
+                return false;
 
-                float t0 = Vector2.Dot(AC, r) / rr;
-                float t1 = t0 + Vector2.Dot(s, r) / rr;
-                float tmin = Mathf.Min(t0, t1);
-                float tmax = Mathf.Max(t0, t1);
+            float t0 = Vector2.Dot(AC, r) / rr;
+            float t1 = t0 + Vector2.Dot(s, r) / rr;
+            float tmin = Mathf.Min(t0, t1);
+            float tmax = Mathf.Max(t0, t1);
+            float lower = includeEndpoints ? Mathf.Max(0f, tmin) : Mathf.Max(EPS, tmin);
+            float upper = includeEndpoints ? Mathf.Min(1f, tmax) : Mathf.Min(1f - EPS, tmax);
 
-                if (tmax <= 0f || tmin >= 1f) return false; // 안 겹침
+            if (lower > upper)
+                return false;
 
-                // 겹침: 단일 교점을 원하면 경계점 중 하나를 반환
-                float t = Mathf.Clamp01((Mathf.Abs(tmin - 1f) < Mathf.Abs(tmax) ? 1f : 0f));
-                intersection = A + t * r;
-                return true;
-            }
-            // 평행하지만 공선 아님
-            return false;
-        }
-
-        // 비평행: t, u 계산
-        float t_ = Cross(AC, s) / rxs;
-        float u_ = Cross(AC, r) / rxs;
-
-        if(includeEndpoints && t_ >= -EPS && t_ <= 1f + EPS && u_ >= -EPS && u_ <= 1f + EPS)
-        {
-            // 구간 안: 교점, 끝점 인식
-            intersection = A + t_ * r;
+            intersection = A + Mathf.Clamp01(lower) * r;
             return true;
         }
-        return false;
+
+        float t = Cross(AC, s) / rxs;
+        float u = Cross(AC, r) / rxs;
+        bool intersects = includeEndpoints
+            ? t >= -EPS && t <= 1f + EPS && u >= -EPS && u <= 1f + EPS
+            : t > EPS && t < 1f - EPS && u > EPS && u < 1f - EPS;
+
+        if (!intersects)
+            return false;
+
+        intersection = A + Mathf.Clamp01(t) * r;
+        return true;
     }
 
-    public static bool PointOnSegment(Vector2 P, Vector2 A, Vector2 B)
+    public static bool PointOnSegment(Vector2 point, Vector2 start, Vector2 end)
     {
-        // 공선 확인
-        if (Mathf.Abs(Cross(B - A, P - A)) > EPS) return false;
-        // 바운딩 박스
-        return Mathf.Min(A.x, B.x) - EPS <= P.x && P.x <= Mathf.Max(A.x, B.x) + EPS &&
-               Mathf.Min(A.y, B.y) - EPS <= P.y && P.y <= Mathf.Max(A.y, B.y) + EPS;
+        Vector2 segment = end - start;
+        if (Vector2.SqrMagnitude(segment) <= EPS * EPS)
+            return AreSamePoint(point, start);
+
+        if (Mathf.Abs(Cross(segment, point - start)) > EPS)
+            return false;
+
+        return point.x >= Mathf.Min(start.x, end.x) - EPS &&
+               point.x <= Mathf.Max(start.x, end.x) + EPS &&
+               point.y >= Mathf.Min(start.y, end.y) - EPS &&
+               point.y <= Mathf.Max(start.y, end.y) + EPS;
+    }
+
+    static bool AreSamePoint(Vector2 a, Vector2 b)
+    {
+        return Vector2.SqrMagnitude(a - b) <= EPS * EPS;
     }
 }

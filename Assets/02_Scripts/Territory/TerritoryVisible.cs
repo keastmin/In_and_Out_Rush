@@ -15,11 +15,16 @@ namespace Dev.Local
 
         public void SetVertices(List<Vector2> vertices)
         {
-            var mesh = Territory.GenerateMesh(vertices);
+            if (_meshFilter == null && !TryGetComponent(out _meshFilter))
+            {
+                Debug.LogError($"{nameof(TerritoryVisible)} requires a {nameof(MeshFilter)}.");
+                return;
+            }
 
+            var mesh = Territory.GenerateMesh(vertices);
             if (mesh == null)
             {
-                Debug.LogError("새로운 폴리곤 생성 실패");
+                Debug.LogError("Territory mesh update skipped because the polygon is invalid.");
                 return;
             }
 

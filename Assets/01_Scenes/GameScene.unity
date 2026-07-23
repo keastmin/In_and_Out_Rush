@@ -644,7 +644,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e75d0def00e49d42aedc38b458933a3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _maintenanceDuration: 30
+  _maintenanceDuration: 2
   _roundDuration: 210
   _defaultRoundCount: 10
   _ElapsedTime: 0

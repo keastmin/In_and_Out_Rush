@@ -181,7 +181,7 @@ namespace KIM.Dev
             base.TowerDespawned();
         }
 
-        private static Cost GetCenterPropertyCost(TowerPropertiesType type)
+        public static Cost GetCenterPropertyCost(TowerPropertiesType type)
         {
             return type switch
             {

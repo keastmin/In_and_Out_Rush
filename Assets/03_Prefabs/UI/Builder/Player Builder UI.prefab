@@ -5535,6 +5535,33 @@ MonoBehaviour:
   - {fileID: 1261910432949068852}
   _towerSellButton: {fileID: 2117022874527318543}
   _towerMoveButton: {fileID: 5057048306291333756}
+  _towerBuildCostLabels:
+  - {fileID: 4258579210276274143}
+  - {fileID: 2377045707993202191}
+  - {fileID: 8080907825357946311}
+  - {fileID: 9163168725587311225}
+  - {fileID: 538960497829515008}
+  - {fileID: 2170987226550062101}
+  - {fileID: 2694861171197945941}
+  - {fileID: 2008311126593293824}
+  - {fileID: 3080358058251358694}
+  - {fileID: 5308148655214898398}
+  _towerBuildCostData:
+  - {fileID: 11400000, guid: 49d30b8405b8c3948b50b7fcb3c99841, type: 2}
+  - {fileID: 11400000, guid: 1a1808b8196b9354ba5ec7bf8096eebf, type: 2}
+  - {fileID: 11400000, guid: 53472092c7cf6b641bffa347c2b0aebe, type: 2}
+  - {fileID: 11400000, guid: 33d7c79d07f70564b9616a3ab561d39a, type: 2}
+  - {fileID: 11400000, guid: 667ae52e196b1254e945b81290e9b5a7, type: 2}
+  - {fileID: 11400000, guid: 2815eca9bd5493a45a87f45082ec0d34, type: 2}
+  - {fileID: 11400000, guid: e69e6d4a543ff234f8a71c5e105035f7, type: 2}
+  - {fileID: 11400000, guid: 46f23635e688428499161e53df3fe856, type: 2}
+  - {fileID: 11400000, guid: e23ec3638d46d88488cae72bf9ab941c, type: 2}
+  - {fileID: 11400000, guid: bb39d7284242c904cbad1ec42fad3e7e, type: 2}
+  _towerMoveCostLabel: {fileID: 6763636128682880769}
+  _centerPropertyCostLabels:
+  - {fileID: 6801061828694444110}
+  - {fileID: 49890052044280574}
+  - {fileID: 5465008534018364707}
 --- !u!222 &2220943576546430604
 CanvasRenderer:
   m_ObjectHideFlags: 0

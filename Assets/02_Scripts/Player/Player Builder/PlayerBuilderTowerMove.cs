@@ -32,6 +32,17 @@ namespace KIM.Dev
                 : IsMoveAvailable;
         }
 
+        public Cost CalculateMoveCost(IEnumerable<Tower> towers)
+        {
+            if (towers == null)
+                return default;
+
+            return _moveCostPolicy.CalculateCost(
+                new List<Tower>(towers),
+                _gridManager,
+                _mineralCostPerTower);
+        }
+
         public override void FixedUpdateNetwork()
         {
             if (HasStateAuthority)

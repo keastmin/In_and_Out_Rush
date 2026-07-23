@@ -28,9 +28,25 @@ namespace KIM.Dev
         [SerializeField] private GameObject _towerSellButton;
         [SerializeField] private GameObject _towerMoveButton;
 
+        [Header("Cost Display")]
+        [SerializeField] private TextMeshProUGUI[] _towerBuildCostLabels;
+        [SerializeField] private TowerData[] _towerBuildCostData;
+        [SerializeField] private TextMeshProUGUI _towerMoveCostLabel;
+        [SerializeField] private TextMeshProUGUI[] _centerPropertyCostLabels;
+
         public bool IsLaboratoryUIActive => _laboratoryUI.gameObject.activeSelf;
 
         private PlayerRunner _playerRunner;
+        private string _towerMoveLabel;
+        private Cost _displayedMoveCost;
+        private bool _hasDisplayedMoveCost;
+
+        private static readonly TowerPropertiesType[] CenterPropertyTypes =
+        {
+            TowerPropertiesType.Flame,
+            TowerPropertiesType.Blitz,
+            TowerPropertiesType.Biochemical
+        };
 
         #region Action
 
@@ -52,6 +68,7 @@ namespace KIM.Dev
         {
             DisableAll();
             _runnerHPSlider.value = 1f;
+            InitializeCostDisplays();
         }
 
         private void OnEnable()
@@ -151,15 +168,19 @@ namespace KIM.Dev
         public void ActivationTowerSelectUI(
             bool isActive,
             TowerType type = TowerType.Attack,
-            TowerCapability capabilities = TowerCapability.None)
+            TowerCapability capabilities = TowerCapability.None,
+            Cost moveCost = default)
         {
             _builderMainUI.gameObject.SetActive(!isActive);
             _towerSelectUI.SetActive(isActive);
 
-            RefreshTowerSelectActions(type, capabilities);
+            RefreshTowerSelectActions(type, capabilities, moveCost);
         }
 
-        public void RefreshTowerSelectActions(TowerType type, TowerCapability capabilities)
+        public void RefreshTowerSelectActions(
+            TowerType type,
+            TowerCapability capabilities,
+            Cost moveCost = default)
         {
             bool canSell = (capabilities & TowerCapability.Sell) != 0;
             bool canMove = (capabilities & TowerCapability.Move) != 0;
@@ -167,6 +188,7 @@ namespace KIM.Dev
 
             _towerSellButton?.SetActive(canSell);
             _towerMoveButton?.SetActive(canMove);
+            RefreshMoveCost(moveCost);
 
             switch (type)
             {
@@ -191,6 +213,77 @@ namespace KIM.Dev
         {
             foreach (var ui in _selectPropertiesUI)
                 ui?.SetActive(isActive);
+        }
+
+        private void InitializeCostDisplays()
+        {
+            int towerCostCount = Mathf.Min(
+                _towerBuildCostLabels?.Length ?? 0,
+                _towerBuildCostData?.Length ?? 0);
+
+            for (int i = 0; i < towerCostCount; i++)
+            {
+                TextMeshProUGUI label = _towerBuildCostLabels[i];
+                Tower tower = _towerBuildCostData[i]?.Tower;
+                if (label == null || tower == null)
+                    continue;
+
+                label.text = AppendCost(label.text, tower.Cost);
+            }
+
+            int propertyCostCount = Mathf.Min(
+                _centerPropertyCostLabels?.Length ?? 0,
+                CenterPropertyTypes.Length);
+
+            for (int i = 0; i < propertyCostCount; i++)
+            {
+                TextMeshProUGUI label = _centerPropertyCostLabels[i];
+                if (label == null)
+                    continue;
+
+                label.text = AppendCost(
+                    label.text,
+                    CenterTower.GetCenterPropertyCost(CenterPropertyTypes[i]));
+            }
+
+            if (_towerMoveCostLabel != null)
+            {
+                _towerMoveLabel = _towerMoveCostLabel.text;
+            }
+        }
+
+        private void RefreshMoveCost(Cost moveCost)
+        {
+            if (_towerMoveCostLabel == null ||
+                (_hasDisplayedMoveCost &&
+                 _displayedMoveCost.Mineral == moveCost.Mineral &&
+                 _displayedMoveCost.Gas == moveCost.Gas))
+            {
+                return;
+            }
+
+            _displayedMoveCost = moveCost;
+            _hasDisplayedMoveCost = true;
+            _towerMoveCostLabel.text = AppendCost(_towerMoveLabel, moveCost, "FREE MOVE");
+        }
+
+        private static string AppendCost(string label, Cost cost, string freeText = "FREE")
+        {
+            const string chipStart = "<size=14><mark=#1D222BCC>";
+            const string chipEnd = "</mark></size>";
+
+            if (cost.Mineral <= 0 && cost.Gas <= 0)
+                return $"{label}\n{chipStart}<color=#6FCF97>{freeText}</color>{chipEnd}";
+
+            string mineral = cost.Mineral > 0
+                ? $"<color=#F2C94C>M {cost.Mineral}</color>"
+                : string.Empty;
+            string gas = cost.Gas > 0
+                ? $"<color=#56CCF2>G {cost.Gas}</color>"
+                : string.Empty;
+            string separator = cost.Mineral > 0 && cost.Gas > 0 ? "  " : string.Empty;
+
+            return $"{label}\n{chipStart}{mineral}{separator}{gas}{chipEnd}";
         }
 
         /// <summary>

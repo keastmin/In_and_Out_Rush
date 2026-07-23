@@ -21,14 +21,16 @@ namespace KIM.Dev
             _player.BuilderUI.ActivationTowerSelectUI(
                 true,
                 type,
-                _player.GetSelectedTowerCapabilities());
+                _player.GetSelectedTowerCapabilities(),
+                _player.BuilderTowerMove.CalculateMoveCost(_player.SelectedTowers));
         }
 
         public void Update()
         {
             _player.BuilderUI.RefreshTowerSelectActions(
                 GetSelectedTowerType(),
-                _player.GetSelectedTowerCapabilities());
+                _player.GetSelectedTowerCapabilities(),
+                _player.BuilderTowerMove.CalculateMoveCost(_player.SelectedTowers));
 
             if (Input.GetMouseButtonDown(0) && !EventSystem.current.IsPointerOverGameObject())
             {

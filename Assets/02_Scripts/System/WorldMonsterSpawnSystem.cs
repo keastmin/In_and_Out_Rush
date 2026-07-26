@@ -38,7 +38,7 @@ public class WorldMonsterSpawnSystem : NetworkSystemBase
             monster.SetPlayerTransform(playerTransform);
             monster.SetPatrolPivotPosition(randomSpawnPosition);
             monster.Initialize();
-            territorySystem.OnTerritoryExpandedEvent += monster.OnTerritoryExpanded;
+            monster.RegisterTerritoryExpansion(territorySystem);
         }
     }
 }

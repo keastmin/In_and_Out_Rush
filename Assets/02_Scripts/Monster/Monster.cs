@@ -13,6 +13,7 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
     protected float maxHealth;
 
     protected Territory territory;
+    private TerritorySystem territoryExpansionSystem;
     [SerializeField] protected Transform playerTransform;
     protected Rigidbody rigidBody;
 
@@ -50,6 +51,26 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
     public void SetPlayerTransform(Transform playerTransform) => this.playerTransform = playerTransform;
     public Transform GetAttackTargetTransform() => attackTargetTransform;
 
+    public void RegisterTerritoryExpansion(TerritorySystem territorySystem)
+    {
+        UnregisterTerritoryExpansion();
+
+        if (territorySystem == null)
+            return;
+
+        territoryExpansionSystem = territorySystem;
+        territoryExpansionSystem.OnTerritoryExpandedEvent += OnTerritoryExpanded;
+    }
+
+    private void UnregisterTerritoryExpansion()
+    {
+        if (territoryExpansionSystem == null)
+            return;
+
+        territoryExpansionSystem.OnTerritoryExpandedEvent -= OnTerritoryExpanded;
+        territoryExpansionSystem = null;
+    }
+
     public virtual void Initialize() { }
 
     public virtual void ApplyStatMultiplier(float multiplier)
@@ -84,7 +105,19 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
         StopByStun();
     }
 
-    public virtual void DestroyMonster() => Runner.Despawn(Object);
+    public virtual void DestroyMonster()
+    {
+        UnregisterTerritoryExpansion();
+
+        if (Runner != null && Object != null && Object.IsValid)
+            Runner.Despawn(Object);
+    }
+
+    public override void Despawned(NetworkRunner runner, bool hasState)
+    {
+        UnregisterTerritoryExpansion();
+        base.Despawned(runner, hasState);
+    }
 
     public override void FixedUpdateNetwork()
     {
@@ -138,10 +171,15 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
 
     public void OnTerritoryExpanded(Territory territory, TerritorySystem territorySystem)
     {
-        var xzPosition = new Vector3(transform.position.x, transform.position.z);
+        if (!CanAccessNetworkState)
+        {
+            UnregisterTerritoryExpansion();
+            return;
+        }
+
+        var xzPosition = new Vector2(transform.position.x, transform.position.z);
         if (territory.IsPointInPolygon(xzPosition))
         {
-            territorySystem.OnTerritoryExpandedEvent -= OnTerritoryExpanded;
             DestroyMonster();
         }
     }

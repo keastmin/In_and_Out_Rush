@@ -10,6 +10,9 @@ namespace KIM.Dev
         private readonly int _chunkColSize;
         private readonly int _chunkRowSize;
 
+        public int ChunkColumnCount => _chunkColSize;
+        public int ChunkRowCount => _chunkRowSize;
+
         public GridCalculator(int chunkColSize = 16, int chunkRowSize = 16)
         {
             _chunkColSize = Mathf.Max(1, chunkColSize);
@@ -28,11 +31,20 @@ namespace KIM.Dev
         public GridChunkKey GetChunkKeyFromWorldPosition(Vector3 origin, Vector3 worldPos, float cellSize)
         {
             Vector2Int nearestCellIndex = GetNearestCellIndexFromWorldPosition(origin, worldPos, cellSize);
+            return GetChunkKeyFromCellIndex(nearestCellIndex);
+        }
 
-            int chunkCol = FloorDiv(nearestCellIndex.x, _chunkColSize);
-            int chunkRow = FloorDiv(nearestCellIndex.y, _chunkRowSize);
+        public GridChunkKey GetChunkKeyFromCellIndex(Vector2Int cellIndex)
+        {
+            int chunkCol = FloorDiv(cellIndex.x, _chunkColSize);
+            int chunkRow = FloorDiv(cellIndex.y, _chunkRowSize);
 
             return new GridChunkKey(chunkCol, chunkRow);
+        }
+
+        public Vector2Int GetChunkMinCellIndex(GridChunkKey chunkKey)
+        {
+            return new Vector2Int(chunkKey.X * _chunkColSize, chunkKey.Y * _chunkRowSize);
         }
 
         public Vector2Int GetNearestCellIndexFromWorldPosition(Vector3 origin, Vector3 worldPos, float cellSize)

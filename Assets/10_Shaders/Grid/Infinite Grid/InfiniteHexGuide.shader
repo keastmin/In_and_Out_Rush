@@ -24,12 +24,11 @@ Shader "GridVisualize/InfiniteHexGuide"
         _PreviewBlockedGuideColor ("Preview Blocked Guide Color", Color) = (1,0.55,0.1,0.42)
         _CellFill ("Cell Fill", Range(0,1)) = 0.2
         _StateOverlayEnabled ("State Overlay Enabled", Float) = 1
-        _OccupiedCellsTex ("Occupied Cells Tex", 2D) = "black" {}
-        _PreviewCellsTex ("Preview Cells Tex", 2D) = "black" {}
-        _BlockedPreviewCellsTex ("Blocked Preview Cells Tex", 2D) = "black" {}
-        _BuffCellsTex ("Buff Cells Tex", 2D) = "black" {}
-        _BuffCellColorsTex ("Buff Cell Colors Tex", 2D) = "black" {}
-        _TerritoryVerticesTex ("Territory Vertices Tex", 2D) = "black" {}
+        _VisibleCellMin ("Visible Cell Min", Vector) = (0,0,0,0)
+        _VisibleCellSize ("Visible Cell Size", Vector) = (0,0,0,0)
+        _GridStateTex ("Visible Grid State", 2D) = "black" {}
+        _GridBuffTex ("Visible Grid Buff", 2D) = "black" {}
+        _BuffDataEnabled ("Buff Data Enabled", Float) = 0
     }
 
     SubShader
@@ -79,11 +78,6 @@ Shader "GridVisualize/InfiniteHexGuide"
             SAMPLER(sampler_MetallicGlossMap);
             TEXTURE2D(_OcclusionMap);
             SAMPLER(sampler_OcclusionMap);
-            #define MAX_OCCUPIED_CELLS 64
-            #define MAX_PREVIEW_CELLS 64
-            #define MAX_BLOCKED_PREVIEW_CELLS 64
-            #define MAX_BUFF_CELLS 256
-            #define MAX_TERRITORY_VERTICES 64
 
             CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
@@ -102,29 +96,14 @@ Shader "GridVisualize/InfiniteHexGuide"
             float _HexSize;
             float _CellFill;
             float _StateOverlayEnabled;
-            float _OccupiedCellCount;
-            float _PreviewCellCount;
-            float _BlockedPreviewCellCount;
-            float _BuffCellCount;
-            float _TerritoryVertexCount;
+            float _BuffDataEnabled;
+            float4 _VisibleCellMin;
+            float4 _VisibleCellSize;
             CBUFFER_END
-            TEXTURE2D(_OccupiedCellsTex);
-            SAMPLER(sampler_OccupiedCellsTex);
-            TEXTURE2D(_PreviewCellsTex);
-            SAMPLER(sampler_PreviewCellsTex);
-            TEXTURE2D(_BlockedPreviewCellsTex);
-            SAMPLER(sampler_BlockedPreviewCellsTex);
-            TEXTURE2D(_BuffCellsTex);
-            SAMPLER(sampler_BuffCellsTex);
-            TEXTURE2D(_BuffCellColorsTex);
-            SAMPLER(sampler_BuffCellColorsTex);
-            TEXTURE2D(_TerritoryVerticesTex);
-            SAMPLER(sampler_TerritoryVerticesTex);
-
-            float2 GetDataUV(int index, float capacity)
-            {
-                return float2(((float)index + 0.5) / capacity, 0.5);
-            }
+            TEXTURE2D(_GridStateTex);
+            SAMPLER(sampler_GridStateTex);
+            TEXTURE2D(_GridBuffTex);
+            SAMPLER(sampler_GridBuffTex);
 
             // 오브젝트 좌표를 월드 좌표화 화면 좌표로 바꿈
             // 노멀과 탄젠트를 준비함
@@ -183,126 +162,25 @@ Shader "GridVisualize/InfiniteHexGuide"
                 return inBounds * inDiagonal;
             }
 
-            float IsOccupiedCell(float2 axial)
+            float2 AxialToOffsetCell(float2 axial)
             {
-                int occupiedCount = (int)_OccupiedCellCount;
-
-                [loop]
-                for (int i = 0; i < MAX_OCCUPIED_CELLS; i++)
-                {
-                    if (i >= occupiedCount)
-                    {
-                        break;
-                    }
-
-                    float2 occupiedAxial = SAMPLE_TEXTURE2D_LOD(_OccupiedCellsTex, sampler_OccupiedCellsTex, GetDataUV(i, MAX_OCCUPIED_CELLS), 0).xy;
-                    if (all(abs(occupiedAxial - axial) < 0.01))
-                    {
-                        return 1.0;
-                    }
-                }
-
-                return 0.0;
+                float row = axial.x;
+                float col = axial.y + floor(row * 0.5);
+                return float2(col, row);
             }
 
-            float IsPreviewCell(float2 axial)
+            float IsInsideVisibleCellRange(float2 localCell)
             {
-                int previewCount = (int)_PreviewCellCount;
-
-                [loop]
-                for (int i = 0; i < MAX_PREVIEW_CELLS; i++)
-                {
-                    if (i >= previewCount)
-                    {
-                        break;
-                    }
-
-                    float2 previewAxial = SAMPLE_TEXTURE2D_LOD(_PreviewCellsTex, sampler_PreviewCellsTex, GetDataUV(i, MAX_PREVIEW_CELLS), 0).xy;
-                    if (all(abs(previewAxial - axial) < 0.01))
-                    {
-                        return 1.0;
-                    }
-                }
-
-                return 0.0;
+                float2 safeSize = max(_VisibleCellSize.xy, float2(0.0, 0.0));
+                float2 minimumMask = step(float2(0.0, 0.0), localCell);
+                float2 maximumMask = step(localCell, safeSize - float2(1.0, 1.0));
+                float hasData = step(0.5, safeSize.x) * step(0.5, safeSize.y);
+                return minimumMask.x * minimumMask.y * maximumMask.x * maximumMask.y * hasData;
             }
 
-            float IsBlockedPreviewCell(float2 axial)
+            float2 GetVisibleCellUV(float2 localCell)
             {
-                int previewCount = (int)_BlockedPreviewCellCount;
-
-                [loop]
-                for (int i = 0; i < MAX_BLOCKED_PREVIEW_CELLS; i++)
-                {
-                    if (i >= previewCount)
-                    {
-                        break;
-                    }
-
-                    float2 previewAxial = SAMPLE_TEXTURE2D_LOD(_BlockedPreviewCellsTex, sampler_BlockedPreviewCellsTex, GetDataUV(i, MAX_BLOCKED_PREVIEW_CELLS), 0).xy;
-                    if (all(abs(previewAxial - axial) < 0.01))
-                    {
-                        return 1.0;
-                    }
-                }
-
-                return 0.0;
-            }
-
-            float4 GetBuffCellColor(float2 axial)
-            {
-                int buffCount = (int)_BuffCellCount;
-
-                [loop]
-                for (int i = 0; i < MAX_BUFF_CELLS; i++)
-                {
-                    if (i >= buffCount)
-                    {
-                        break;
-                    }
-
-                    float2 buffAxial = SAMPLE_TEXTURE2D_LOD(_BuffCellsTex, sampler_BuffCellsTex, GetDataUV(i, MAX_BUFF_CELLS), 0).xy;
-                    if (all(abs(buffAxial - axial) < 0.01))
-                    {
-                        return SAMPLE_TEXTURE2D_LOD(_BuffCellColorsTex, sampler_BuffCellColorsTex, GetDataUV(i, MAX_BUFF_CELLS), 0);
-                    }
-                }
-
-                return float4(0, 0, 0, 0);
-            }
-
-            float IsCellCenterInTerritory(float2 cellCenterWS)
-            {
-                int vertexCount = (int)_TerritoryVertexCount;
-                if (vertexCount < 3)
-                {
-                    return 0.0;
-                }
-
-                bool isInside = false;
-                float2 previous = SAMPLE_TEXTURE2D_LOD(_TerritoryVerticesTex, sampler_TerritoryVerticesTex, GetDataUV(vertexCount - 1, MAX_TERRITORY_VERTICES), 0).xy;
-
-                [loop]
-                for (int i = 0; i < MAX_TERRITORY_VERTICES; i++)
-                {
-                    if (i >= vertexCount)
-                    {
-                        break;
-                    }
-
-                    float2 current = SAMPLE_TEXTURE2D_LOD(_TerritoryVerticesTex, sampler_TerritoryVerticesTex, GetDataUV(i, MAX_TERRITORY_VERTICES), 0).xy;
-                    bool intersects = ((current.y > cellCenterWS.y) != (previous.y > cellCenterWS.y)) &&
-                                      (cellCenterWS.x < ((previous.x - current.x) * (cellCenterWS.y - current.y) / ((previous.y - current.y) + 1e-5) + current.x));
-
-                    if (intersects)
-                    {
-                        isInside = !isInside;
-                    }
-
-                    previous = current;
-                }
-
-                return isInside ? 1.0 : 0.0;
+                return (localCell + float2(0.5, 0.5)) / max(_VisibleCellSize.xy, float2(1.0, 1.0));
             }
 
             half3 SampleNormalTS(float2 uv)
@@ -391,16 +269,30 @@ Shader "GridVisualize/InfiniteHexGuide"
                 float innerSize = _HexSize * innerScale;
                 float innerEnabled = step(1e-4, innerSize);
                 float innerMask = IsInsideFlatTopHex(localPosition, innerSize) * innerEnabled;
-                float guideMask = outerMask * (1.0 - innerMask) * saturate(_StateOverlayEnabled);
-                float buffMask = outerMask * (1.0 - guideMask);
+                float2 offsetCell = AxialToOffsetCell(qr);
+                float2 localVisibleCell = offsetCell - _VisibleCellMin.xy;
+                float visibleCellMask = IsInsideVisibleCellRange(localVisibleCell);
+                float2 visibleCellUV = GetVisibleCellUV(localVisibleCell);
+                float4 gridState = SAMPLE_TEXTURE2D_LOD(
+                    _GridStateTex,
+                    sampler_GridStateTex,
+                    visibleCellUV,
+                    0);
+                float4 buffColor = SAMPLE_TEXTURE2D_LOD(
+                    _GridBuffTex,
+                    sampler_GridBuffTex,
+                    visibleCellUV,
+                    0) * visibleCellMask * saturate(_BuffDataEnabled);
 
-                float2 cellCenterWS = centerXZ + _GridOriginWS.xz;
-                float territoryMask = IsCellCenterInTerritory(cellCenterWS);
-                float occupiedMask = IsOccupiedCell(qr);
-                float previewValidMask = IsPreviewCell(qr);
-                float previewBlockedMask = IsBlockedPreviewCell(qr);
-                float4 buffColor = GetBuffCellColor(qr);
-                float canBuildMask = territoryMask * (1.0 - occupiedMask);
+                float guideMask =
+                    outerMask *
+                    (1.0 - innerMask) *
+                    saturate(_StateOverlayEnabled) *
+                    visibleCellMask;
+                float buffMask = outerMask * visibleCellMask * (1.0 - guideMask);
+                float canBuildMask = 1.0 - step(0.5, gridState.r);
+                float previewValidMask = step(0.5, gridState.g) * visibleCellMask;
+                float previewBlockedMask = step(0.5, gridState.b) * visibleCellMask;
                 half4 guideColor = lerp(_SecondaryGuideColor, _PrimaryGuideColor, canBuildMask);
                 half3 mixedAlbedo = lerp(baseColor.rgb, guideColor.rgb, guideColor.a * guideMask);
                 mixedAlbedo = lerp(mixedAlbedo, _PreviewValidGuideColor.rgb, _PreviewValidGuideColor.a * outerMask * previewValidMask);

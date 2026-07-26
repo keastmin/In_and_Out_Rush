@@ -16,8 +16,9 @@ namespace KIM.Dev
         [SerializeField] private InfiniteGridLayoutSettings _layout = new();
         [SerializeField] private InfiniteGridGuideSettings _guide = new();
         [SerializeField] private InfiniteGridRenderingSettings _rendering = new();
+        [SerializeField] private InfiniteGridTrackBlockingSettings _monsterTrackBlocking = new();
 
-        [Networked, Capacity(512), OnChangedRender(nameof(RefreshVisuals))]
+        [Networked, Capacity(512), OnChangedRender(nameof(RefreshNetworkGridVisuals))]
         public NetworkDictionary<Vector2Int, CellData> NetworkGrid => default;
         public HashSet<Tower> HostOnlyReadTowers = new();
 
@@ -38,11 +39,27 @@ namespace KIM.Dev
         private readonly Dictionary<Vector2Int, int> _buffCellRefCount = new();
         private readonly Dictionary<Vector2Int, Color> _buffCellColorSum = new();
         private readonly TowerTrackDestructionSchedule _trackDestructionSchedule = new();
+        private readonly InfiniteGridTrackOverlapTester _trackOverlapTester = new();
+        private MeshFilter _territoryMeshFilter;
+        private Mesh _lastTerritoryMesh;
+        private Bounds _lastTerritoryMeshBounds;
+        private int _lastTerritoryMeshVertexCount = -1;
+        private Camera _cachedRenderCamera;
+        private float _lastTrackBlockingLineWidth = float.NaN;
         private bool _hasSpawned;
 
         private void OnValidate()
         {
             Initialize();
+            float trackBlockingLineWidth = _monsterTrackBlocking.LineWidth;
+            if (!Mathf.Approximately(
+                    _lastTrackBlockingLineWidth,
+                    trackBlockingLineWidth))
+            {
+                RefreshTrackBlockedCells(false);
+                RefreshTrackDestructionSchedule();
+            }
+
             RefreshVisuals();
         }
 
@@ -68,6 +85,13 @@ namespace KIM.Dev
 
             // 시작시 그리드 가이드 끄기
             SetCellStateOverlayEnabled(false);
+        }
+
+        private void LateUpdate()
+        {
+            Initialize();
+            RefreshTerritoryVisualStateIfNeeded();
+            _visualController?.UpdateVisibleChunks(ResolveRenderCamera());
         }
 
         public override void Spawned()
@@ -112,7 +136,7 @@ namespace KIM.Dev
             }
 
             _layout.SetCellStateOverlay(enabled);
-            RefreshVisuals();
+            RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.Settings);
         }
 
         /// <summary>
@@ -307,7 +331,7 @@ namespace KIM.Dev
                 _previewValidCellIndices.Add(indices[i]);
             }
 
-            RefreshVisuals();
+            RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.Preview);
         }
 
         public void SetBuildRangePreview(IEnumerable<Vector2Int> indices)
@@ -322,7 +346,7 @@ namespace KIM.Dev
                 }
             }
 
-            RefreshVisuals();
+            RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.Preview);
         }
 
         public void SetBuildRangePreview(IEnumerable<Vector2Int> validIndices, IEnumerable<Vector2Int> blockedIndices)
@@ -347,7 +371,7 @@ namespace KIM.Dev
                 }
             }
 
-            RefreshVisuals();
+            RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.Preview);
         }
 
         public void ClearBuildRangePreview()
@@ -359,7 +383,7 @@ namespace KIM.Dev
 
             _previewValidCellIndices.Clear();
             _previewBlockedCellIndices.Clear();
-            RefreshVisuals();
+            RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.Preview);
         }
 
         public void RegisterOrUpdateBuffSource(int sourceId, Vector2Int centerIndex, int range, Color color)
@@ -391,7 +415,7 @@ namespace KIM.Dev
                 Cells = cells
             };
 
-            RefreshVisuals();
+            RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.Buff);
         }
 
         public void RemoveBuffSource(int sourceId)
@@ -401,7 +425,7 @@ namespace KIM.Dev
 
             RemoveBuffCells(state.Cells, state.Color);
             _buffSources.Remove(sourceId);
-            RefreshVisuals();
+            RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.Buff);
         }
 
         public void RegisterOrUpdateBuffPreviewSource(int sourceId, Vector2Int centerIndex, int range, Color color)
@@ -433,7 +457,7 @@ namespace KIM.Dev
                 Cells = cells
             };
 
-            RefreshVisuals();
+            RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.Buff);
         }
 
         public void ClearBuffPreviewSources()
@@ -447,7 +471,7 @@ namespace KIM.Dev
             }
 
             _buffPreviewSources.Clear();
-            RefreshVisuals();
+            RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.Buff);
         }
 
         public void RemoveBuffPreviewSource(int sourceId)
@@ -457,7 +481,7 @@ namespace KIM.Dev
 
             RemoveBuffCells(state.Cells, state.Color);
             _buffPreviewSources.Remove(sourceId);
-            RefreshVisuals();
+            RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.Buff);
         }
 
         public bool IsCellInBuffSource(int sourceId, Vector2Int index)
@@ -489,7 +513,7 @@ namespace KIM.Dev
                 return false;
 
             NetworkGrid.Add(index, new CellData(range, BuffData.Empty));
-            RefreshVisuals();
+            RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.Occupancy);
             return true;
         }
 
@@ -504,17 +528,36 @@ namespace KIM.Dev
                 return false;
 
             NetworkGrid.Remove(index);
-            RefreshVisuals();
+            RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.Occupancy);
             return true;
         }
 
         private void Initialize()
         {
-            _gridCalculator ??= new GridCalculator(32, 32);
+            _monsterTrackBlocking ??= new InfiniteGridTrackBlockingSettings();
+            int chunkColumnCount = _rendering != null ? _rendering.ChunkColumnCount : 16;
+            int chunkRowCount = _rendering != null ? _rendering.ChunkRowCount : 16;
+            if (_gridCalculator == null ||
+                _gridCalculator.ChunkColumnCount != chunkColumnCount ||
+                _gridCalculator.ChunkRowCount != chunkRowCount)
+            {
+                _gridCalculator = new GridCalculator(chunkColumnCount, chunkRowCount);
+            }
+
             _visualController ??= new InfiniteGridVisualController();
         }
 
         private void RefreshVisuals()
+        {
+            RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.All);
+        }
+
+        private void RefreshNetworkGridVisuals()
+        {
+            RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.Occupancy);
+        }
+
+        private void RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags dirtyFlags)
         {
             IEnumerable<KeyValuePair<Vector2Int, CellData>> networkGrid = null;
 
@@ -536,7 +579,8 @@ namespace KIM.Dev
                 _previewBlockedCellIndices,
                 _buffCellRefCount,
                 _buffCellColorSum,
-                _territorySystem != null ? _territorySystem.Territory : null);
+                _territorySystem != null ? _territorySystem.Territory : null,
+                dirtyFlags);
         }
 
         private bool CanUseNetworkGrid()
@@ -569,7 +613,78 @@ namespace KIM.Dev
 
         private void OnTerritoryExpanded(Territory territory, TerritorySystem territorySystem)
         {
-            RefreshVisuals();
+            CacheTerritoryVisualState();
+            RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.Territory);
+        }
+
+        private void RefreshTerritoryVisualStateIfNeeded()
+        {
+            if (_territorySystem == null || _territorySystem.TerritoryVisible == null)
+            {
+                return;
+            }
+
+            Transform territoryVisibleTransform = _territorySystem.TerritoryVisible.transform;
+            if (_territoryMeshFilter == null || _territoryMeshFilter.transform != territoryVisibleTransform)
+            {
+                _territorySystem.TerritoryVisible.TryGetComponent(out _territoryMeshFilter);
+                _lastTerritoryMesh = null;
+                _lastTerritoryMeshVertexCount = -1;
+            }
+
+            Mesh currentMesh = _territoryMeshFilter != null ? _territoryMeshFilter.sharedMesh : null;
+            int currentVertexCount = currentMesh != null ? currentMesh.vertexCount : 0;
+            Bounds currentBounds = currentMesh != null ? currentMesh.bounds : default;
+            if (currentMesh == _lastTerritoryMesh &&
+                currentVertexCount == _lastTerritoryMeshVertexCount &&
+                currentBounds.Equals(_lastTerritoryMeshBounds))
+            {
+                return;
+            }
+
+            _lastTerritoryMesh = currentMesh;
+            _lastTerritoryMeshVertexCount = currentVertexCount;
+            _lastTerritoryMeshBounds = currentBounds;
+            RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.Territory);
+        }
+
+        private void CacheTerritoryVisualState()
+        {
+            if (_territorySystem == null || _territorySystem.TerritoryVisible == null)
+            {
+                return;
+            }
+
+            Transform territoryVisibleTransform = _territorySystem.TerritoryVisible.transform;
+            if (_territoryMeshFilter == null || _territoryMeshFilter.transform != territoryVisibleTransform)
+            {
+                _territorySystem.TerritoryVisible.TryGetComponent(out _territoryMeshFilter);
+            }
+
+            _lastTerritoryMesh = _territoryMeshFilter != null ? _territoryMeshFilter.sharedMesh : null;
+            _lastTerritoryMeshVertexCount =
+                _lastTerritoryMesh != null ? _lastTerritoryMesh.vertexCount : 0;
+            _lastTerritoryMeshBounds =
+                _lastTerritoryMesh != null ? _lastTerritoryMesh.bounds : default;
+        }
+
+        private Camera ResolveRenderCamera()
+        {
+            Camera configuredCamera = _rendering != null ? _rendering.RenderCamera : null;
+            if (configuredCamera != null)
+            {
+                _cachedRenderCamera = configuredCamera;
+                return _cachedRenderCamera;
+            }
+
+            if (_cachedRenderCamera == null ||
+                !_cachedRenderCamera.isActiveAndEnabled ||
+                !_cachedRenderCamera.CompareTag("MainCamera"))
+            {
+                _cachedRenderCamera = Camera.main;
+            }
+
+            return _cachedRenderCamera;
         }
 
         private void OnTrackChanged(Vector3[] vertices, TrackSystem trackSystem, object sender)
@@ -578,18 +693,23 @@ namespace KIM.Dev
             RefreshTrackDestructionSchedule();
         }
 
-        private void RefreshTrackBlockedCells()
+        private void RefreshTrackBlockedCells(bool refreshVisuals = true)
         {
             _trackBlockedCellIndices.Clear();
+            _lastTrackBlockingLineWidth = _monsterTrackBlocking.LineWidth;
 
             if (_gridCalculator == null || _trackSystem == null || _trackSystem.Track?.Vertices == null || _trackSystem.Track.Vertices.Length < 2)
             {
-                RefreshVisuals();
+                if (refreshVisuals)
+                {
+                    RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.Occupancy);
+                }
+
                 return;
             }
 
             Vector3[] vertices = _trackSystem.Track.Vertices;
-            float overlapRadius = _layout.CellSize + (_trackSystem.TrackLineWidth * 0.5f);
+            float overlapRadius = _monsterTrackBlocking.HalfLineWidth;
             Bounds bounds = new Bounds(vertices[0], Vector3.zero);
 
             for (int i = 1; i < vertices.Length; i++)
@@ -632,57 +752,27 @@ namespace KIM.Dev
                 {
                     Vector2Int cellIndex = new Vector2Int(col, row);
                     Vector3 cellCenter = GetCellCenterPositionFromCellIndex(cellIndex);
-                    if (IsTrackOverlappingCell(cellCenter, vertices, overlapRadius))
+                    if (_trackOverlapTester.IsOverlapping(
+                            cellCenter,
+                            vertices,
+                            overlapRadius))
                     {
                         _trackBlockedCellIndices.Add(cellIndex);
                     }
                 }
             }
 
-            RefreshVisuals();
-        }
-
-        private bool IsTrackOverlappingCell(Vector3 cellCenter, Vector3[] trackVertices, float overlapRadius)
-        {
-            Vector2 center = new Vector2(cellCenter.x, cellCenter.z);
-            float overlapRadiusSqr = overlapRadius * overlapRadius;
-
-            for (int i = 0; i < trackVertices.Length; i++)
+            if (refreshVisuals)
             {
-                Vector3 startVertex = trackVertices[i];
-                Vector3 endVertex = trackVertices[(i + 1) % trackVertices.Length];
-                Vector2 start = new Vector2(startVertex.x, startVertex.z);
-                Vector2 end = new Vector2(endVertex.x, endVertex.z);
-
-                if (GetDistanceToSegmentSqr(center, start, end) <= overlapRadiusSqr)
-                {
-                    return true;
-                }
+                RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.Occupancy);
             }
-
-            return false;
-        }
-
-        private static float GetDistanceToSegmentSqr(Vector2 point, Vector2 start, Vector2 end)
-        {
-            Vector2 segment = end - start;
-            float segmentLengthSqr = segment.sqrMagnitude;
-
-            if (segmentLengthSqr <= Mathf.Epsilon)
-            {
-                return (point - start).sqrMagnitude;
-            }
-
-            float t = Mathf.Clamp01(Vector2.Dot(point - start, segment) / segmentLengthSqr);
-            Vector2 closestPoint = start + segment * t;
-            return (point - closestPoint).sqrMagnitude;
         }
 
         public void DestroyTowersBlockedByTrack()
         {
             RefreshTrackBlockedCells();
             DestroyBlockedTowers();
-            RefreshVisuals();
+            RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.Occupancy);
         }
 
         public bool IsTowerPendingTrackDestruction(Tower tower)

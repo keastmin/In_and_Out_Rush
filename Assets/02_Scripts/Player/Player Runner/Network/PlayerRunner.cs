@@ -14,6 +14,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
 {
     private const float DefaultMaxHealth = 100f;
     private const float DefaultMaxStamina = 100f;
+    private const float DefaultSlideStaminaCost = 10f;
     private const float LifelineReturnRadius = 2f;
     private const float WeaponSupplyDamageScalerAmount = 0.1f;
     private const RunnerSkillType DefaultSelectedSkill = RunnerSkillType.Tumble;
@@ -39,6 +40,9 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     [Networked] public NetworkBool IsBiodecompositionDeviceActive { get; set; }
     [Networked, OnChangedRender(nameof(OnSelectedSkillChanged))]
     public int SelectedSkill { get; set; } = (int)DefaultSelectedSkill;
+
+    [Header("Slide")]
+    [SerializeField] private PlayerRunnerSlideSettings _slideSettings;
 
     [Header("Weapon")]
     [SerializeField] private MonoBehaviour _weaponBehaviour;
@@ -99,6 +103,9 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     public event Action<PlayerRunner, object> OnLaboratoryLookStarted;
     public event Action<PlayerRunner, object> OnLaboratoryLookEnded;
     public float EffectiveMovementSpeed => _buffHandler.GetMovementSpeed(this);
+    public float SlideStaminaCost => _slideSettings != null
+        ? _slideSettings.StaminaCost
+        : DefaultSlideStaminaCost;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     public bool IsTestModeInvincible => _testModeInvincibleEnabled;
 #endif

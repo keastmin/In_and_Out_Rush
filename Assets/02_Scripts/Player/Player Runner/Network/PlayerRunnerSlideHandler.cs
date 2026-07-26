@@ -15,6 +15,12 @@ public class PlayerRunnerSlideHandler
     {
         if (_isSliding) return;
 
+        bool canUseSwiftnessSlide =
+            swiftnessHandler.IsSwiftnessActive &&
+            swiftnessHandler.RemainingSlideCount > 0;
+
+        if (!canUseSwiftnessSlide && runner.Stamina < runner.SlideStaminaCost) return;
+
         Debug.Log("슬라이드 시작");
         _isSliding = true;
         rigidbody.linearVelocity = Vector3.zero;
@@ -23,14 +29,14 @@ public class PlayerRunnerSlideHandler
         float originalLinearDamping = rigidbody.linearDamping;
         rigidbody.linearDamping = 2f;
 
-        if (swiftnessHandler.IsSwiftnessActive && swiftnessHandler.RemainingSlideCount > 0)
+        if (canUseSwiftnessSlide)
         {
             swiftnessHandler.DecrementRemainingSlideCount();
             Debug.Log($"스위프트니스 슬라이드 남음: {swiftnessHandler.RemainingSlideCount}회");
         }
         else
         {
-            runner.Stamina = Mathf.Max(0f, runner.Stamina - 10f);
+            runner.Stamina = Mathf.Max(0f, runner.Stamina - runner.SlideStaminaCost);
             runner.OnStaminaChanged();
         }
 

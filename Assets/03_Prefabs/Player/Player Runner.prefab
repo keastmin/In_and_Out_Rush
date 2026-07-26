@@ -5269,6 +5269,7 @@ MonoBehaviour:
   _IsBiodecompositionDeviceActive:
     _value: 0
   _SelectedSkill: 1
+  _slideSettings: {fileID: 11400000, guid: 767588e3457a454888ad4dc78b451012, type: 2}
   _weaponBehaviour: {fileID: -3321396743853381275}
   _barrierPrefab: {fileID: 1623655954361001160, guid: 7a094e5f0ee577d4fa3dbbc29c6f03e5, type: 3}
   _barrierMuzzle: {fileID: 8889067391957367747}

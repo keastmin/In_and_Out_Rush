@@ -7,6 +7,12 @@ using UnityEngine;
 
 public class TerritorySystem : NetworkSystemBase
 {
+    const int TerritoryVertexSyncChunkSize = 10;
+    const float MinExpansionMoveDistanceSqr = 0.01f;
+    const float MinTurnSegmentDistanceSqr = 0.0001f;
+    const float TurnDirectionDotThreshold = 0.99f;
+    const float MinTurnLateralDistance = 0.05f;
+
     [Header("Initial Territory")]
     [SerializeField] int circlePointCount;
     [SerializeField] float circleRadius;
@@ -18,6 +24,7 @@ public class TerritorySystem : NetworkSystemBase
     [SerializeField] List<Vector2> playerPath;
     bool isIntersected = false;
     bool isRecoveringFromLifeline = false;
+    readonly List<Vector2> temporaryTerritoryVertices = new();
 
     public Territory Territory;
     public TerritoryVisible TerritoryVisible;
@@ -130,7 +137,6 @@ public class TerritorySystem : NetworkSystemBase
         return results.Count >= 2;
     }
 
-    Vector2 toward;
     public void HandlePlayerPositionChanged(Vector3 position, PlayerRunner playerRunner, object sender) // 러너만
     {
         var currentPosition = new Vector2(position.x, position.z);
@@ -156,8 +162,7 @@ public class TerritorySystem : NetworkSystemBase
                     AddExpandingPathPoint(currentPosition);
                     if (Object.HasStateAuthority)
                     {
-                        var playerPathArray = playerPath.ToArray();
-                        RPC_ExpandTerritory(playerPathArray);
+                        ExpandTerritoryFromCurrentPath();
                     }
                 }
                 StopExpanding();
@@ -177,21 +182,16 @@ public class TerritorySystem : NetworkSystemBase
                 return;
             }
 
-            if (Vector2.SqrMagnitude(currentPosition - previousPosition) > 0.01f)
+            if (Vector2.SqrMagnitude(currentPosition - previousPosition) > MinExpansionMoveDistanceSqr)
             {
-                if (playerPath.Count >= 2)
-                {
-                    toward = (currentPosition - previousPosition).normalized;
-                    var dir = Vector2.Dot(toward, (currentPosition - playerPath[^1]).normalized);
-                    if (dir < 1 - 0.01f)
-                    {
-                        AddExpandingPathPoint(previousPosition);
-                    }
-                }
+                bool shouldAddTurnPoint = ShouldAddTurnPoint(currentPosition);
 
                 // 러너가 자신이 지나온 길을 다시 밟으면 게임 오버
-                if (CheckPlayerRunnerCrossedOwnPath(currentPosition, playerRunner))
+                if (CheckPlayerRunnerCrossedOwnPath(currentPosition, shouldAddTurnPoint, playerRunner))
                     return;
+
+                if (shouldAddTurnPoint)
+                    AddExpandingPathPoint(previousPosition);
 
                 if (lineRenderer.positionCount > 0)
                 {
@@ -200,6 +200,36 @@ public class TerritorySystem : NetworkSystemBase
                 previousPosition = currentPosition;
             }
         }
+    }
+
+    private bool ShouldAddTurnPoint(Vector2 currentPosition)
+    {
+        if (playerPath.Count < 2)
+            return false;
+
+        Vector2 lastFixedPoint = playerPath[^1];
+        Vector2 previousSegment = previousPosition - lastFixedPoint;
+        Vector2 currentSegment = currentPosition - previousPosition;
+        if (Vector2.SqrMagnitude(previousSegment) <= MinTurnSegmentDistanceSqr ||
+            Vector2.SqrMagnitude(currentSegment) <= MinTurnSegmentDistanceSqr)
+            return false;
+
+        float dir = Vector2.Dot(previousSegment.normalized, currentSegment.normalized);
+        if (dir >= TurnDirectionDotThreshold)
+            return false;
+
+        return GetPointLineDistance(currentPosition, lastFixedPoint, previousPosition) >= MinTurnLateralDistance;
+    }
+
+    private static float GetPointLineDistance(Vector2 point, Vector2 lineStart, Vector2 lineEnd)
+    {
+        Vector2 line = lineEnd - lineStart;
+        float lineLengthSqr = Vector2.SqrMagnitude(line);
+        if (lineLengthSqr <= Mathf.Epsilon)
+            return Vector2.Distance(point, lineStart);
+
+        return Mathf.Abs(line.x * (lineStart.y - point.y) - (lineStart.x - point.x) * line.y) /
+               Mathf.Sqrt(lineLengthSqr);
     }
 
     [Rpc(RpcSources.All, RpcTargets.All, Channel = RpcChannel.Reliable)]
@@ -233,19 +263,18 @@ public class TerritorySystem : NetworkSystemBase
         lineRenderer.SetPositions(converted.ToArray());
     }
 
-    [Rpc(RpcSources.All, RpcTargets.All, Channel = RpcChannel.Reliable)]
-    public void RPC_ExpandTerritory(Vector2[] playerPathArray)
+    private void ExpandTerritoryFromCurrentPath()
     {
-        Debug.Log($"{Runner.name} - Expanding territory with path: {playerPathArray.Length}");
+        Debug.Log($"{Runner.name} - Expanding territory with path: {playerPath.Count}");
 
-        var playerPathFromHost = new List<Vector2>(playerPathArray);
-        if (!Territory.TryExpand(playerPathFromHost))
+        if (!Territory.TryExpand(playerPath))
         {
-            Debug.LogWarning($"{Runner.name} - Territory expansion rejected. Path point count: {playerPathArray.Length}");
+            Debug.LogWarning($"{Runner.name} - Territory expansion rejected. Path point count: {playerPath.Count}");
             return;
         }
 
         TerritoryVisible.SetVertices(Territory.Vertices);
+        SyncTerritoryVertices(Territory.Vertices);
 
         if (Object.HasStateAuthority)
         {
@@ -253,14 +282,61 @@ public class TerritorySystem : NetworkSystemBase
         }
     }
 
+    private void SyncTerritoryVertices(List<Vector2> vertices)
+    {
+        if (!Object.HasStateAuthority || vertices == null || vertices.Count <= 0)
+            return;
+
+        RPC_BeginTerritoryVertices();
+
+        for (int i = 0; i < vertices.Count; i += TerritoryVertexSyncChunkSize)
+        {
+            int chunkLength = Mathf.Min(TerritoryVertexSyncChunkSize, vertices.Count - i);
+            var chunk = new Vector2[chunkLength];
+            for (int j = 0; j < chunkLength; j++)
+                chunk[j] = vertices[i + j];
+
+            RPC_SyncTerritoryVertices(chunk);
+        }
+
+        RPC_FinishTerritoryVertices();
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.Proxies, Channel = RpcChannel.Reliable)]
+    private void RPC_BeginTerritoryVertices()
+    {
+        temporaryTerritoryVertices.Clear();
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.Proxies, Channel = RpcChannel.Reliable)]
+    private void RPC_SyncTerritoryVertices(Vector2[] vertices)
+    {
+        if (vertices == null || vertices.Length <= 0)
+            return;
+
+        temporaryTerritoryVertices.AddRange(vertices);
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.Proxies, Channel = RpcChannel.Reliable)]
+    private void RPC_FinishTerritoryVertices()
+    {
+        if (temporaryTerritoryVertices.Count <= 0)
+            return;
+
+        Territory.Vertices.Clear();
+        Territory.Vertices.AddRange(temporaryTerritoryVertices);
+        TerritoryVisible.SetVertices(Territory.Vertices);
+        temporaryTerritoryVertices.Clear();
+    }
+
     // 플레이어 러너가 이전 경로를 밟았는지 확인하고 밟았다면 게임 오버 처리
-    private bool CheckPlayerRunnerCrossedOwnPath(Vector2 currPos, PlayerRunner playerRunner)
+    private bool CheckPlayerRunnerCrossedOwnPath(Vector2 currPos, bool includesPendingTurnPoint, PlayerRunner playerRunner)
     {
         if (isIntersected) { return true; }
-        if (CheckCurrPathCrossPrevPath(currPos))
+        if (CheckCurrPathCrossPrevPath(currPos, includesPendingTurnPoint))
         {
             if (!Object.HasStateAuthority)
-                return true;
+                return false;
 
             if (playerRunner != null && playerRunner.TryActivateLifeline(out Vector3 returnPosition))
             {
@@ -282,18 +358,22 @@ public class TerritorySystem : NetworkSystemBase
     }
 
     // 플레이어 러너의 현재 경로가 이전 경로와 교차했는지 확인
-    private bool CheckCurrPathCrossPrevPath(Vector2 currPos)
+    private bool CheckCurrPathCrossPrevPath(Vector2 currPos, bool includesPendingTurnPoint)
     {
         int count = playerPath.Count;
 
         if (count < 3)
-            return false;
+        {
+            if (!includesPendingTurnPoint || count < 2)
+                return false;
+        }
 
         Vector2 prevPos = previousPosition;
         if (Vector2.SqrMagnitude(currPos - prevPos) <= 0.0001f)
             return false;
 
-        for (int i = 0; i < count - 2; i++) // 마지막 두 점은 현재 경로이므로 제외
+        int checkedSegmentCount = includesPendingTurnPoint ? count - 1 : count - 2;
+        for (int i = 0; i < checkedSegmentCount; i++) // 현재 경로와 직전 인접 선분은 제외
         {
             Vector2 pos1 = playerPath[i];
             Vector2 pos2 = playerPath[i + 1];

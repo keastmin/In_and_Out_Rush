@@ -40,21 +40,23 @@ namespace KIM.Dev
         private readonly Dictionary<Vector2Int, Color> _buffCellColorSum = new();
         private readonly TowerTrackDestructionSchedule _trackDestructionSchedule = new();
         private readonly InfiniteGridTrackOverlapTester _trackOverlapTester = new();
+        private readonly InfiniteGridTrackBlockedCellCollector
+            _trackBlockedCellCollector = new();
         private MeshFilter _territoryMeshFilter;
         private Mesh _lastTerritoryMesh;
         private Bounds _lastTerritoryMeshBounds;
         private int _lastTerritoryMeshVertexCount = -1;
         private Camera _cachedRenderCamera;
         private float _lastTrackBlockingLineWidth = float.NaN;
+        private float _lastTrackBlockingCellSize = float.NaN;
+        private Vector3 _lastTrackBlockingGridOrigin;
+        private bool _hasTrackBlockingLayout;
         private bool _hasSpawned;
 
         private void OnValidate()
         {
             Initialize();
-            float trackBlockingLineWidth = _monsterTrackBlocking.LineWidth;
-            if (!Mathf.Approximately(
-                    _lastTrackBlockingLineWidth,
-                    trackBlockingLineWidth))
+            if (HasTrackBlockingConfigurationChanged())
             {
                 RefreshTrackBlockedCells(false);
                 RefreshTrackDestructionSchedule();
@@ -696,7 +698,7 @@ namespace KIM.Dev
         private void RefreshTrackBlockedCells(bool refreshVisuals = true)
         {
             _trackBlockedCellIndices.Clear();
-            _lastTrackBlockingLineWidth = _monsterTrackBlocking.LineWidth;
+            CacheTrackBlockingConfiguration();
 
             if (_gridCalculator == null || _trackSystem == null || _trackSystem.Track?.Vertices == null || _trackSystem.Track.Vertices.Length < 2)
             {
@@ -708,64 +710,52 @@ namespace KIM.Dev
                 return;
             }
 
-            Vector3[] vertices = _trackSystem.Track.Vertices;
-            float overlapRadius = _monsterTrackBlocking.HalfLineWidth;
-            Bounds bounds = new Bounds(vertices[0], Vector3.zero);
-
-            for (int i = 1; i < vertices.Length; i++)
-            {
-                bounds.Encapsulate(vertices[i]);
-            }
-
-            bounds.Expand(new Vector3(overlapRadius * 2f, 0f, overlapRadius * 2f));
-
-            Vector2Int[] corners =
-            {
-            GetCellIndexFromWorldPosition(new Vector3(bounds.min.x, GridHeight, bounds.min.z)),
-            GetCellIndexFromWorldPosition(new Vector3(bounds.min.x, GridHeight, bounds.max.z)),
-            GetCellIndexFromWorldPosition(new Vector3(bounds.max.x, GridHeight, bounds.min.z)),
-            GetCellIndexFromWorldPosition(new Vector3(bounds.max.x, GridHeight, bounds.max.z))
-        };
-
-            int padding = Mathf.CeilToInt(overlapRadius / Mathf.Max(0.001f, _layout.CellSize)) + 2;
-            int minCol = corners[0].x;
-            int maxCol = corners[0].x;
-            int minRow = corners[0].y;
-            int maxRow = corners[0].y;
-
-            for (int i = 1; i < corners.Length; i++)
-            {
-                minCol = Mathf.Min(minCol, corners[i].x);
-                maxCol = Mathf.Max(maxCol, corners[i].x);
-                minRow = Mathf.Min(minRow, corners[i].y);
-                maxRow = Mathf.Max(maxRow, corners[i].y);
-            }
-
-            minCol -= padding;
-            maxCol += padding;
-            minRow -= padding;
-            maxRow += padding;
-
-            for (int col = minCol; col <= maxCol; col++)
-            {
-                for (int row = minRow; row <= maxRow; row++)
-                {
-                    Vector2Int cellIndex = new Vector2Int(col, row);
-                    Vector3 cellCenter = GetCellCenterPositionFromCellIndex(cellIndex);
-                    if (_trackOverlapTester.IsOverlapping(
-                            cellCenter,
-                            vertices,
-                            overlapRadius))
-                    {
-                        _trackBlockedCellIndices.Add(cellIndex);
-                    }
-                }
-            }
+            _trackBlockedCellCollector.Collect(
+                _trackBlockedCellIndices,
+                _gridCalculator,
+                GridOrigin,
+                _layout.CellSize,
+                _trackSystem.Track.Vertices,
+                _monsterTrackBlocking.HalfLineWidth,
+                _trackOverlapTester);
 
             if (refreshVisuals)
             {
                 RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.Occupancy);
             }
+        }
+
+        private bool HasTrackBlockingConfigurationChanged()
+        {
+            if (!_hasTrackBlockingLayout ||
+                !Mathf.Approximately(
+                    _lastTrackBlockingLineWidth,
+                    _monsterTrackBlocking.LineWidth) ||
+                !Mathf.Approximately(
+                    _lastTrackBlockingCellSize,
+                    _layout.CellSize))
+            {
+                return true;
+            }
+
+            Vector3 currentGridOrigin = GridOrigin;
+            return !Mathf.Approximately(
+                       _lastTrackBlockingGridOrigin.x,
+                       currentGridOrigin.x) ||
+                   !Mathf.Approximately(
+                       _lastTrackBlockingGridOrigin.y,
+                       currentGridOrigin.y) ||
+                   !Mathf.Approximately(
+                       _lastTrackBlockingGridOrigin.z,
+                       currentGridOrigin.z);
+        }
+
+        private void CacheTrackBlockingConfiguration()
+        {
+            _lastTrackBlockingLineWidth = _monsterTrackBlocking.LineWidth;
+            _lastTrackBlockingCellSize = _layout.CellSize;
+            _lastTrackBlockingGridOrigin = GridOrigin;
+            _hasTrackBlockingLayout = true;
         }
 
         public void DestroyTowersBlockedByTrack()

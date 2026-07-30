@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8596291018344165325}
   - component: {fileID: 6059979120551381573}
+  - component: {fileID: 788362901345228019}
   m_Layer: 0
   m_Name: Player Builder Cinemachine Camera
   m_TagString: Untagged
@@ -75,3 +76,21 @@ MonoBehaviour:
       BarrelClipping: 0.25
       Anamorphism: 0
   BlendHint: 0
+--- !u!114 &788362901345228019
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1968952764661722871}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e01cd45445f465eab211ed74202ff7a, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  _cameraBorderThickness: 10
+  _cameraMoveSpeed: 65
+  _cameraMaxZoomDistance: 11
+  _cameraWheelPerZoomDistance: 10
+  _zoomSmoothTime: 0.12
+  _allowZoom: 1

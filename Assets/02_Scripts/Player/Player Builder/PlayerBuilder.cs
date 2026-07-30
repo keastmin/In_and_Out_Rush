@@ -1,6 +1,5 @@
 using Fusion;
 using Dev.Network;
-using Unity.Cinemachine;
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -10,8 +9,7 @@ namespace KIM.Dev
     public class PlayerBuilder : Player
     {
         private TowerBuildManager _towerBuildManager;
-
-        [SerializeField] private PlayerBuilderCameraMover _cameraMover = new();
+        private PlayerBuilderCinemachineController _cameraController;
 
         [Header("Click")]
         [SerializeField] private LayerMask _clickDetectLayer;
@@ -80,7 +78,6 @@ namespace KIM.Dev
 
         #region 필드 프로퍼티
 
-        public PlayerBuilderCameraMover CamMover => _cameraMover;
         public bool IsClick => _isClick;
         public Vector2 StartMousePoint => _startMousePoint;
         public Vector2 CurrentMousePoint => _currentMousePoint;
@@ -114,9 +111,10 @@ namespace KIM.Dev
             base.Spawned();
         }
 
-        public void InitializeCinemachineCamera(CinemachineCamera cinemachineCamera)
+        public void InitializeCinemachineController(
+            PlayerBuilderCinemachineController cameraController)
         {
-            _cameraMover.SetCamera(cinemachineCamera);
+            _cameraController = cameraController;
         }
 
         private void Awake()
@@ -134,12 +132,9 @@ namespace KIM.Dev
         {
             CleanupInvalidTowerReferences();
             StateMachine.Update();
+            _cameraController?.SetGameplayInputEnabled(
+                !ReferenceEquals(StateMachine.CurrentState, StateMachine.DragState));
             _resourceSystemTestInput.Tick(this);
-        }
-
-        private void LateUpdate()
-        {
-            StateMachine.LateUpdate();
         }
 
         #region 초기화 로직

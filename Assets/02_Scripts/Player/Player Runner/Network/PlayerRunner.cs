@@ -100,8 +100,6 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
 
     public event Action<Vector3, PlayerRunner, object> OnPositionChanged;
     public event Action<PlayerRunner, object> OnDied;
-    public event Action<PlayerRunner, object> OnLaboratoryLookStarted;
-    public event Action<PlayerRunner, object> OnLaboratoryLookEnded;
     public float EffectiveMovementSpeed => _buffHandler.GetMovementSpeed(this);
     public float SlideStaminaCost => _slideSettings != null
         ? _slideSettings.StaminaCost
@@ -239,7 +237,6 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
         HandleItemInput(data);
         HandleSkillInput(data);
         HandleInteractInput(data);
-        HandleLaboratoryInput(data);
         HandleWeaponInput(data);
     }
 
@@ -351,13 +348,6 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
             if (hit.collider.TryGetComponent<IRunnerInteractableTower>(out var interactableTower))
                 interactableTower.Interact(this);
         Debug.Log("상호작용 사용");
-    }
-
-    private void HandleLaboratoryInput(NetworkInputData data)
-    {
-        if (StageBootstrapper.Instance.CinemachineSystem == null) return;
-        if (!data.LaboratoryInput.IsSet(NetworkInputData.LABORATORY_INPUT))
-            StageBootstrapper.Instance.CinemachineSystem.SetTrackingTarget(transform);
     }
 
     private void HandleWeaponInput(NetworkInputData data)

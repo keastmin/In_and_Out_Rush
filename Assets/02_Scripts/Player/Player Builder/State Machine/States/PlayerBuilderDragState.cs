@@ -35,11 +35,6 @@ namespace KIM.Dev
             TransitionTo();
         }
 
-        public void LateUpdate()
-        {
-
-        }
-
         public void Exit()
         {
             CompleteDrag();

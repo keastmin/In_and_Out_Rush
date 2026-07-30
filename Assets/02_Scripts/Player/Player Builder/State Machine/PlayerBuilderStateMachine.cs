@@ -35,11 +35,6 @@ namespace KIM.Dev
             _currentState.Update();
         }
 
-        public void LateUpdate()
-        {
-            _currentState.LateUpdate();
-        }
-
         public void TransitionToState(IPlayerState next)
         {
             if (next == null || ReferenceEquals(_currentState, next))

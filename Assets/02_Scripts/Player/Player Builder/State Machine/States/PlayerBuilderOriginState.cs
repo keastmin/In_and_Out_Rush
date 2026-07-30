@@ -42,12 +42,6 @@ namespace KIM.Dev
             TransitionTo();
         }
 
-        public void LateUpdate()
-        {
-            if (_player == null) return;
-            _player.CamMover.Move();
-        }
-
         public void Exit()
         {
         }

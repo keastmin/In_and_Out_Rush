@@ -48,11 +48,6 @@ namespace KIM.Dev
             TransitionTo();
         }
 
-        public void LateUpdate()
-        {
-            _player.CamMover.Move();
-        }
-
         public void Exit()
         {
             _player.BuilderUI.ActivationTowerSelectUI(false);

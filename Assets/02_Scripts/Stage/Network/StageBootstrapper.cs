@@ -11,7 +11,6 @@ namespace Dev.Network
     {
         [Networked] public PlayerRunner PlayerRunner { get; private set; }
         [Networked] public PlayerBuilder PlayerBuilder { get; private set; }
-        public CinemachineSystem CinemachineSystem { get; private set; }
 
         public static StageBootstrapper Instance { get; private set; }
 
@@ -33,7 +32,7 @@ namespace Dev.Network
 
         [Header("Local Systems")]
         [SerializeField] private FogOfWarSystem _fogOfWarSystem;
-        [SerializeField] private CinemachineSystem cinemachineSystemPrefab;
+        public CinemachineSystem CinemachineSystem;
         public StageUIController UIController;
 
         [Space(10)]
@@ -160,13 +159,6 @@ namespace Dev.Network
 
         private void InitCinemachineSystem()
         {
-            if (cinemachineSystemPrefab == null || !cinemachineSystemPrefab.gameObject.scene.IsValid())
-            {
-                Debug.LogError("StageBootstrapper requires a scene CinemachineSystem reference.", this);
-                return;
-            }
-
-            CinemachineSystem = cinemachineSystemPrefab;
             var playerPosition = NetworkManager.Instance.Registry.RefToPosition[Runner.LocalPlayer];
             CinemachineSystem.Initialize(playerPosition, PlayerRunner, PlayerBuilder);
         }

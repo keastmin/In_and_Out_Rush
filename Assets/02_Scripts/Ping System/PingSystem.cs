@@ -3,8 +3,11 @@ using UnityEngine;
 
 public class PingSystem : NetworkBehaviour
 {
-    [SerializeField] private ParticleSystem _ping1Particle;
+    [SerializeField] private PlayerPing _playerPingPrefab;
     [SerializeField] private LayerMask _groundLayer;
+
+    // 러너의 핑 가이드 컴포넌트 참조
+    private PlayerRunnerPingGuide _playerRunnerPingGuide;
 
     private void Update()
     {
@@ -23,9 +26,19 @@ public class PingSystem : NetworkBehaviour
         }
     }
 
+    // 핑 시스템 초기화
+    public void InitializePingSystem(PlayerRunnerPingGuide runnerPingGuide)
+    {
+        // 러너의 핑 가이드 캐싱
+        _playerRunnerPingGuide = runnerPingGuide;
+    }
+
+    // 핑 전송
     [Rpc(RpcSources.All, RpcTargets.All)]
     private void RPC_SendPing(Vector3 pingPos)
     {
-        Instantiate(_ping1Particle, pingPos, Quaternion.identity);
+        // 핑 초기화
+        PlayerPing ping = Instantiate(_playerPingPrefab, pingPos, Quaternion.identity);
+        ping.InitializePlayerPing(_playerRunnerPingGuide);
     }
 }

@@ -25,6 +25,7 @@ namespace Dev.Network
         [Header("Network Systems")]
         [SerializeField] private NetworkInputSystem networkInputSystemPrefab;
         [SerializeField] private NetworkSystemBase[] systems;
+        [SerializeField] private PingSystem _pingSystem;
         [SerializeField] private KIM.Dev.TowerUpgradeManager _towerUpgradeManager;
         public KIM.Dev.ResourceSystem ResourceSystem;
 
@@ -188,6 +189,7 @@ namespace Dev.Network
 
         private void BindObjects()
         {
+            InitializePingSystem(); // 핑 시스템 초기화
             YOUBindObjects();
             KIMBindObjects();
         }
@@ -211,6 +213,13 @@ namespace Dev.Network
         private void PlayerRunnerReferenceInjectToUI(PlayerRunner playerRunner)
         {
             UIController.GetPlayerRunnerReference(playerRunner);
+        }
+
+        // 핑 시스템 초기화
+        private void InitializePingSystem()
+        {
+            // 러너의 핑 가이드 참조 전달
+            _pingSystem.InitializePingSystem(PlayerRunner.PingGuide);
         }
     }
 }

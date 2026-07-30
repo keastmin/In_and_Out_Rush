@@ -67,6 +67,9 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     [SerializeField, Min(0.01f)] private float _biodecompositionSlashVfxSampleSpacing = 0.8f;
     [SerializeField, Min(1)] private int _biodecompositionSlashVfxMaxPoints = 64;
 
+    [Header("Ping Guide")]
+    [SerializeField] private PlayerRunnerPingGuide _pingGuide; // 핑 가이드 컴포넌트 참조
+
     [SerializeField] private ParticleSystem _swiftnessParticleEffect;
     public Sprite[] skillIcons;
 
@@ -91,6 +94,13 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     private PlayerRunnerBiodecompositionSlashVfxHandler _biodecompositionSlashVfxHandler;
 
     private float _elapsedTime = 0f;
+
+    #region 프로퍼티
+
+    // 러너의 핑 가이드
+    public PlayerRunnerPingGuide PingGuide => _pingGuide;
+
+    #endregion 
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     private bool _testModeInvincibleEnabled;

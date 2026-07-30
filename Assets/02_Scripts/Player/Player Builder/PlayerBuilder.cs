@@ -230,21 +230,7 @@ namespace KIM.Dev
         // 월드를 향해 좌클릭을 눌렀을 때 이미 선택된 오브젝트들을 초기화 하고 새로운 정보 수집
         public void ClickLeftMouseDownOnWorld()
         {
-            // 이미 클릭된 오브젝트가 있을 때 클리어
-            ClickObjectClear();
-
-            // 이미 선택된 드래그 오브젝트가 있을 때
-            if (DragObjectHash.Count > 0)
-            {
-                foreach (var dragObj in DragObjectHash)
-                {
-                    dragObj.OnDragOverThisObject();
-                }
-                DragObjectHash.Clear();
-            }
-
-            // 선택된 공격타워 해쉬 초기화
-            ResetTowerHashSet();
+            ClearTowerSelection();
 
             // 새로운 오브젝트 수집 시도
             var cam = Camera.main;
@@ -277,6 +263,19 @@ namespace KIM.Dev
                 ClickObject.OnCancelClickThisObject();
                 ClickObject = null;
             }
+        }
+
+        public void ClearTowerSelection()
+        {
+            ClickObjectClear();
+
+            foreach (var dragObj in DragObjectHash)
+            {
+                dragObj.OnDragOverThisObject();
+            }
+
+            DragObjectHash.Clear();
+            ResetTowerHashSet();
         }
 
         #endregion

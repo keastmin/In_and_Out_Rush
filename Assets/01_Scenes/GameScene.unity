@@ -629,6 +629,7 @@ MonoBehaviour:
   territorySystem: {fileID: 0}
   monsterParentTransform: {fileID: 636045684}
   monsterPrefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
+  waveSpawnTable: {fileID: 11400000, guid: 2e7fe6f56c6b6db4bbc655e2d9ea5382, type: 2}
   spawnInterval: 1
   spawnCount: 20
   strengthenMultiplier: 1.2

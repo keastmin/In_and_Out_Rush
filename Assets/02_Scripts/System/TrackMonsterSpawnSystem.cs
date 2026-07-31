@@ -13,13 +13,15 @@ public class TrackMonsterSpawnSystem : NetworkSystemBase
     [SerializeField] TerritorySystem territorySystem;
     [SerializeField] Transform monsterParentTransform;
     [SerializeField] TrackMonster monsterPrefab;
+    [SerializeField] TrackMonsterWaveSpawnTable waveSpawnTable;
     [SerializeField] float spawnInterval;
     [SerializeField] int spawnCount;
     [SerializeField] float strengthenMultiplier = 1.2f;
 
     readonly List<TrackMonster> aliveTrackMonsters = new();
-    Coroutine monsterSpawnRoutine;
+    readonly List<Coroutine> monsterSpawnRoutines = new();
     int spawnSequence;
+    int spawnPrioritySequence;
     int strengthenCount;
 
     public override void SetUp()
@@ -30,6 +32,11 @@ public class TrackMonsterSpawnSystem : NetworkSystemBase
 
     public void SpawnMonsters(Track track)
     {
+        SpawnMonsters(track, 0);
+    }
+
+    public void SpawnMonsters(Track track, int waveNumber)
+    {
         if (!Object.HasStateAuthority) { return; }
         if (track == null || track.Vertices == null || track.Vertices.Length == 0)
         {
@@ -38,7 +45,30 @@ public class TrackMonsterSpawnSystem : NetworkSystemBase
         }
 
         StopMonsterSpawnRoutine();
-        monsterSpawnRoutine = StartCoroutine(MonsterSpawnRoutine(track));
+        spawnPrioritySequence = 0;
+
+        if (!TryGetWaveData(waveNumber, out TrackMonsterWaveData waveData))
+        {
+            Debug.LogWarning($"Track monster wave data missing for wave {waveNumber}. Fallback spawn settings will be used.");
+            StartTrackedMonsterSpawnRoutine(FallbackMonsterSpawnRoutine(track));
+            return;
+        }
+
+        IReadOnlyList<TrackMonsterSpawnGroup> spawnGroups = waveData.SpawnGroups;
+        for (int i = 0; i < spawnGroups.Count; i++)
+        {
+            TrackMonsterSpawnGroup spawnGroup = spawnGroups[i];
+            if (spawnGroup == null || spawnGroup.SpawnCount <= 0)
+                continue;
+
+            StartTrackedMonsterSpawnRoutine(MonsterSpawnGroupRoutine(track, spawnGroup));
+        }
+
+        if (monsterSpawnRoutines.Count <= 0)
+        {
+            Debug.LogWarning($"Track monster wave {waveNumber} has no valid spawn groups. Fallback spawn settings will be used.");
+            StartTrackedMonsterSpawnRoutine(FallbackMonsterSpawnRoutine(track));
+        }
     }
 
     public void SpawnInternalizedMonsters(Track track, int count)
@@ -51,7 +81,7 @@ public class TrackMonsterSpawnSystem : NetworkSystemBase
         }
 
         for (int i = 0; i < count; i++)
-            SpawnTrackMonster(track, true, i);
+            SpawnTrackMonster(track, monsterPrefab, true, i);
     }
 
     public void StrengthenTrackMonsters()
@@ -81,23 +111,47 @@ public class TrackMonsterSpawnSystem : NetworkSystemBase
         StartCoroutine(TrackMonsterSettlementRoutine(trackMonsters, runner));
     }
 
-    IEnumerator MonsterSpawnRoutine(Track track)
+    IEnumerator FallbackMonsterSpawnRoutine(Track track)
     {
         for (int i = 0; i < spawnCount; i++)
         {
-            SpawnTrackMonster(track, false, i);
+            SpawnTrackMonster(track, monsterPrefab, false, spawnPrioritySequence++);
             yield return new WaitForSeconds(spawnInterval);
         }
-
-        monsterSpawnRoutine = null;
     }
 
-    TrackMonster SpawnTrackMonster(Track track, bool internalized, int priority)
+    IEnumerator MonsterSpawnGroupRoutine(Track track, TrackMonsterSpawnGroup spawnGroup)
     {
+        if (spawnGroup.DelayFromWaveStartSeconds > 0f)
+            yield return new WaitForSeconds(spawnGroup.DelayFromWaveStartSeconds);
+
+        TrackMonster prefab = spawnGroup.Prefab != null ? spawnGroup.Prefab : monsterPrefab;
+        for (int repeatIndex = 0; repeatIndex < spawnGroup.RepeatCount; repeatIndex++)
+        {
+            for (int spawnIndex = 0; spawnIndex < spawnGroup.SpawnCount; spawnIndex++)
+            {
+                SpawnTrackMonster(track, prefab, false, spawnPrioritySequence++);
+                if (spawnIndex < spawnGroup.SpawnCount - 1 && spawnGroup.SpawnIntervalSeconds > 0f)
+                    yield return new WaitForSeconds(spawnGroup.SpawnIntervalSeconds);
+            }
+
+            if (repeatIndex < spawnGroup.RepeatCount - 1 && spawnGroup.RepeatIntervalSeconds > 0f)
+                yield return new WaitForSeconds(spawnGroup.RepeatIntervalSeconds);
+        }
+    }
+
+    TrackMonster SpawnTrackMonster(Track track, TrackMonster prefab, bool internalized, int priority)
+    {
+        if (prefab == null)
+        {
+            Debug.LogWarning("Track monster spawn skipped. Monster prefab is missing.");
+            return null;
+        }
+
         var startPosition = track.Vertices[0];
         int sequence = spawnSequence++;
 
-        var monster = Runner.Spawn(monsterPrefab, startPosition, Quaternion.identity, PlayerRef.None, (runner, obj) =>
+        var monster = Runner.Spawn(prefab, startPosition, Quaternion.identity, PlayerRef.None, (runner, obj) =>
         {
             obj.name = internalized ? $"Internalized Monster_{sequence}" : $"Monster_{sequence}";
             obj.transform.SetParent(monsterParentTransform);
@@ -114,6 +168,29 @@ public class TrackMonsterSpawnSystem : NetworkSystemBase
             ApplyCurrentStrength(monster);
 
         return monster;
+    }
+
+    bool TryGetWaveData(int waveNumber, out TrackMonsterWaveData waveData)
+    {
+        waveData = null;
+        return waveNumber > 0 &&
+               waveSpawnTable != null &&
+               waveSpawnTable.TryGetWave(waveNumber, out waveData) &&
+               waveData != null &&
+               waveData.HasSpawnGroups;
+    }
+
+    void StartTrackedMonsterSpawnRoutine(IEnumerator routine)
+    {
+        Coroutine coroutine = null;
+        IEnumerator TrackRoutine()
+        {
+            yield return routine;
+            monsterSpawnRoutines.Remove(coroutine);
+        }
+
+        coroutine = StartCoroutine(TrackRoutine());
+        monsterSpawnRoutines.Add(coroutine);
     }
 
     Territory ResolveTerritory()
@@ -153,11 +230,17 @@ public class TrackMonsterSpawnSystem : NetworkSystemBase
 
     void StopMonsterSpawnRoutine()
     {
-        if (monsterSpawnRoutine == null)
+        if (monsterSpawnRoutines.Count <= 0)
             return;
 
-        StopCoroutine(monsterSpawnRoutine);
-        monsterSpawnRoutine = null;
+        for (int i = 0; i < monsterSpawnRoutines.Count; i++)
+        {
+            Coroutine routine = monsterSpawnRoutines[i];
+            if (routine != null)
+                StopCoroutine(routine);
+        }
+
+        monsterSpawnRoutines.Clear();
     }
 
     void CleanupDestroyedTrackMonsters()

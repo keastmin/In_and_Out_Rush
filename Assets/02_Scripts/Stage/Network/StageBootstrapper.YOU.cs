@@ -157,7 +157,7 @@ namespace Dev.Network
             }
 
             FlushQueuedInternalizedMonsters();
-            trackMonsterSpawnSystem.SpawnMonsters(roundTrackSystem.Track);
+            trackMonsterSpawnSystem.SpawnMonsters(roundTrackSystem.Track, round);
             Debug.Log($"Track monsters spawned for round {round}.");
         }
 

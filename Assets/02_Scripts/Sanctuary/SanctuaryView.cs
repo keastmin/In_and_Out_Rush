@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [AddComponentMenu("ProjectIO/Sanctuary View")]
-[RequireComponent(typeof(MeshFilter))]
+[RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class SanctuaryView : MonoBehaviour
 {
     public enum SanctuaryState
@@ -13,8 +13,17 @@ public class SanctuaryView : MonoBehaviour
         Expired
     }
 
+    private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+    private static readonly int ColorId = Shader.PropertyToID("_Color");
+
+    [Header("Material Color")]
+    [SerializeField] private Color _activeColor = new(0.25f, 1f, 0.55f, 1f);
+    [SerializeField] private Color _inactiveColor = new(0.35f, 0.45f, 0.55f, 1f);
+
     private readonly Territory _territory = new();
     private MeshFilter _meshFilter;
+    private MeshRenderer _meshRenderer;
+    private MaterialPropertyBlock _materialPropertyBlock;
     private float _activeDuration;
     private float _activeElapsedTime;
 
@@ -28,7 +37,8 @@ public class SanctuaryView : MonoBehaviour
 
     private void Awake()
     {
-        _meshFilter = GetComponent<MeshFilter>();
+        CacheComponents();
+        ApplyStateColor();
     }
 
     public void Initialize(float activeDuration)
@@ -36,6 +46,7 @@ public class SanctuaryView : MonoBehaviour
         _activeDuration = Mathf.Max(0.01f, activeDuration);
         _activeElapsedTime = 0f;
         State = SanctuaryState.Inactive;
+        ApplyStateColor();
     }
 
     public void SetVertices(List<Vector2> vertices)
@@ -70,6 +81,7 @@ public class SanctuaryView : MonoBehaviour
 
         State = SanctuaryState.Active;
         _activeElapsedTime = 0f;
+        ApplyStateColor();
         Activated?.Invoke(this);
         return true;
     }
@@ -84,6 +96,37 @@ public class SanctuaryView : MonoBehaviour
             return;
 
         State = SanctuaryState.Expired;
+        ApplyStateColor();
         Expired?.Invoke(this);
+    }
+
+    private void CacheComponents()
+    {
+        if (_meshFilter == null)
+            _meshFilter = GetComponent<MeshFilter>();
+
+        if (_meshRenderer == null)
+            _meshRenderer = GetComponent<MeshRenderer>();
+    }
+
+    private void ApplyStateColor()
+    {
+        CacheComponents();
+
+        if (_meshRenderer == null)
+            return;
+
+        _materialPropertyBlock ??= new MaterialPropertyBlock();
+        _meshRenderer.GetPropertyBlock(_materialPropertyBlock);
+
+        Color color = IsActive ? _activeColor : _inactiveColor;
+        _materialPropertyBlock.SetColor(BaseColorId, color);
+        _materialPropertyBlock.SetColor(ColorId, color);
+        _meshRenderer.SetPropertyBlock(_materialPropertyBlock);
+    }
+
+    private void OnValidate()
+    {
+        ApplyStateColor();
     }
 }

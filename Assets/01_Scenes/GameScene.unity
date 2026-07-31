@@ -820,8 +820,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 633568622}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.5735764, y: 0, z: 0, w: 0.8191521}
-  m_LocalPosition: {x: 0, y: 30, z: 0}
+  m_LocalRotation: {x: 0.6427876, y: 0, z: 0, w: 0.7660445}
+  m_LocalPosition: {x: 2.1648645, y: 18, z: -11.670606}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1079,7 +1079,7 @@ MonoBehaviour:
   - {fileID: 1996878198739820596, guid: 08c57da2db45b24428da686d59997b61, type: 3}
   - {fileID: -1371715635768697079, guid: 3febb430baa3e5a42834c9c276f5ce3e, type: 3}
   - {fileID: -7740008079418054329, guid: 016c82c53b2d0094ea2d7832ca2e11b1, type: 3}
-  spawnCount: 2000
+  spawnCount: 500
   spawnRadius: 400
   playerTransform: {fileID: 0}
 --- !u!1 &813144253

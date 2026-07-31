@@ -5198,6 +5198,52 @@ Transform:
   m_Children: []
   m_Father: {fileID: 5782809305708921265}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &8360457870369061178
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7977730705592027354}
+  - component: {fileID: 1680865586286248271}
+  m_Layer: 10
+  m_Name: Ping Guide
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7977730705592027354
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8360457870369061178}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.968, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5948079281826790062}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1680865586286248271
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8360457870369061178}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 335a58e78f97cd04e9ecbeca848a4918, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _pingGuidePrefab: {fileID: 6533097450878648669, guid: c65edf9a11aa02e47afd48203430fa51, type: 3}
+  _pingGuideOffsetDistance: 3
 --- !u!1 &9008013758366610681
 GameObject:
   m_ObjectHideFlags: 0
@@ -5238,6 +5284,7 @@ Transform:
   m_Children:
   - {fileID: 5782809305708921265}
   - {fileID: 767553142045143712}
+  - {fileID: 7977730705592027354}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &6623639392449802583
@@ -5303,6 +5350,7 @@ MonoBehaviour:
   _biodecompositionSlashVfxPrefab: {fileID: 3252026903538010208, guid: 9bbe77cbc581c5f4ab7f7f99d13e3af9, type: 3}
   _biodecompositionSlashVfxSampleSpacing: 0.8
   _biodecompositionSlashVfxMaxPoints: 64
+  _pingGuide: {fileID: 1680865586286248271}
   _swiftnessParticleEffect: {fileID: 6092269608685176354}
   skillIcons:
   - {fileID: 1471596959, guid: e1a81109ab95c0344a014a0e72fa1378, type: 3}
@@ -5330,6 +5378,7 @@ MonoBehaviour:
   - {fileID: 9208446726996137561}
   - {fileID: 1669351244208117714}
   - {fileID: 373271162909325404}
+  - {fileID: 1680865586286248271}
   ForceRemoteRenderTimeframe: 0
 --- !u!136 &2540990109086367435
 CapsuleCollider:

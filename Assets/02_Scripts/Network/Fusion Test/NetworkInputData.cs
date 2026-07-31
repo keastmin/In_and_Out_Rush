@@ -10,7 +10,6 @@ public struct NetworkInputData : INetworkInput
     public const byte ITEM_INPUT = 5; // 러너의 아이템 사용
     public const byte SKILL_INPUT = 6; // 러너의 스킬 사용
     public const byte INTERACT_INPUT = 7; // 러너의 상호작용
-    public const byte LABORATORY_INPUT = 8; // 러너의 연구소 상호작용
     public const byte WEAPON_INPUT = 9; // 러너의 무기 사용
 
 
@@ -23,7 +22,6 @@ public struct NetworkInputData : INetworkInput
     public NetworkButtons SkillInput;
     public int SelectedSkill;
     public NetworkButtons InteractInput;
-    public NetworkButtons LaboratoryInput;
     public NetworkButtons WeaponInput;
 
     // 빌더 입력

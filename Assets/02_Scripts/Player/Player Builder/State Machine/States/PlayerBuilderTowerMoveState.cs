@@ -49,11 +49,6 @@ namespace KIM.Dev
             TransitionTo(moveComplete);
         }
 
-        public void LateUpdate()
-        {
-            _player.CamMover.Move();
-        }
-
         public void Exit()
         {
             InfiniteGrid gridManager = _player.BuilderTowerMove.GridManager;

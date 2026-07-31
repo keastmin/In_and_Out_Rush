@@ -49,18 +49,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 031db61d352854d4b85cad8477ecf2ec, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _cameraMover:
-    _cineCam: {fileID: 0}
-    _cameraBorderThickness: 10
-    _cameraMoveSpeed: 50
-    _cameraMaxZoomDistance: 11
-    _cameraWheelPerZoomDistance: 10
-    _zoomSmoothTime: 0.12
-    _camZoomDistance: 0
-    _zoomTargetDistance: 0
-    _zoomVel: 0
-    _isLock: 0
-    _allowZoom: 1
   _clickDetectLayer:
     serializedVersion: 2
     m_Bits: 385

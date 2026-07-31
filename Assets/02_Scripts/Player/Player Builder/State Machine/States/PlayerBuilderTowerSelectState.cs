@@ -27,6 +27,13 @@ namespace KIM.Dev
 
         public void Update()
         {
+            if (Input.GetMouseButtonDown(1))
+            {
+                _player.ClearTowerSelection();
+                TransitionTo();
+                return;
+            }
+
             _player.BuilderUI.RefreshTowerSelectActions(
                 GetSelectedTowerType(),
                 _player.GetSelectedTowerCapabilities(),
@@ -39,10 +46,6 @@ namespace KIM.Dev
             }
 
             TransitionTo();
-        }
-
-        public void LateUpdate()
-        {
         }
 
         public void Exit()

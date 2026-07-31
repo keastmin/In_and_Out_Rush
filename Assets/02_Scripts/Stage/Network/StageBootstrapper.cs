@@ -11,7 +11,6 @@ namespace Dev.Network
     {
         [Networked] public PlayerRunner PlayerRunner { get; private set; }
         [Networked] public PlayerBuilder PlayerBuilder { get; private set; }
-        public CinemachineSystem CinemachineSystem { get; private set; }
 
         public static StageBootstrapper Instance { get; private set; }
 
@@ -26,6 +25,7 @@ namespace Dev.Network
         [Header("Network Systems")]
         [SerializeField] private NetworkInputSystem networkInputSystemPrefab;
         [SerializeField] private NetworkSystemBase[] systems;
+        [SerializeField] private PingSystem _pingSystem;
         [SerializeField] private KIM.Dev.TowerUpgradeManager _towerUpgradeManager;
         public KIM.Dev.ResourceSystem ResourceSystem;
 
@@ -33,7 +33,7 @@ namespace Dev.Network
 
         [Header("Local Systems")]
         [SerializeField] private FogOfWarSystem _fogOfWarSystem;
-        [SerializeField] private CinemachineSystem cinemachineSystemPrefab;
+        public CinemachineSystem CinemachineSystem;
         public StageUIController UIController;
 
         [Space(10)]
@@ -192,13 +192,6 @@ namespace Dev.Network
 
         private void InitCinemachineSystem()
         {
-            if (cinemachineSystemPrefab == null || !cinemachineSystemPrefab.gameObject.scene.IsValid())
-            {
-                Debug.LogError("StageBootstrapper requires a scene CinemachineSystem reference.", this);
-                return;
-            }
-
-            CinemachineSystem = cinemachineSystemPrefab;
             var playerPosition = NetworkManager.Instance.Registry.RefToPosition[Runner.LocalPlayer];
             CinemachineSystem.Initialize(playerPosition, PlayerRunner, PlayerBuilder);
         }
@@ -228,6 +221,7 @@ namespace Dev.Network
 
         private void BindObjects()
         {
+            InitializePingSystem(); // 핑 시스템 초기화
             YOUBindObjects();
             KIMBindObjects();
         }
@@ -251,6 +245,13 @@ namespace Dev.Network
         private void PlayerRunnerReferenceInjectToUI(PlayerRunner playerRunner)
         {
             UIController.GetPlayerRunnerReference(playerRunner);
+        }
+
+        // 핑 시스템 초기화
+        private void InitializePingSystem()
+        {
+            // 러너의 핑 가이드 참조 전달
+            _pingSystem.InitializePingSystem(PlayerRunner.PingGuide);
         }
     }
 }

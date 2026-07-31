@@ -102,9 +102,6 @@ public class NetworkInputSystem : NetworkBehaviour, INetworkRunnerCallbacks
         data.InteractInput.Set(NetworkInputData.INTERACT_INPUT, _interactInput);
         _interactInput = false;
 
-        // 연구소 상호작용
-        data.LaboratoryInput.Set(NetworkInputData.LABORATORY_INPUT, Input.GetKey(KeyCode.Space));
-
         // 무기 사용
         data.WeaponInput.Set(NetworkInputData.WEAPON_INPUT, Input.GetMouseButton(0));
 

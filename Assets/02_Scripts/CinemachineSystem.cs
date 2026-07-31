@@ -7,6 +7,9 @@ public class CinemachineSystem : MonoBehaviour
     [SerializeField] private CinemachineCamera _playerRunnerCamera;
     [SerializeField] private CinemachineCamera _playerBuilderCamera;
 
+    private PlayerRunnerCinemachineController _runnerController;
+    private PlayerBuilderCinemachineController _builderController;
+    private Transform _laboratoryTarget;
     private PlayerPosition _localPlayerPosition;
     private bool _isInitialized;
     private bool _isLookingAtRunner;
@@ -27,9 +30,19 @@ public class CinemachineSystem : MonoBehaviour
             return;
         }
 
+        if (!_playerRunnerCamera.TryGetComponent(out _runnerController) ||
+            !_playerBuilderCamera.TryGetComponent(out _builderController))
+        {
+            Debug.LogError("CinemachineSystem requires role camera controllers.", this);
+            return;
+        }
+
+        _runnerController.Initialize(runner.transform);
+        _builderController.Initialize(myPosition == PlayerPosition.Builder);
+        _builderController.SetLaboratoryTarget(_laboratoryTarget);
+        builder.InitializeCinemachineController(_builderController);
+
         SetPriority(myPosition);
-        SetTrackingTarget(runner);
-        builder.InitializeCinemachineCamera(_playerBuilderCamera);
         _isLookingAtRunner = myPosition == PlayerPosition.Runner;
         _isInitialized = true;
     }
@@ -45,7 +58,17 @@ public class CinemachineSystem : MonoBehaviour
             return;
 
         _isLookingAtRunner = isLookingAtRunner;
-        SetPriority(isLookingAtRunner ? PlayerPosition.Runner : PlayerPosition.Builder);
+        if (isLookingAtRunner)
+        {
+            _runnerController.ApplyObservationView(_builderController.Camera);
+            _builderController.SetViewActive(false);
+            SetPriority(PlayerPosition.Runner);
+        }
+        else
+        {
+            SetPriority(PlayerPosition.Builder);
+            _builderController.SetViewActive(true);
+        }
     }
 
     // 내 역할군에 따라 시네머신 우선순위 결정
@@ -64,14 +87,9 @@ public class CinemachineSystem : MonoBehaviour
         }
     }
 
-    // 시네머신의 타겟을 설정
-    public void SetTrackingTarget(Transform transform)
+    public void SetLaboratoryTarget(Transform laboratoryTarget)
     {
-        if (_playerRunnerCamera != null)
-            _playerRunnerCamera.Target.TrackingTarget = transform;
-    }
-    private void SetTrackingTarget(PlayerRunner runner)
-    {
-        SetTrackingTarget(runner.transform);
+        _laboratoryTarget = laboratoryTarget;
+        _builderController?.SetLaboratoryTarget(laboratoryTarget);
     }
 }

@@ -98,6 +98,7 @@ namespace Dev.Network
         public void OnSpawnedLaboratory(Laboratory laboratory)
         {
             _localLaboratory = laboratory;
+            CinemachineSystem?.SetLaboratoryTarget(laboratory.transform);
             TryInjectBuilderUI(laboratory);
         }
 

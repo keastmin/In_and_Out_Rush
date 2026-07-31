@@ -24,13 +24,7 @@ namespace KIM.Dev
             if (Input.GetMouseButtonDown(1))
                 _player.IsOpenLaboratory(false);
 
-            _player.CamMover.Move();
             TransitionTo();
-        }
-
-        public void LateUpdate()
-        {
-
         }
 
         public void Exit()

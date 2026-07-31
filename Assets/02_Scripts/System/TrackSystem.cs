@@ -144,7 +144,9 @@ public class TrackSystem : NetworkSystemBase
     public void ExpandTrack()
     {
         expansionLevel++;
-        CreateTrack(vertexCount * expansionLevel, horizontalRadius * expansionLevel, verticalRadius * expansionLevel, noise);
+        // var factor = Mathf.FloorToInt(expansionLevel * Mathf.Pow(2, expansionLevel - 1));
+        var factor = expansionLevel;
+        CreateTrack(vertexCount * factor, horizontalRadius * factor, verticalRadius * factor, noise);
         var noiseCount = UnityEngine.Random.Range(2, noiseVertexCount);
         for (int i = 0; i < noiseCount; i++)
         {

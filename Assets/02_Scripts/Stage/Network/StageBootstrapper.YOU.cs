@@ -259,11 +259,11 @@ namespace Dev.Network
 
         private Vector3 CreateGatePosition()
         {
-            if (sacredZoneSystem == null || sacredZoneSystem.InnerRadius <= 0f)
+            if (sacredZoneSystem == null || sacredZoneSystem.OuterRadius <= 0f)
                 return CreateFallbackGatePosition();
 
             int candidateIndex = Random.Range(0, GateCandidateCount);
-            return CreateGateCandidatePosition(candidateIndex, sacredZoneSystem.InnerRadius);
+            return CreateGateCandidatePosition(candidateIndex, sacredZoneSystem.OuterRadius);
         }
 
         private Vector3 CreateFallbackGatePosition()
@@ -295,14 +295,14 @@ namespace Dev.Network
             return squarePoint.normalized;
         }
 
-        private Vector3 CreateGateCandidatePosition(int candidateIndex, float innerRadius)
+        private Vector3 CreateGateCandidatePosition(int candidateIndex, float radius)
         {
             Vector2 direction = CreateProjectedInscribedSquareDirection(candidateIndex);
             Vector3 center = sacredZoneSystem != null ? sacredZoneSystem.Center : transform.position;
             return center + new Vector3(
-                direction.x * innerRadius,
+                direction.x * radius,
                 0f,
-                direction.y * innerRadius);
+                direction.y * radius);
         }
 
         private void Update()
@@ -325,20 +325,20 @@ namespace Dev.Network
 
         private void DrawGateCandidateGizmos()
         {
-            float innerRadius = GetGateCandidateGizmoInnerRadius();
-            if (innerRadius <= 0f)
+            float candidateRadius = GetGateCandidateGizmoRadius();
+            if (candidateRadius <= 0f)
                 return;
 
             Vector3 center = sacredZoneSystem != null ? sacredZoneSystem.Center : transform.position;
             Vector3 centerOffset = center + Vector3.up * 0.25f;
 
             Gizmos.color = new Color(0.1f, 0.8f, 1f, 0.35f);
-            Gizmos.DrawWireSphere(centerOffset, innerRadius);
+            Gizmos.DrawWireSphere(centerOffset, candidateRadius);
 
             Gizmos.color = new Color(0.2f, 1f, 0.65f, 0.9f);
             for (int i = 0; i < GateCandidateCount; i++)
             {
-                Vector3 position = CreateGateCandidatePosition(i, innerRadius) + Vector3.up * 0.25f;
+                Vector3 position = CreateGateCandidatePosition(i, candidateRadius) + Vector3.up * 0.25f;
                 Gizmos.DrawLine(centerOffset, position);
                 Gizmos.DrawSphere(position, gateCandidateGizmoRadius);
                 Gizmos.DrawWireSphere(position, gateCandidateGizmoRadius * 2f);
@@ -346,13 +346,10 @@ namespace Dev.Network
             }
         }
 
-        private float GetGateCandidateGizmoInnerRadius()
+        private float GetGateCandidateGizmoRadius()
         {
-            if (Application.isPlaying && sacredZoneSystem != null && sacredZoneSystem.InnerRadius > 0f)
-                return sacredZoneSystem.InnerRadius;
-
-            if (sacredZoneSystem != null)
-                return sacredZoneSystem.CalculateInnerRadius(_worldBoundaryRadius);
+            if (Application.isPlaying && sacredZoneSystem != null && sacredZoneSystem.OuterRadius > 0f)
+                return sacredZoneSystem.OuterRadius;
 
             return _worldBoundaryRadius;
         }

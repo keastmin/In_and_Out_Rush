@@ -23,6 +23,7 @@ namespace Dev.Network
 
         public Vector3 Center => transform.position;
         public float InnerRadius => innerRadius;
+        public float OuterRadius => worldBoundaryRadius;
         public float CapturedArea { get; private set; }
         public float TotalArea { get; private set; }
         public float ProgressRatio => TotalArea > 0f ? Mathf.Clamp01(CapturedArea / TotalArea) : 0f;

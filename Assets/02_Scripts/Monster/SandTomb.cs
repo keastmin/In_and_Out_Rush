@@ -3,6 +3,9 @@ using UnityEngine;
 
 public class SandTomb : WorldMonster
 {
+    private const string ActivationRangeName = "Activation Range";
+    private const int ActivationRangeSegments = 64;
+
     public enum SandTombState
     {
         Inactive,
@@ -24,10 +27,17 @@ public class SandTomb : WorldMonster
 
     private float _activationTimer = 0f;
     private float _attackElapsedTime = 0f;
+    private Mesh _activationRangeMesh;
+
+    private void Awake()
+    {
+        ApplyActivationRangeVisual();
+    }
 
     public override void Spawned()
     {
         base.Spawned();
+        ApplyActivationRangeVisual();
         ApplyStateVisual();
     }
 
@@ -88,6 +98,71 @@ public class SandTomb : WorldMonster
             _meshRenderer.sharedMaterial = material;
     }
 
+    private void ApplyActivationRangeVisual()
+    {
+        MeshFilter meshFilter = FindActivationRangeMeshFilter();
+        if (meshFilter == null) return;
+
+        UpdateActivationRangeMesh(Mathf.Max(0f, _activationRadius));
+        meshFilter.sharedMesh = _activationRangeMesh;
+
+        MeshCollider meshCollider = meshFilter.GetComponent<MeshCollider>();
+        if (meshCollider != null)
+            meshCollider.sharedMesh = _activationRangeMesh;
+    }
+
+    private MeshFilter FindActivationRangeMeshFilter()
+    {
+        Transform activationRange = transform.Find(ActivationRangeName);
+        return activationRange != null
+            ? activationRange.GetComponent<MeshFilter>()
+            : null;
+    }
+
+    private void UpdateActivationRangeMesh(float radius)
+    {
+        if (_activationRangeMesh == null)
+        {
+            _activationRangeMesh = new Mesh
+            {
+                name = "SandTomb Activation Range",
+            };
+        }
+
+        Vector3[] vertices = new Vector3[ActivationRangeSegments + 1];
+        Vector3[] normals = new Vector3[vertices.Length];
+        Vector2[] uvs = new Vector2[vertices.Length];
+        int[] triangles = new int[ActivationRangeSegments * 3];
+
+        vertices[0] = Vector3.zero;
+        normals[0] = Vector3.back;
+        uvs[0] = new Vector2(0.5f, 0.5f);
+
+        for (int i = 0; i < ActivationRangeSegments; i++)
+        {
+            float angle = i * Mathf.PI * 2f / ActivationRangeSegments;
+            float x = Mathf.Cos(angle);
+            float y = Mathf.Sin(angle);
+            int vertexIndex = i + 1;
+
+            vertices[vertexIndex] = new Vector3(x * radius, y * radius, 0f);
+            normals[vertexIndex] = Vector3.back;
+            uvs[vertexIndex] = new Vector2(x * 0.5f + 0.5f, y * 0.5f + 0.5f);
+
+            int triangleIndex = i * 3;
+            triangles[triangleIndex] = 0;
+            triangles[triangleIndex + 1] = i == ActivationRangeSegments - 1 ? 1 : vertexIndex + 1;
+            triangles[triangleIndex + 2] = vertexIndex;
+        }
+
+        _activationRangeMesh.Clear();
+        _activationRangeMesh.vertices = vertices;
+        _activationRangeMesh.normals = normals;
+        _activationRangeMesh.uv = uvs;
+        _activationRangeMesh.triangles = triangles;
+        _activationRangeMesh.RecalculateBounds();
+    }
+
     private bool IsPlayerInTerritory()
     {
         var playerPosition2d = new Vector2(playerTransform.position.x, playerTransform.position.z);
@@ -120,5 +195,15 @@ public class SandTomb : WorldMonster
         Gizmos.DrawWireSphere(transform.position, _activationRadius);
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, _suckedIntoRadius);
+    }
+
+    private void OnDestroy()
+    {
+        if (_activationRangeMesh == null) return;
+
+        if (Application.isPlaying)
+            Destroy(_activationRangeMesh);
+        else
+            DestroyImmediate(_activationRangeMesh);
     }
 }

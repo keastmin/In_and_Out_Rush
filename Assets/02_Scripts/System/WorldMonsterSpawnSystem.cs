@@ -22,10 +22,9 @@ public class WorldMonsterSpawnSystem : NetworkSystemBase
     {
         for (int i = 0; i < spawnCount; i++)
         {
-            var randomSpawnPosition = monsterParentTransform.position + Random.insideUnitSphere * spawnRadius;
-            randomSpawnPosition.y = 0; // y축 고정
-
-            if (territorySystem.Territory.IsPointInPolygon(randomSpawnPosition)) { i--; continue; }
+            var randomSpawnPosition2d = Random.insideUnitCircle * spawnRadius;
+            var randomSpawnPosition = new Vector3(randomSpawnPosition2d.x, 0, randomSpawnPosition2d.y);
+            if (territorySystem.Territory.IsPointInPolygon(randomSpawnPosition2d)) { i--; continue; }
 
             var monsterPrefab = monsterPrefabs[Random.Range(0, monsterPrefabs.Length)];
             var monster = Runner.Spawn(monsterPrefab, randomSpawnPosition, Quaternion.identity, PlayerRef.None, (runner, obj) =>

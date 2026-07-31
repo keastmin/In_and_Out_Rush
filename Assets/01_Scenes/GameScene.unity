@@ -1066,8 +1066,10 @@ MonoBehaviour:
   monsterPrefabs:
   - {fileID: -5550781050059216141, guid: ad46d8f98d96fd94196ef19d385fdd25, type: 3}
   - {fileID: 1996878198739820596, guid: 08c57da2db45b24428da686d59997b61, type: 3}
-  spawnCount: 100
-  spawnRadius: 200
+  - {fileID: -1371715635768697079, guid: 3febb430baa3e5a42834c9c276f5ce3e, type: 3}
+  - {fileID: -7740008079418054329, guid: 016c82c53b2d0094ea2d7832ca2e11b1, type: 3}
+  spawnCount: 2000
+  spawnRadius: 400
   playerTransform: {fileID: 0}
 --- !u!1 &813144253
 GameObject:
@@ -2309,6 +2311,10 @@ PrefabInstance:
     - target: {fileID: 5400355807062306309, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
       propertyPath: m_Name
       value: Fog of War System
+      objectReference: {fileID: 0}
+    - target: {fileID: 5400355807062306309, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8092433541136705184, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
       propertyPath: m_LocalPosition.x
@@ -3689,7 +3695,7 @@ PrefabInstance:
       objectReference: {fileID: 1532805954}
     - target: {fileID: 7251378647776299556, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
       propertyPath: _worldBoundaryRadius
-      value: 250
+      value: 500
       objectReference: {fileID: 0}
     - target: {fileID: 7251378647776299556, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
       propertyPath: 'systems.Array.data[0]'

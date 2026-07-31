@@ -9,11 +9,11 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3649296518827394531}
-  - component: {fileID: 1287462723279336629}
-  - component: {fileID: 3472767642691166672}
-  - component: {fileID: 2240025861059067290}
+  - component: {fileID: -4769506676359899512}
+  - component: {fileID: 8466970799922438682}
+  - component: {fileID: -1719614178540343546}
   m_Layer: 0
-  m_Name: Mineral Small
+  m_Name: Gas Small
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -35,7 +35,7 @@ Transform:
   - {fileID: 3545490277411532423}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1287462723279336629
+--- !u!114 &-4769506676359899512
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -47,9 +47,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b0ccc7a51a5e8424ca2e4a30e5602e49, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Type: 0
-  Amount: 100
---- !u!114 &3472767642691166672
+  Type: 1
+  Amount: 50
+--- !u!114 &8466970799922438682
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -61,15 +61,15 @@ MonoBehaviour:
   m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  SortKey: 1978802287
+  SortKey: 3527694157
   ObjectInterest: 1
   Flags: 262145
   NestedObjects: []
   NetworkedBehaviours:
-  - {fileID: 1287462723279336629}
-  - {fileID: 2240025861059067290}
+  - {fileID: -4769506676359899512}
+  - {fileID: -1719614178540343546}
   ForceRemoteRenderTimeframe: 0
---- !u!114 &2240025861059067290
+--- !u!114 &-1719614178540343546
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -151,7 +151,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: b6db9d81ded86104299cf83afdc9e8fb, type: 2}
+  - {fileID: 2100000, guid: 43fa61ff1c395c04c97cc76944ceab82, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

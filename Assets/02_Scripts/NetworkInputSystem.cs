@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+[RequireComponent(typeof(NetworkObject))]
 public class NetworkInputSystem : NetworkBehaviour, INetworkRunnerCallbacks
 {
     [Header("Builder")]

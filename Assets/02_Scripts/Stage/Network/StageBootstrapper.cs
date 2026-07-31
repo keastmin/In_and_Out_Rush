@@ -136,7 +136,39 @@ namespace Dev.Network
 
         private void SpawnNetworkInputSystem()
         {
-            var instance = Runner.Spawn(networkInputSystemPrefab, Vector3.zero, Quaternion.identity);
+            if (Runner == null)
+            {
+                Debug.LogError("StageBootstrapper cannot spawn NetworkInputSystem because Runner is null.", this);
+                return;
+            }
+
+            if (networkInputSystemPrefab == null)
+            {
+                Debug.LogError("StageBootstrapper requires a NetworkInputSystem prefab reference.", this);
+                return;
+            }
+
+            var networkObjectPrefab = networkInputSystemPrefab.GetComponent<NetworkObject>();
+            if (networkObjectPrefab == null)
+            {
+                Debug.LogError("NetworkInputSystem prefab must have a NetworkObject component.", networkInputSystemPrefab);
+                return;
+            }
+
+            var spawnedObject = Runner.Spawn(networkObjectPrefab, Vector3.zero, Quaternion.identity);
+            if (spawnedObject == null)
+            {
+                Debug.LogError("Runner failed to spawn NetworkInputSystem prefab.", networkObjectPrefab);
+                return;
+            }
+
+            var instance = spawnedObject.GetComponent<NetworkInputSystem>();
+            if (instance == null)
+            {
+                Debug.LogError("Spawned NetworkInputSystem object does not have a NetworkInputSystem component.", spawnedObject);
+                return;
+            }
+
             instance.name = $"{Runner.name} - NetworkInputSystem";
             Debug.Log($"{Runner.name} - NetworkInputSystem spawned");
         }

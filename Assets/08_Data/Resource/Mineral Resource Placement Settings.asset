@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e2e631e6867dcd47a2d5e34dcb330e7, type: 3}
+  m_Name: Mineral Resource Placement Settings
+  m_EditorClassIdentifier: 
+  _resourceType: 0
+  _small:
+    _prefab: {fileID: 2142689607256237635, guid: d02a8295b7d9841418f05dd9ff95b627, type: 3}
+    _amount: 30
+    _minDistance: 3
+  _medium:
+    _prefab: {fileID: 2142689607256237635, guid: 844f2433f5f192f4a9ed5307c81a20b9, type: 3}
+    _amount: 60
+    _minDistance: 4
+  _large:
+    _prefab: {fileID: 2142689607256237635, guid: 4ffd235bc92192c4daf60e3781439608, type: 3}
+    _amount: 90
+    _minDistance: 5
+  _sectorCount: 8
+  _ringCount: 3
+  _zoneBudget: 2000

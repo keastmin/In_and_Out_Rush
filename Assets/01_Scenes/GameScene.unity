@@ -3770,55 +3770,11 @@ PrefabInstance:
       objectReference: {fileID: 1028244186}
     - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
       propertyPath: _worldSpawnRadius
-      value: 250
-      objectReference: {fileID: 0}
-    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: _gasSettings._prefab
-      value: 
-      objectReference: {fileID: 2142689607256237635, guid: 8b86240da3c329f4fba94b55052fc461, type: 3}
-    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: _nearStartSpawnRadius
-      value: 80
+      value: 400
       objectReference: {fileID: 0}
     - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
       propertyPath: _mineralObstaclePadding
       value: 3
-      objectReference: {fileID: 0}
-    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: _gasSettings._worldCount
-      value: 66
-      objectReference: {fileID: 0}
-    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: _mineralSettings._prefab
-      value: 
-      objectReference: {fileID: 2142689607256237635, guid: d02a8295b7d9841418f05dd9ff95b627, type: 3}
-    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: _gasSettings._nearStartCount
-      value: 30
-      objectReference: {fileID: 0}
-    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: _mineralSettings._worldCount
-      value: 134
-      objectReference: {fileID: 0}
-    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: _mineralSettings._nearStartCount
-      value: 60
-      objectReference: {fileID: 0}
-    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: _mineralDistributionSettings._large._prefab
-      value: 
-      objectReference: {fileID: 2142689607256237635, guid: 4ffd235bc92192c4daf60e3781439608, type: 3}
-    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: _mineralDistributionSettings._small._prefab
-      value: 
-      objectReference: {fileID: 2142689607256237635, guid: d02a8295b7d9841418f05dd9ff95b627, type: 3}
-    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: _mineralDistributionSettings._medium._prefab
-      value: 
-      objectReference: {fileID: 2142689607256237635, guid: 844f2433f5f192f4a9ed5307c81a20b9, type: 3}
-    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: _mineralDistributionSettings._mineralBudgetPerZone
-      value: 2000
       objectReference: {fileID: 0}
     - target: {fileID: 7470420851286671921, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
       propertyPath: SortKey

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Fusion;
 using UnityEngine;
@@ -8,72 +7,16 @@ namespace Dev.Network
 {
     public class ResourceSpawnSystem : System, IWorldObstacleConsumer
     {
-        [Serializable]
-        private class ResourceSpawnSettings
-        {
-            [SerializeField] private GameObject _prefab;
-            [SerializeField, Min(0)] private int _worldCount;
-            [SerializeField, Min(0)] private int _nearStartCount;
-
-            public GameObject Prefab => _prefab;
-            public int WorldCount => _worldCount;
-            public int NearStartCount => _nearStartCount;
-        }
-
-        [Serializable]
-        private class MineralDistributionSettings
-        {
-            [SerializeField] private MineralChunkSettings _small = new(null, 100, 3f);
-            [SerializeField] private MineralChunkSettings _medium = new(null, 200, 4f);
-            [SerializeField] private MineralChunkSettings _large = new(null, 300, 5f);
-            [SerializeField, Min(1)] private int _sectorCount = 8;
-            [SerializeField, Min(1)] private int _ringCount = 3;
-            [SerializeField, Min(0)] private int _mineralBudgetPerZone = 400;
-
-            public MineralChunkSettings Small => _small;
-            public MineralChunkSettings Medium => _medium;
-            public MineralChunkSettings Large => _large;
-            public int SectorCount => Mathf.Max(1, _sectorCount);
-            public int RingCount => Mathf.Max(1, _ringCount);
-            public int MineralBudgetPerZone => Mathf.Max(0, _mineralBudgetPerZone);
-        }
-
-        [Serializable]
-        private class MineralChunkSettings
-        {
-            [SerializeField] private GameObject _prefab;
-            [SerializeField, Min(1)] private int _amount;
-            [SerializeField, Min(0f)] private float _minDistance;
-
-            public MineralChunkSettings(GameObject prefab, int amount, float minDistance)
-            {
-                _prefab = prefab;
-                _amount = amount;
-                _minDistance = minDistance;
-            }
-
-            public GameObject Prefab => _prefab;
-            public int Amount => Mathf.Max(1, _amount);
-            public float MinDistance => Mathf.Max(0f, _minDistance);
-            public bool IsAvailable => _prefab != null;
-        }
-
-        private readonly struct PlacedMineral
+        private readonly struct PlacedResource
         {
             public readonly Vector3 Position;
             public readonly float MinDistance;
 
-            public PlacedMineral(Vector3 position, float minDistance)
+            public PlacedResource(Vector3 position, float minDistance)
             {
                 Position = position;
                 MinDistance = minDistance;
             }
-        }
-
-        private enum SpawnArea
-        {
-            World,
-            NearStart
         }
 
         [SerializeField] private ResourceSystem _resourceSystem;
@@ -81,20 +24,18 @@ namespace Dev.Network
         [SerializeField] private Local.ResourceView _resourceView;
 
         [Header("Resource Settings")]
-        [SerializeField] private MineralDistributionSettings _mineralDistributionSettings = new();
-        [SerializeField] private ResourceSpawnSettings _gasSettings = new();
+        [SerializeField] private ResourcePlacementSettings _mineralPlacementSettings;
+        [SerializeField] private ResourcePlacementSettings _gasPlacementSettings;
 
         [Header("Spawn Area")]
         [SerializeField, Min(0f)] private float _worldSpawnRadius = 250f;
-        [SerializeField, Min(0f)] private float _nearStartSpawnRadius = 30f;
         [SerializeField, Min(1)] private int _maxRetryCount = 10;
 
         [Header("Obstacle Avoidance")]
         [SerializeField] private InfiniteGridRockSpawner _rockSpawner;
         [SerializeField, Min(0f)] private float _mineralObstaclePadding = 0f;
 
-        private readonly CircleSpawnPolicy<NetworkObject> _circleSpawnPolicy = new();
-        private readonly List<PlacedMineral> _placedMinerals = new();
+        private readonly List<PlacedResource> _placedResources = new();
         private IReadOnlyList<WorldObstacle> _worldObstacles;
         private Vector3 _startPosition;
         private bool _hasStartPosition;
@@ -163,43 +104,28 @@ namespace Dev.Network
 
         public void GenerateResources()
         {
-            SpawnMineralsByZone();
-            SpawnResources(
-                ResourceType.Gas,
-                _gasSettings,
-                SpawnArea.World,
-                Vector3.zero,
-                _worldSpawnRadius,
-                _gasSettings.WorldCount);
-            SpawnResources(
-                ResourceType.Gas,
-                _gasSettings,
-                SpawnArea.NearStart,
-                _startPosition,
-                _nearStartSpawnRadius,
-                _gasSettings.NearStartCount);
+            _placedResources.Clear();
+            SpawnResourcesByZone(_mineralPlacementSettings);
+            SpawnResourcesByZone(_gasPlacementSettings);
         }
 
-        private void SpawnMineralsByZone()
+        private void SpawnResourcesByZone(ResourcePlacementSettings settings)
         {
-            _placedMinerals.Clear();
-
-            if (_mineralDistributionSettings == null ||
-                _mineralDistributionSettings.MineralBudgetPerZone <= 0 ||
-                _worldSpawnRadius <= 0f)
-            {
+            if (settings == null || settings.ZoneBudget <= 0 || _worldSpawnRadius <= 0f)
                 return;
-            }
 
-            var availableChunks = GetAvailableMineralChunks();
+            IReadOnlyList<ResourceChunkPlacementSettings> availableChunks = settings.GetAvailableChunks();
             if (availableChunks.Count == 0)
             {
-                Debug.LogWarning("Mineral zone spawn skipped: no mineral prefab is assigned.");
+                Debug.LogWarning($"{settings.ResourceType} zone spawn skipped: no resource prefab is assigned.");
                 return;
             }
 
-            int sectorCount = _mineralDistributionSettings.SectorCount;
-            int ringCount = _mineralDistributionSettings.RingCount;
+            if (!TryValidateResourceChunks(settings.ResourceType, availableChunks))
+                return;
+
+            int sectorCount = settings.SectorCount;
+            int ringCount = settings.RingCount;
             int spawnedCount = 0;
             int spawnedAmount = 0;
             int skippedZoneCount = 0;
@@ -214,64 +140,56 @@ namespace Dev.Network
                     float startAngle = Mathf.PI * 2f * sectorIndex / sectorCount;
                     float endAngle = Mathf.PI * 2f * (sectorIndex + 1) / sectorCount;
 
-                    if (!TryCreateMineralBudgetPlan(
-                            _mineralDistributionSettings.MineralBudgetPerZone,
-                            availableChunks,
-                            out List<MineralChunkSettings> zoneChunks))
+                    List<ResourceChunkPlacementSettings> zoneChunks = CreateResourceBudgetPlan(
+                        settings.ZoneBudget,
+                        availableChunks);
+                    if (zoneChunks.Count == 0)
                     {
                         skippedZoneCount++;
                         Debug.LogWarning(
-                            $"Mineral zone skipped. Budget cannot be filled exactly. " +
-                            $"Ring: {ringIndex}, Sector: {sectorIndex}, Budget: {_mineralDistributionSettings.MineralBudgetPerZone}.");
+                            $"{settings.ResourceType} zone skipped. No resource chunks fit within the zone budget. " +
+                            $"Ring: {ringIndex}, Sector: {sectorIndex}, Budget: {settings.ZoneBudget}.");
                         continue;
                     }
 
-                    var zonePlacedMinerals = new List<PlacedMineral>(zoneChunks.Count);
+                    var zonePlacedResources = new List<PlacedResource>(zoneChunks.Count);
                     var zoneResources = new List<ResourceVisible>(zoneChunks.Count);
-                    var zoneObjects = new List<NetworkObject>(zoneChunks.Count);
-                    bool isZoneCompleted = true;
 
                     for (int i = 0; i < zoneChunks.Count; i++)
                     {
-                        MineralChunkSettings chunk = zoneChunks[i];
-                        if (!TryFindMineralPosition(
+                        ResourceChunkPlacementSettings chunk = zoneChunks[i];
+                        if (!TryFindResourcePosition(
                                 innerRadius,
                                 outerRadius,
                                 startAngle,
                                 endAngle,
                                 chunk,
-                                zonePlacedMinerals,
+                                zonePlacedResources,
                                 out Vector3 position))
                         {
                             Debug.LogWarning(
-                                $"Failed to place mineral in zone after {_maxRetryCount} attempts. " +
+                                $"Failed to place {settings.ResourceType} in zone after {_maxRetryCount} attempts. " +
                                 $"Ring: {ringIndex}, Sector: {sectorIndex}, Amount: {chunk.Amount}.");
-                            isZoneCompleted = false;
                             continue;
                         }
 
-                        if (!TrySpawnMineral(chunk, position, out ResourceVisible resource))
-                        {
-                            isZoneCompleted = false;
+                        if (!TrySpawnResource(settings.ResourceType, chunk, position, out ResourceVisible resource))
                             continue;
-                        }
 
-                        zonePlacedMinerals.Add(new PlacedMineral(position, chunk.MinDistance));
+                        zonePlacedResources.Add(new PlacedResource(position, chunk.MinDistance));
                         zoneResources.Add(resource);
-                        zoneObjects.Add(resource.Object);
                     }
 
-                    if (!isZoneCompleted || zoneResources.Count != zoneChunks.Count)
+                    if (zoneResources.Count == 0)
                     {
                         skippedZoneCount++;
-                        DespawnZoneObjects(zoneObjects);
                         continue;
                     }
 
                     for (int i = 0; i < zoneResources.Count; i++)
                     {
                         BindResource(zoneResources[i]);
-                        _placedMinerals.Add(zonePlacedMinerals[i]);
+                        _placedResources.Add(zonePlacedResources[i]);
                         spawnedCount++;
                         spawnedAmount += zoneResources[i].Amount;
                     }
@@ -279,76 +197,67 @@ namespace Dev.Network
             }
 
             Debug.Log(
-                $"Mineral zone spawn completed: {spawnedCount} chunks, {spawnedAmount} minerals, " +
+                $"{settings.ResourceType} zone spawn completed: {spawnedCount} chunks, {spawnedAmount} total amount, " +
                 $"{skippedZoneCount}/{ringCount * sectorCount} zones skipped.");
         }
 
-        private List<MineralChunkSettings> GetAvailableMineralChunks()
+        private static bool TryValidateResourceChunks(
+            ResourceType resourceType,
+            IReadOnlyList<ResourceChunkPlacementSettings> chunks)
         {
-            var chunks = new List<MineralChunkSettings>(3);
-            AddAvailableMineralChunk(chunks, _mineralDistributionSettings.Small);
-            AddAvailableMineralChunk(chunks, _mineralDistributionSettings.Medium);
-            AddAvailableMineralChunk(chunks, _mineralDistributionSettings.Large);
-            return chunks;
-        }
-
-        private static void AddAvailableMineralChunk(List<MineralChunkSettings> chunks, MineralChunkSettings chunk)
-        {
-            if (chunk == null || !chunk.IsAvailable)
-                return;
-
-            if (!chunk.Prefab.TryGetComponent<ResourceVisible>(out _))
+            for (int i = 0; i < chunks.Count; i++)
             {
-                Debug.LogWarning($"Mineral prefab {chunk.Prefab.name} does not contain {nameof(ResourceVisible)}.");
-                return;
-            }
-
-            chunks.Add(chunk);
-        }
-
-        private static bool TryCreateMineralBudgetPlan(
-            int budget,
-            IReadOnlyList<MineralChunkSettings> availableChunks,
-            out List<MineralChunkSettings> chunks)
-        {
-            chunks = new List<MineralChunkSettings>();
-            if (budget <= 0)
-                return true;
-
-            if (!CanFillBudget(budget, availableChunks))
-                return false;
-
-            int remainingBudget = budget;
-            while (remainingBudget > 0)
-            {
-                var candidates = new List<MineralChunkSettings>();
-                for (int i = 0; i < availableChunks.Count; i++)
+                ResourceChunkPlacementSettings chunk = chunks[i];
+                if (!chunk.Prefab.TryGetComponent<ResourceVisible>(out _))
                 {
-                    MineralChunkSettings chunk = availableChunks[i];
-                    int nextBudget = remainingBudget - chunk.Amount;
-                    if (nextBudget >= 0 && CanFillBudget(nextBudget, availableChunks))
-                        candidates.Add(chunk);
-                }
-
-                if (candidates.Count == 0)
+                    Debug.LogWarning(
+                        $"{resourceType} prefab {chunk.Prefab.name} does not contain {nameof(ResourceVisible)}.");
                     return false;
-
-                MineralChunkSettings selected = candidates[UnityEngine.Random.Range(0, candidates.Count)];
-                chunks.Add(selected);
-                remainingBudget -= selected.Amount;
+                }
             }
 
             return true;
         }
 
-        private static bool CanFillBudget(int budget, IReadOnlyList<MineralChunkSettings> availableChunks)
+        private static List<ResourceChunkPlacementSettings> CreateResourceBudgetPlan(
+            int budget,
+            IReadOnlyList<ResourceChunkPlacementSettings> availableChunks)
         {
-            if (budget == 0)
-                return true;
+            var chunks = new List<ResourceChunkPlacementSettings>();
+            if (budget <= 0 || availableChunks == null || availableChunks.Count == 0)
+                return chunks;
 
-            if (budget < 0 || availableChunks == null || availableChunks.Count == 0)
-                return false;
+            bool[] fillableBudgets = CreateFillableBudgetTable(budget, availableChunks);
+            int remainingBudget = GetMaxFillableBudget(fillableBudgets);
+            if (remainingBudget <= 0)
+                return chunks;
 
+            while (remainingBudget > 0)
+            {
+                var candidates = new List<ResourceChunkPlacementSettings>();
+                for (int i = 0; i < availableChunks.Count; i++)
+                {
+                    ResourceChunkPlacementSettings chunk = availableChunks[i];
+                    int nextBudget = remainingBudget - chunk.Amount;
+                    if (nextBudget >= 0 && fillableBudgets[nextBudget])
+                        candidates.Add(chunk);
+                }
+
+                if (candidates.Count == 0)
+                    break;
+
+                ResourceChunkPlacementSettings selected = candidates[UnityEngine.Random.Range(0, candidates.Count)];
+                chunks.Add(selected);
+                remainingBudget -= selected.Amount;
+            }
+
+            return chunks;
+        }
+
+        private static bool[] CreateFillableBudgetTable(
+            int budget,
+            IReadOnlyList<ResourceChunkPlacementSettings> availableChunks)
+        {
             var fillable = new bool[budget + 1];
             fillable[0] = true;
 
@@ -365,25 +274,36 @@ namespace Dev.Network
                 }
             }
 
-            return fillable[budget];
+            return fillable;
         }
 
-        private bool TryFindMineralPosition(
+        private static int GetMaxFillableBudget(IReadOnlyList<bool> fillableBudgets)
+        {
+            for (int budget = fillableBudgets.Count - 1; budget >= 0; budget--)
+            {
+                if (fillableBudgets[budget])
+                    return budget;
+            }
+
+            return 0;
+        }
+
+        private bool TryFindResourcePosition(
             float innerRadius,
             float outerRadius,
             float startAngle,
             float endAngle,
-            MineralChunkSettings chunk,
-            IReadOnlyList<PlacedMineral> zonePlacedMinerals,
+            ResourceChunkPlacementSettings chunk,
+            IReadOnlyList<PlacedResource> zonePlacedResources,
             out Vector3 position)
         {
             for (int i = 0; i < _maxRetryCount; i++)
             {
                 position = SampleAnnularSectorPosition(innerRadius, outerRadius, startAngle, endAngle);
-                if (!IsValidMineralPosition(position, chunk))
+                if (!IsValidResourcePosition(position, chunk))
                     continue;
 
-                if (!IsFarEnoughFromPlacedMinerals(position, chunk.MinDistance, zonePlacedMinerals))
+                if (!IsFarEnoughFromPlacedResources(position, chunk.MinDistance, zonePlacedResources))
                     continue;
 
                 return true;
@@ -410,37 +330,41 @@ namespace Dev.Network
                 Mathf.Sin(angle) * radius);
         }
 
-        private bool IsFarEnoughFromPlacedMinerals(
+        private bool IsFarEnoughFromPlacedResources(
             Vector3 position,
             float minDistance,
-            IReadOnlyList<PlacedMineral> zonePlacedMinerals)
+            IReadOnlyList<PlacedResource> zonePlacedResources)
         {
-            if (!IsFarEnoughFromPlacedMineralList(position, minDistance, _placedMinerals))
+            if (!IsFarEnoughFromPlacedResourceList(position, minDistance, _placedResources))
                 return false;
 
-            return IsFarEnoughFromPlacedMineralList(position, minDistance, zonePlacedMinerals);
+            return IsFarEnoughFromPlacedResourceList(position, minDistance, zonePlacedResources);
         }
 
-        private static bool IsFarEnoughFromPlacedMineralList(
+        private static bool IsFarEnoughFromPlacedResourceList(
             Vector3 position,
             float minDistance,
-            IReadOnlyList<PlacedMineral> placedMinerals)
+            IReadOnlyList<PlacedResource> placedResources)
         {
-            if (placedMinerals == null)
+            if (placedResources == null)
                 return true;
 
-            for (int i = 0; i < placedMinerals.Count; i++)
+            for (int i = 0; i < placedResources.Count; i++)
             {
-                PlacedMineral placedMineral = placedMinerals[i];
-                float requiredDistance = Mathf.Max(minDistance, placedMineral.MinDistance);
-                if (Vector3.SqrMagnitude(position - placedMineral.Position) < requiredDistance * requiredDistance)
+                PlacedResource placedResource = placedResources[i];
+                float requiredDistance = Mathf.Max(minDistance, placedResource.MinDistance);
+                if (Vector3.SqrMagnitude(position - placedResource.Position) < requiredDistance * requiredDistance)
                     return false;
             }
 
             return true;
         }
 
-        private bool TrySpawnMineral(MineralChunkSettings chunk, Vector3 position, out ResourceVisible resource)
+        private bool TrySpawnResource(
+            ResourceType resourceType,
+            ResourceChunkPlacementSettings chunk,
+            Vector3 position,
+            out ResourceVisible resource)
         {
             resource = null;
             NetworkObject spawnedObject = Runner.Spawn(chunk.Prefab, position, Quaternion.identity);
@@ -449,103 +373,23 @@ namespace Dev.Network
 
             if (!spawnedObject.TryGetComponent(out resource))
             {
-                Debug.LogWarning($"Spawned mineral prefab does not contain {nameof(ResourceVisible)}.");
+                Debug.LogWarning($"Spawned {resourceType} prefab does not contain {nameof(ResourceVisible)}.");
                 Runner.Despawn(spawnedObject);
                 return false;
             }
 
-            resource.Type = ResourceType.Mineral;
+            resource.Type = resourceType;
             resource.Amount = chunk.Amount;
             return true;
         }
 
-        private void DespawnZoneObjects(IReadOnlyList<NetworkObject> zoneObjects)
+        private bool IsValidResourcePosition(Vector3 position, ResourceChunkPlacementSettings chunk)
         {
-            for (int i = 0; i < zoneObjects.Count; i++)
-            {
-                NetworkObject zoneObject = zoneObjects[i];
-                if (zoneObject != null && zoneObject.IsValid)
-                    Runner.Despawn(zoneObject);
-            }
-        }
-
-        private void SpawnResources(
-            ResourceType resourceType,
-            ResourceSpawnSettings settings,
-            SpawnArea spawnArea,
-            Vector3 spawnPosition,
-            float spawnRadius,
-            int spawnCount)
-        {
-            if (spawnCount <= 0)
-                return;
-
-            if (settings.Prefab == null)
-            {
-                Debug.LogWarning($"{resourceType} resource spawn skipped in {spawnArea}: prefab is missing.");
-                return;
-            }
-
-            var spawnParam = CreateSpawnParam(settings.Prefab, spawnPosition, spawnRadius);
-            var spawner = new Spawner(this, new ObjectSampler(), _circleSpawnPolicy);
-            var spawnedCount = 0;
-
-            for (int i = 0; i < spawnCount; i++)
-            {
-                var isSpawned = spawner.Spawn(spawnParam, out var spawnedObject);
-                if (!isSpawned)
-                {
-                    Debug.LogWarning(
-                        $"Failed to spawn {resourceType} in {spawnArea} after {_maxRetryCount} attempts. " +
-                        $"Resource index: {i + 1}/{spawnCount}.");
-                    continue;
-                }
-
-                if (!spawnedObject.TryGetComponent<ResourceVisible>(out var resource))
-                {
-                    Debug.LogWarning(
-                        $"Spawned {resourceType} prefab in {spawnArea} does not contain {nameof(ResourceVisible)}.");
-                    Runner.Despawn(spawnedObject);
-                    continue;
-                }
-
-                BindResource(resource);
-                spawnedCount++;
-            }
-
-            Debug.Log($"{resourceType} resource spawn completed in {spawnArea}: {spawnedCount}/{spawnCount}.");
-        }
-
-        private CircleSpawnParam CreateSpawnParam(GameObject prefab, Vector3 spawnPosition, float spawnRadius)
-        {
-            return new CircleSpawnParam
-            {
-                ObjectSampleParam = new ObjectSampleParam
-                {
-                    Prefabs = new[] { prefab },
-                    Weights = new[] { 1f }
-                },
-                MaxRetryCount = _maxRetryCount,
-                SpawnPosition = spawnPosition,
-                SpawnRotation = Quaternion.identity,
-                SpawnRadius = spawnRadius,
-                SpawnValidator = IsValidSpawnPosition
-            };
-        }
-
-        private bool IsValidSpawnPosition(object args)
-        {
-            var (_, position, _) = (ValueTuple<GameObject, Vector3, Quaternion>)args;
-            return IsValidResourcePosition(position);
-        }
-
-        private bool IsValidMineralPosition(Vector3 position, MineralChunkSettings chunk)
-        {
-            return IsValidResourcePosition(position) &&
+            return IsOutsideTerritory(position) &&
                    !IsOverlappingWorldObstacle(position, chunk);
         }
 
-        private bool IsValidResourcePosition(Vector3 position)
+        private bool IsOutsideTerritory(Vector3 position)
         {
             var xzPosition = new Vector2(position.x, position.z);
             return _territorySystem == null ||
@@ -553,12 +397,12 @@ namespace Dev.Network
                    !_territorySystem.Territory.IsPointInPolygon(xzPosition);
         }
 
-        private bool IsOverlappingWorldObstacle(Vector3 position, MineralChunkSettings chunk)
+        private bool IsOverlappingWorldObstacle(Vector3 position, ResourceChunkPlacementSettings chunk)
         {
             if (_worldObstacles == null || _worldObstacles.Count == 0)
                 return false;
 
-            float clearance = GetMineralObstacleClearance(chunk);
+            float clearance = GetObstacleClearance(chunk);
 
             for (int i = 0; i < _worldObstacles.Count; i++)
             {
@@ -577,7 +421,7 @@ namespace Dev.Network
             return false;
         }
 
-        private float GetMineralObstacleClearance(MineralChunkSettings chunk)
+        private float GetObstacleClearance(ResourceChunkPlacementSettings chunk)
         {
             float fallbackRadius = chunk != null ? chunk.MinDistance * 0.5f : 0f;
             float prefabRadius = chunk != null ? GetPrefabFootprintRadius(chunk.Prefab) : 0f;
@@ -719,7 +563,7 @@ namespace Dev.Network
                         _resourceView.SetGas(_resourceSystem.Gas);
                     break;
             }
-            // Debug.Log($"Obtained {amount} {type} from {resource.gameObject.name}");
+
             if (resource != null && resource.Object != null && resource.Object.IsValid)
                 Runner.Despawn(resource.Object);
         }

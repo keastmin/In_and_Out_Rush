@@ -65,17 +65,12 @@ MonoBehaviour:
   _resourceSystem: {fileID: 2667290622005498128}
   _territorySystem: {fileID: 0}
   _resourceView: {fileID: 0}
-  _mineralSettings:
-    _prefab: {fileID: 0}
-    _worldCount: 0
-    _nearStartCount: 0
-  _gasSettings:
-    _prefab: {fileID: 0}
-    _worldCount: 0
-    _nearStartCount: 0
+  _mineralPlacementSettings: {fileID: 11400000, guid: ae0d1b0debc5438285dfa36a9357c0a3, type: 2}
+  _gasPlacementSettings: {fileID: 11400000, guid: 6dab86e714554e12b6fdd266a53da513, type: 2}
   _worldSpawnRadius: 250
-  _nearStartSpawnRadius: 30
   _maxRetryCount: 10
+  _rockSpawner: {fileID: 0}
+  _mineralObstaclePadding: 0
 --- !u!114 &7761316472097650306
 MonoBehaviour:
   m_ObjectHideFlags: 0

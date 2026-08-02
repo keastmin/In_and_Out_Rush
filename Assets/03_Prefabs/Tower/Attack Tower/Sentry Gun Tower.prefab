@@ -1148,7 +1148,7 @@ MonoBehaviour:
   _currTarget: {fileID: 0}
   _bullet: {fileID: 4963649366916377928, guid: 022974b8ab27faa45b10e7989d5d7305, type: 3}
   _bulletSpeed: 20
-  _bulletDamage: 3
+  _bulletDamage: 300
 --- !u!114 &2502629201869543890
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -610,6 +610,8 @@ MonoBehaviour:
   _buildRange: 0
   _requireTerritory: 1
   _BuiltIndex: {x: 0, y: 0}
+  _capabilities: 2
+  _includeLegacyCapabilities: 1
   _cost:
     Mineral: 100
     Gas: 50
@@ -618,6 +620,7 @@ MonoBehaviour:
   _towerId: 
   _selectedChecker: {fileID: 8782237397610169252}
   _selectedImage: {fileID: 0}
+  _PropertyType: 0
   _attackSpeed: 2
   _attackPosition: {fileID: 5333304996924359817}
   _enemyLayer:
@@ -632,7 +635,7 @@ MonoBehaviour:
   _laser: {fileID: 215352874251757992}
   _laserWidth: 1
   _laserLength: 6
-  _laserDamage: 3
+  _laserDamage: 300
   _laserWidthDecreaseRate: 1
 --- !u!120 &215352874251757992
 LineRenderer:

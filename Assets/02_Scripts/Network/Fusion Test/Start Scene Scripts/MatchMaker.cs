@@ -27,8 +27,10 @@ namespace KIM.Dev
         private const string TeammateDisconnectedMessage = "Disconnected from teammate";
         private const string CreateRoomFailedMessage = "Failed to create session. Please try again.";
         private const string JoinRoomFailedMessage = "Failed to join session. Please check the room code and try again.";
+        private const string LobbyInitializationFailedMessage = "Failed to initialize the lobby. Please try again.";
         private const string LobbySceneName = "LobbyScene";
         private const string GameSceneName = "GameScene";
+        private const float LobbyInitializationTimeoutSeconds = 10f;
 
         public static MatchMaker Instance { get; private set; } // 싱글턴 인스턴스
 
@@ -89,15 +91,6 @@ namespace KIM.Dev
                     // 러너 프리팹 생성
                     Runner = Instantiate(RunnerPrefab);
 
-                    // 러너의 NetworkEvents 컴포넌트를 찾아 PlayerJoined에 이벤트 리스너 추가
-                    Runner.GetComponent<NetworkEvents>().PlayerJoined.AddListener((runner, player) =>
-                    {
-                        if (runner.IsServer && runner.LocalPlayer == player)
-                        {
-                            Debug.Log("네트워크 매니저 스폰");
-                            runner.Spawn(NetworkManagerPrefab);
-                        }
-                    });
                 }
 
                 // 러너에 콜백 추가
@@ -118,6 +111,16 @@ namespace KIM.Dev
                 roomCreated = result.Ok;
                 if (!result.Ok)
                     failureDetail = result.ShutdownReason.ToString();
+                else
+                {
+                    Runner.Spawn(NetworkManagerPrefab);
+                    roomCreated = await WaitForLocalPlayerRegistrationAsync();
+                    if (!roomCreated)
+                    {
+                        failureDetail = LobbyInitializationFailedMessage;
+                        await Runner.Shutdown();
+                    }
+                }
             }
             catch (Exception exception)
             {
@@ -176,6 +179,15 @@ namespace KIM.Dev
                 roomJoined = result.Ok;
                 if (!result.Ok)
                     failureDetail = result.ShutdownReason.ToString();
+                else
+                {
+                    roomJoined = await WaitForLocalPlayerRegistrationAsync();
+                    if (!roomJoined)
+                    {
+                        failureDetail = LobbyInitializationFailedMessage;
+                        await Runner.Shutdown();
+                    }
+                }
             }
             catch (Exception exception)
             {
@@ -216,6 +228,21 @@ namespace KIM.Dev
             }
 
             return chars;
+        }
+
+        private async Task<bool> WaitForLocalPlayerRegistrationAsync()
+        {
+            float timeoutAt = Time.realtimeSinceStartup + LobbyInitializationTimeoutSeconds;
+
+            while (Runner != null && Time.realtimeSinceStartup < timeoutAt)
+            {
+                if (NetworkManager.Instance != null && NetworkManager.Instance.IsLocalPlayerRegistered)
+                    return true;
+
+                await Task.Yield();
+            }
+
+            return false;
         }
 
         // 대기실에서 게임 시작 버튼 클릭 시 호출되는 메서드
@@ -415,7 +442,10 @@ namespace KIM.Dev
 
         public void OnConnectedToServer(NetworkRunner runner) { }
 
-        public void OnConnectFailed(NetworkRunner runner, NetAddress remoteAddress, NetConnectFailedReason reason) { }
+        public void OnConnectFailed(NetworkRunner runner, NetAddress remoteAddress, NetConnectFailedReason reason)
+        {
+            Debug.LogError($"Fusion connection failed: {reason} ({remoteAddress})");
+        }
 
         public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token) { }
 

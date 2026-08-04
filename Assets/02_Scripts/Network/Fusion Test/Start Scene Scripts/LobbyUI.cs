@@ -19,7 +19,12 @@ namespace KIM.Dev
         private void Update()
         {
             // PlayerRegistry가 아직 스폰되지 않으면 작동하지 않음
-            if (NetworkManager.Instance == null) return;
+            if (NetworkManager.Instance == null || !NetworkManager.Instance.IsLocalPlayerRegistered)
+            {
+                if (_startButton.gameObject.activeSelf)
+                    _startButton.gameObject.SetActive(false);
+                return;
+            }
             var playerRegistry = NetworkManager.Instance.Registry;
             if (playerRegistry)
             {
@@ -106,7 +111,11 @@ namespace KIM.Dev
 
         public void OnClickPositionChange()
         {
-            if (NetworkManager.Instance.Registry == null) return;
+            if (NetworkManager.Instance == null ||
+                !NetworkManager.Instance.IsLocalPlayerRegistered ||
+                MatchMaker.Instance == null ||
+                MatchMaker.Instance.Runner == null)
+                return;
             var key = MatchMaker.Instance.Runner.LocalPlayer;
             NetworkManager.Instance.Registry.RPC_ChangeRole(key);
         }

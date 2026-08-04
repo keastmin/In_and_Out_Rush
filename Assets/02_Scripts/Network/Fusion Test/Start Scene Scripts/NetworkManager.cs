@@ -15,6 +15,12 @@ namespace KIM.Dev
         // 플레이어 정보
         public PlayerRegistry Registry { get; private set; }
 
+        public bool IsLocalPlayerRegistered =>
+            Registry != null &&
+            Runner != null &&
+            Runner.LocalPlayer != PlayerRef.None &&
+            Registry.RefToPosition.ContainsKey(Runner.LocalPlayer);
+
         // 현재 테스트 모드 여부
         private bool _isTestMode = false;
         private PlayerPosition _testPosition = PlayerPosition.Builder;
@@ -44,6 +50,7 @@ namespace KIM.Dev
             if (HasStateAuthority)
             {
                 Runner.AddCallbacks(this);
+                RegisterConnectedPlayers();
             }
 
             Debug.Log("네트워크 매니저 스폰 완료");
@@ -126,14 +133,21 @@ namespace KIM.Dev
             Debug.Log("플레이어 접속");
 
             // 테스트 모드가 아니면 빌더로 추가, 테스트 모드라면 테스트 할 역할군으로 추가
-            if (HasStateAuthority && !_isTestMode)
-            {
-                Registry.AddPlayer(player, PlayerPosition.Builder);
-            }
-            else if (HasStateAuthority && _isTestMode)
-            {
-                Registry.AddPlayer(player, _testPosition);
-            }
+            RegisterPlayer(player);
+        }
+
+        private void RegisterConnectedPlayers()
+        {
+            foreach (PlayerRef player in Runner.ActivePlayers)
+                RegisterPlayer(player);
+        }
+
+        private void RegisterPlayer(PlayerRef player)
+        {
+            if (!HasStateAuthority || Registry == null || Registry.RefToPosition.ContainsKey(player))
+                return;
+
+            Registry.AddPlayer(player, _isTestMode ? _testPosition : PlayerPosition.Builder);
         }
 
         // 플레이어가 나갔을 때 콜백되는 함수

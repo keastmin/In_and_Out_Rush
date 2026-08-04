@@ -46,6 +46,22 @@ namespace KIM.Dev
             }
         }
 
+        public void DespawnRocksOverlappingTerritory(NetworkRunner runner, Territory territory)
+        {
+            if (runner == null || territory == null || territory.Vertices == null || territory.Vertices.Count < 3)
+                return;
+
+            for (int i = _spawnedRocks.Count - 1; i >= 0; i--)
+            {
+                WorldObstacle rock = _spawnedRocks[i];
+                if (!ShouldDespawnRock(rock, territory))
+                    continue;
+
+                DespawnRock(runner, rock);
+                _spawnedRocks.RemoveAt(i);
+            }
+        }
+
         public void SpawnRocks()
         {
             _grid = GetComponent<InfiniteGrid>();
@@ -181,6 +197,11 @@ namespace KIM.Dev
                    DoesTrackOverlapObstacleBounds(trackVertices, trackRadius, rock.Bounds);
         }
 
+        private static bool ShouldDespawnRock(WorldObstacle rock, Territory territory)
+        {
+            return rock == null || DoesTerritoryOverlapObstacleBounds(territory, rock.Bounds);
+        }
+
         private static void DespawnRock(NetworkRunner runner, WorldObstacle rock)
         {
             if (rock == null)
@@ -286,6 +307,38 @@ namespace KIM.Dev
                 Vector2 end = ToXZ(trackVertices[(i + 1) % trackVertices.Count]);
 
                 if (GetSegmentBoundsDistanceSqr(start, end, boundsMin, boundsMax) <= trackRadiusSqr)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static bool DoesTerritoryOverlapObstacleBounds(Territory territory, Bounds bounds)
+        {
+            const float geometryTolerance = 0.0001f;
+            IReadOnlyList<Vector2> territoryVertices = territory.Vertices;
+            Vector2 boundsMin = ToXZ(bounds.min) - Vector2.one * geometryTolerance;
+            Vector2 boundsMax = ToXZ(bounds.max) + Vector2.one * geometryTolerance;
+
+            if (territory.IsPointInPolygon(new Vector2(boundsMin.x, boundsMin.y)) ||
+                territory.IsPointInPolygon(new Vector2(boundsMin.x, boundsMax.y)) ||
+                territory.IsPointInPolygon(new Vector2(boundsMax.x, boundsMin.y)) ||
+                territory.IsPointInPolygon(new Vector2(boundsMax.x, boundsMax.y)))
+            {
+                return true;
+            }
+
+            for (int i = 0; i < territoryVertices.Count; i++)
+            {
+                if (IsPointInsideBounds(territoryVertices[i], boundsMin, boundsMax))
+                    return true;
+            }
+
+            for (int i = 0; i < territoryVertices.Count; i++)
+            {
+                Vector2 start = territoryVertices[i];
+                Vector2 end = territoryVertices[(i + 1) % territoryVertices.Count];
+                if (DoesSegmentIntersectBounds(start, end, boundsMin, boundsMax))
                     return true;
             }
 

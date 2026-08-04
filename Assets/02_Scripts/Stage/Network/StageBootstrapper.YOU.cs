@@ -13,6 +13,7 @@ namespace Dev.Network
         [SerializeField] private TrackSystem roundTrackSystem;
         [SerializeField] private TerritorySystem territorySystem;
         [SerializeField] private TrackMonsterSpawnSystem trackMonsterSpawnSystem;
+        private WorldMonsterSpawnSystem worldMonsterSpawnSystem;
 
         [Header("Sacred Zone")]
         [SerializeField] private SacredZoneSystem sacredZoneSystem;
@@ -49,6 +50,7 @@ namespace Dev.Network
 
         public event global::System.Action<PlayerRunner, Gate, object> OnGateEntered;
         public TrackSystem RoundTrackSystem => roundTrackSystem;
+        public SacredZoneSystem SacredZoneSystem => sacredZoneSystem;
         public TerritorySystem TerritorySystem =>
             territorySystem != null ? territorySystem : UnityEngine.Object.FindFirstObjectByType<TerritorySystem>();
 
@@ -80,6 +82,9 @@ namespace Dev.Network
 
             if (trackMonsterSpawnSystem == null)
                 trackMonsterSpawnSystem = FindNetworkSystem<TrackMonsterSpawnSystem>(systems);
+
+            if (worldMonsterSpawnSystem == null)
+                worldMonsterSpawnSystem = FindNetworkSystem<WorldMonsterSpawnSystem>(systems);
 
             if (timeSystem == null)
                 timeSystem = UnityEngine.Object.FindFirstObjectByType<TimeSystem>();
@@ -118,6 +123,12 @@ namespace Dev.Network
                 roundTrackSystem.OnTrackChanged -= HandleTrackChanged;
                 roundTrackSystem.OnTrackChanged += HandleTrackChanged;
             }
+
+            if (territorySystem != null)
+            {
+                territorySystem.OnTerritoryExpandedEvent -= HandleTerritoryExpanded;
+                territorySystem.OnTerritoryExpandedEvent += HandleTerritoryExpanded;
+            }
         }
 
         private void UnbindRoundSystemEvents()
@@ -131,6 +142,9 @@ namespace Dev.Network
 
             if (roundTrackSystem != null)
                 roundTrackSystem.OnTrackChanged -= HandleTrackChanged;
+
+            if (territorySystem != null)
+                territorySystem.OnTerritoryExpandedEvent -= HandleTerritoryExpanded;
         }
 
         private void HandleRoundStarting(int round, TimeSystem sender, object context)
@@ -189,6 +203,14 @@ namespace Dev.Network
             _rockSpawner.DespawnRocksOverlappingTrack(Runner, vertices, trackSystem != null ? trackSystem.TrackLineWidth : 0f);
         }
 
+        private void HandleTerritoryExpanded(Territory territory, TerritorySystem sender)
+        {
+            if (!HasStateAuthority || Runner == null || territory == null || _rockSpawner == null)
+                return;
+
+            _rockSpawner.DespawnRocksOverlappingTerritory(Runner, territory);
+        }
+
         private void StartTrackMonsterSettlement()
         {
             if (trackMonsterSpawnSystem == null)
@@ -234,6 +256,7 @@ namespace Dev.Network
 
             YOUSetUpRoundSystems(systems);
             SetUpSacredZone();
+            SpawnWorldMonsters();
         }
 
         private void YOUBindObjects()
@@ -368,6 +391,22 @@ namespace Dev.Network
 
         public bool IsRunnerProtectedBySanctuary(Vector3 runnerPosition)
             => IsPointInActiveSanctuary(runnerPosition);
+
+        public bool IsCircleOverlappingAnySanctuary(Vector3 worldPosition, float radius)
+        {
+            for (int i = 0; i < sanctuaries.Count; i++)
+            {
+                SanctuaryView sanctuary = sanctuaries[i];
+                if (sanctuary != null &&
+                    !sanctuary.IsExpired &&
+                    sanctuary.IsCircleOverlappingSanctuary(worldPosition, radius))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         private void CreateSanctuaries()
         {
@@ -575,6 +614,20 @@ namespace Dev.Network
 
             if (activeGate != null)
                 SetSacredZoneGate(activeGate);
+        }
+
+        private void SpawnWorldMonsters()
+        {
+            if (!HasStateAuthority)
+                return;
+
+            if (worldMonsterSpawnSystem == null)
+            {
+                Debug.LogWarning("WorldMonsterSpawnSystem is missing. World monster spawn skipped.");
+                return;
+            }
+
+            worldMonsterSpawnSystem.SpawnMonsters();
         }
 
         private void SetSacredZoneGate(Gate gate)

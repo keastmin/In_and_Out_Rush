@@ -21,6 +21,7 @@ public class SanctuaryView : MonoBehaviour
     [SerializeField] private Color _inactiveColor = new(0.35f, 0.45f, 0.55f, 1f);
 
     private readonly Territory _territory = new();
+    private readonly List<Vector2> _worldVertices = new();
     private MeshFilter _meshFilter;
     private MeshRenderer _meshRenderer;
     private MaterialPropertyBlock _materialPropertyBlock;
@@ -72,6 +73,25 @@ public class SanctuaryView : MonoBehaviour
     {
         Vector3 localPosition = transform.InverseTransformPoint(worldPosition);
         return _territory.IsPointInPolygon(new Vector2(localPosition.x, localPosition.z));
+    }
+
+    public bool IsCircleOverlappingSanctuary(Vector3 worldPosition, float radius)
+    {
+        if (_territory.Vertices == null || _territory.Vertices.Count < 3)
+            return false;
+
+        _worldVertices.Clear();
+        for (int i = 0; i < _territory.Vertices.Count; i++)
+        {
+            Vector2 localVertex = _territory.Vertices[i];
+            Vector3 worldVertex = transform.TransformPoint(new Vector3(localVertex.x, 0f, localVertex.y));
+            _worldVertices.Add(new Vector2(worldVertex.x, worldVertex.z));
+        }
+
+        return Geometry.IsCircleOverlappingPolygon(
+            new Vector2(worldPosition.x, worldPosition.z),
+            radius,
+            _worldVertices);
     }
 
     public bool TryActivate()

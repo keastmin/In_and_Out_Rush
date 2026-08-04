@@ -28,6 +28,7 @@ namespace Dev.Network
         public float TotalArea { get; private set; }
         public float ProgressRatio => TotalArea > 0f ? Mathf.Clamp01(CapturedArea / TotalArea) : 0f;
         public bool IsQuotaReached => isQuotaReached;
+        public bool IsInitialized => isInitialized;
 
         public event global::System.Action<float, float, SacredZoneSystem> OnProgressChanged;
         public event global::System.Action<SacredZoneSystem> OnQuotaReached;
@@ -64,6 +65,21 @@ namespace Dev.Network
 
         public float CalculateInnerRadius(float outerRadius)
             => Mathf.Max(0f, outerRadius) * Mathf.Clamp01(innerRadiusRatio);
+
+        public bool IsCircleOverlappingSacredZone(Vector3 worldPosition, float radius)
+        {
+            if (!isInitialized)
+                return false;
+
+            float safeRadius = Mathf.Max(0f, radius);
+            Vector2 centerOffset = new(
+                worldPosition.x - Center.x,
+                worldPosition.z - Center.z);
+            float centerDistance = centerOffset.magnitude;
+
+            return centerDistance + safeRadius >= innerRadius &&
+                   centerDistance - safeRadius <= worldBoundaryRadius;
+        }
 
         private void RebuildSacredZone()
         {

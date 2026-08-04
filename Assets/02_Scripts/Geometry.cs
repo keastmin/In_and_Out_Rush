@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public static class Geometry
@@ -97,6 +98,72 @@ public static class Geometry
                point.x <= Mathf.Max(start.x, end.x) + EPS &&
                point.y >= Mathf.Min(start.y, end.y) - EPS &&
                point.y <= Mathf.Max(start.y, end.y) + EPS;
+    }
+
+    public static bool IsCircleOverlappingPolygon(
+        Vector2 center,
+        float radius,
+        IReadOnlyList<Vector2> polygon)
+    {
+        if (polygon == null || polygon.Count < 3)
+            return false;
+
+        if (IsPointInPolygon(center, polygon))
+            return true;
+
+        float safeRadius = Mathf.Max(0f, radius);
+        float radiusSqr = safeRadius * safeRadius;
+        for (int i = 0; i < polygon.Count; i++)
+        {
+            Vector2 start = polygon[i];
+            Vector2 end = polygon[(i + 1) % polygon.Count];
+            if (GetPointToSegmentDistanceSqr(center, start, end) <= radiusSqr)
+                return true;
+        }
+
+        return false;
+    }
+
+    public static bool IsPointInPolygon(Vector2 point, IReadOnlyList<Vector2> polygon)
+    {
+        if (polygon == null || polygon.Count < 3)
+            return false;
+
+        bool inside = false;
+        for (int i = 0, previous = polygon.Count - 1; i < polygon.Count; previous = i++)
+        {
+            Vector2 currentVertex = polygon[i];
+            Vector2 previousVertex = polygon[previous];
+            if (PointOnSegment(point, previousVertex, currentVertex))
+                return true;
+
+            bool crossesPointHeight =
+                (currentVertex.y > point.y) != (previousVertex.y > point.y);
+            if (!crossesPointHeight)
+                continue;
+
+            float intersectionX =
+                (previousVertex.x - currentVertex.x) *
+                (point.y - currentVertex.y) /
+                (previousVertex.y - currentVertex.y) +
+                currentVertex.x;
+            if (point.x < intersectionX)
+                inside = !inside;
+        }
+
+        return inside;
+    }
+
+    public static float GetPointToSegmentDistanceSqr(Vector2 point, Vector2 start, Vector2 end)
+    {
+        Vector2 segment = end - start;
+        float segmentLengthSqr = Vector2.Dot(segment, segment);
+        if (segmentLengthSqr <= EPS * EPS)
+            return Vector2.SqrMagnitude(point - start);
+
+        float projection = Vector2.Dot(point - start, segment) / segmentLengthSqr;
+        Vector2 closestPoint = start + segment * Mathf.Clamp01(projection);
+        return Vector2.SqrMagnitude(point - closestPoint);
     }
 
     static bool AreSamePoint(Vector2 a, Vector2 b)

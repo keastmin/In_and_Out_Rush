@@ -12,6 +12,9 @@ public class SandTomb : WorldMonster
         Active,
     }
 
+    public float SpawnExclusionRadius =>
+        Mathf.Max(Mathf.Max(0f, _activationRadius), Mathf.Max(0f, _suckedIntoRadius));
+
     [Header("Sand Tomb Settings")]
     [SerializeField] private MeshRenderer _meshRenderer;
     [SerializeField] private Material _activeMaterial;

@@ -26,5 +26,5 @@ MonoBehaviour:
     spawnCount: 250
     spawnRadius: 400
   - prefab: {fileID: -1357924680135792468, guid: f9bdf593ea2a3f34581116acc2b00d4f, type: 3}
-    spawnCount: 250
+    spawnCount: 0
     spawnRadius: 400

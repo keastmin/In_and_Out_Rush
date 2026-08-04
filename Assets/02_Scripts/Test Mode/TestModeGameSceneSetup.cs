@@ -16,6 +16,8 @@ namespace KIM.Dev
         [SerializeField] private NetworkManager _networkManagerPrefab; // 네트워크 매니저 프리팹
         [SerializeField] private ResourceManager _resourceManagerPrefab; // 리소스 매니저 프리팹
 
+        private bool _isBuildingEnvironment;
+
         private void Awake()
         {
             if (NetworkManager.Instance == null)
@@ -27,6 +29,20 @@ namespace KIM.Dev
         // 테스트 모드 환경 구축
         public async void BuildTestModeEnvironment()
         {
+            if (_isBuildingEnvironment)
+                return;
+
+            _isBuildingEnvironment = true;
+
+            if (_runnerPrefab == null || _networkManagerPrefab == null || _resourceManagerPrefab == null)
+            {
+                Debug.LogError(
+                    $"{nameof(TestModeGameSceneSetup)} 프리팹 참조가 비어 있습니다. " +
+                    $"Runner={_runnerPrefab}, NetworkManager={_networkManagerPrefab}, ResourceManager={_resourceManagerPrefab}",
+                    this);
+                _isBuildingEnvironment = false;
+                return;
+            }
             // 리소스 매니저 생성
             Instantiate(_resourceManagerPrefab);
 
@@ -34,13 +50,30 @@ namespace KIM.Dev
             NetworkRunner runner = Instantiate(_runnerPrefab);
 
             // 러너의 NetworkEvents 컴포넌트를 찾아 PlayerJoined에 이벤트 리스너 추가
-            runner.GetComponent<NetworkEvents>().PlayerJoined.AddListener((runner, player) =>
+            NetworkEvents networkEvents = runner.GetComponent<NetworkEvents>();
+            if (networkEvents == null)
             {
-                if (runner.IsServer && runner.LocalPlayer == player)
+                Debug.LogError("테스트 모드 러너에 NetworkEvents 컴포넌트가 없습니다.", runner);
+                _isBuildingEnvironment = false;
+                return;
+            }
+
+            networkEvents.PlayerJoined.AddListener((joinedRunner, player) =>
+            {
+                if (!joinedRunner.IsServer || joinedRunner.LocalPlayer != player || NetworkManager.Instance != null)
+                    return;
+
+                NetworkManager networkManager = joinedRunner.Spawn(_networkManagerPrefab);
+
+                if (networkManager == null)
                 {
-                    NetworkManager networkManager = runner.Spawn(_networkManagerPrefab); // 네트워크 매니저 스폰
-                    networkManager.SetTestModeVariable(true, _playerPosition); // 테스트 모드 활성화
+                    Debug.LogError(
+                        "Network Manager 스폰에 실패했습니다.",
+                        _networkManagerPrefab);
+                    return;
                 }
+
+                networkManager.SetTestModeVariable(true, _playerPosition);
             });
 
             // 입력을 제공하도록 설정
@@ -49,19 +82,26 @@ namespace KIM.Dev
             var sceneRef = SceneRef.FromIndex(SceneManager.GetActiveScene().buildIndex);
 
             // 게임 시작 인자 설정
-            var result = await runner.StartGame(new StartGameArgs
+            try
             {
-                GameMode = GameMode.Host, // 호스트 모드로 시작
-                PlayerCount = 2, // 최대 2명으로 설정
-                SessionName = _testSessionName, // 룸 코드 적용
-                Scene = sceneRef,
-                SceneManager = runner.GetComponent<NetworkSceneManagerDefault>() // 기본 씬 매니저 사용
-            });
+                var result = await runner.StartGame(new StartGameArgs
+                {
+                    GameMode = GameMode.Host, // 호스트 모드로 시작
+                    PlayerCount = 2, // 최대 2명으로 설정
+                    SessionName = _testSessionName, // 룸 코드 적용
+                    Scene = sceneRef,
+                    SceneManager = runner.GetComponent<NetworkSceneManagerDefault>() // 기본 씬 매니저 사용
+                });
 
-            // 룸 생성 성공
-            if (result.Ok)
+                // 룸 생성 성공
+                if (result.Ok)
+                {
+                    Debug.Log("테스트 룸 생성 성공");
+                }
+            }
+            finally
             {
-                Debug.Log("테스트 룸 생성 성공");
+                _isBuildingEnvironment = false;
             }
         }
     }

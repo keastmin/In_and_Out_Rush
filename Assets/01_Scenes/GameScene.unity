@@ -2317,10 +2317,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Fog of War System
       objectReference: {fileID: 0}
-    - target: {fileID: 5400355807062306309, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 8092433541136705184, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
       propertyPath: m_LocalPosition.x
       value: 213.17992
@@ -2404,6 +2400,14 @@ PrefabInstance:
     - target: {fileID: 7928665524494258476, guid: 4860868dac3037343a9034cbfef85387, type: 3}
       propertyPath: SortKey
       value: 1531392661
+      objectReference: {fileID: 0}
+    - target: {fileID: 8385694607101590629, guid: 4860868dac3037343a9034cbfef85387, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 100
+      objectReference: {fileID: 0}
+    - target: {fileID: 8385694607101590629, guid: 4860868dac3037343a9034cbfef85387, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 100
       objectReference: {fileID: 0}
     - target: {fileID: 8385694607101590629, guid: 4860868dac3037343a9034cbfef85387, type: 3}
       propertyPath: m_LocalPosition.x
@@ -3803,6 +3807,10 @@ PrefabInstance:
       propertyPath: _playerPosition
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 2984146816420512075, guid: e4f76d1c9ebcfc94da4fe245963476d1, type: 3}
+      propertyPath: _networkManagerPrefab
+      value: 
+      objectReference: {fileID: 3714456403506439088, guid: eeb78de4f6b5072489fd41f6a0987d86, type: 3}
     - target: {fileID: 8681410219602733062, guid: e4f76d1c9ebcfc94da4fe245963476d1, type: 3}
       propertyPath: m_LocalPosition.x
       value: -35.429146

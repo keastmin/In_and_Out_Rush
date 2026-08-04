@@ -106,6 +106,8 @@ MonoBehaviour:
   _buildRange: 0
   _requireTerritory: 1
   _BuiltIndex: {x: 0, y: 0}
+  _capabilities: 2
+  _includeLegacyCapabilities: 1
   _cost:
     Mineral: 100
     Gas: 50
@@ -114,6 +116,7 @@ MonoBehaviour:
   _towerId: 
   _selectedChecker: {fileID: 6741192922173202427}
   _selectedImage: {fileID: 0}
+  _PropertyType: 0
   _attackSpeed: 1
   _attackPosition: {fileID: 790783490424944510}
   _enemyLayer:
@@ -126,7 +129,7 @@ MonoBehaviour:
   _bioEffect: {fileID: 268686593581800444}
   _currTarget: {fileID: 0}
   _missliePrefab: {fileID: -8257491614462668254, guid: 28d14186b36c59e459e4d71d5ff83aca, type: 3}
-  _missileDamage: 1
+  _missileDamage: 100
   _explosionRange: 3
   _missileSpeed: 10
 --- !u!4 &790783490424944510 stripped

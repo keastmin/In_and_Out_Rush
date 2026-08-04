@@ -103,8 +103,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   attackTargetTransform: {fileID: 0}
-  health: 10
-  movementSpeed: 3
+  health: 1500
+  movementSpeed: 7.2
   arrivalThreshold: 0.1
   playerTransform: {fileID: 0}
   patrolMinimumRadius: 5

@@ -5,6 +5,8 @@ public class Territory
 {
     const float EPS = 0.0001f;
     const float BoundarySampleDistance = 0.01f;
+    const int PrototypeVertexBudget = 256;
+    const float PrototypeSimplificationTolerance = 0.1f;
 
     public List<Vector2> Vertices = new();
 
@@ -373,7 +375,6 @@ public class Territory
         float oldArea = Mathf.Abs(Area(Vertices));
         List<Vector2> best = null;
         float bestArea = float.MinValue;
-        bool bestContainsExistingTerritory = false;
 
         TryUseCandidate(candidateA);
         TryUseCandidate(candidateB);
@@ -382,24 +383,20 @@ public class Territory
 
         void TryUseCandidate(List<Vector2> candidate)
         {
-            if (!TryGetExpandedCandidateInfo(candidate, oldArea, out float candidateArea, out bool containsExistingTerritory))
+            if (!TryGetExpandedCandidateInfo(candidate, oldArea, out float candidateArea))
                 return;
 
-            if (best == null ||
-                containsExistingTerritory && !bestContainsExistingTerritory ||
-                containsExistingTerritory == bestContainsExistingTerritory && candidateArea > bestArea)
+            if (best == null || candidateArea > bestArea)
             {
                 best = candidate;
                 bestArea = candidateArea;
-                bestContainsExistingTerritory = containsExistingTerritory;
             }
         }
     }
 
-    bool TryGetExpandedCandidateInfo(List<Vector2> candidate, float oldArea, out float candidateArea, out bool containsExistingTerritory)
+    bool TryGetExpandedCandidateInfo(List<Vector2> candidate, float oldArea, out float candidateArea)
     {
         candidateArea = 0f;
-        containsExistingTerritory = false;
 
         if (candidate == null || candidate.Count < 3)
             return false;
@@ -408,29 +405,7 @@ public class Territory
         if (candidateArea <= oldArea + EPS)
             return false;
 
-        if (!IsSimplePolygon(candidate))
-            return false;
-
-        if (!TryBuildMeshData(candidate, false, out _, out _))
-            return false;
-
-        containsExistingTerritory = ContainsExistingTerritory(candidate);
-        return true;
-    }
-
-    bool ContainsExistingTerritory(List<Vector2> candidate)
-    {
-        for (int i = 0; i < Vertices.Count; i++)
-        {
-            if (!PointInPolygon(Vertices[i], candidate))
-                return false;
-
-            Vector2 midpoint = (Vertices[i] + Vertices[(i + 1) % Vertices.Count]) * 0.5f;
-            if (!PointInPolygon(midpoint, candidate))
-                return false;
-        }
-
-        return true;
+        return TryBuildMeshData(candidate, false, out _, out _);
     }
 
     bool ApplyNewPolygon(List<Vector2> newPoly)
@@ -581,13 +556,6 @@ public class Territory
                 reason = $"Territory triangulation produced an out-of-range index at triangle {i / 3}.";
                 return false;
             }
-
-            float triangleArea = Mathf.Abs(Cross(polygon[b] - polygon[a], polygon[c] - polygon[a])) * 0.5f;
-            if (triangleArea <= EPS)
-            {
-                reason = $"Territory triangulation produced a degenerate triangle at triangle {i / 3}.";
-                return false;
-            }
         }
 
         return true;
@@ -638,7 +606,101 @@ public class Territory
         }
         while (changed);
 
+        return SimplifyForPrototype(result);
+    }
+
+    static List<Vector2> SimplifyForPrototype(List<Vector2> polygon)
+    {
+        if (polygon.Count <= PrototypeVertexBudget)
+            return polygon;
+
+        float tolerance = PrototypeSimplificationTolerance;
+        List<Vector2> simplified = polygon;
+        for (int attempt = 0; attempt < 12; attempt++)
+        {
+            int splitIndex = polygon.Count / 2;
+            var firstArc = new List<Vector2>(splitIndex + 1);
+            var secondArc = new List<Vector2>(polygon.Count - splitIndex + 1);
+            for (int i = 0; i <= splitIndex; i++)
+                firstArc.Add(polygon[i]);
+            for (int i = splitIndex; i < polygon.Count; i++)
+                secondArc.Add(polygon[i]);
+            secondArc.Add(polygon[0]);
+
+            simplified = SimplifyOpenPath(firstArc, tolerance);
+            List<Vector2> secondHalf = SimplifyOpenPath(secondArc, tolerance);
+            for (int i = 1; i < secondHalf.Count; i++)
+                AddPoint(simplified, secondHalf[i]);
+
+            if (simplified.Count > 1 && AreSamePoint(simplified[0], simplified[^1]))
+                simplified.RemoveAt(simplified.Count - 1);
+
+            if (simplified.Count <= PrototypeVertexBudget)
+                return simplified;
+
+            tolerance *= 2f;
+        }
+
+        return simplified;
+    }
+
+    static List<Vector2> SimplifyOpenPath(List<Vector2> points, float tolerance)
+    {
+        int count = points.Count;
+        if (count <= 2)
+            return points;
+
+        var keep = new bool[count];
+        keep[0] = true;
+        keep[count - 1] = true;
+        float toleranceSqr = tolerance * tolerance;
+        var ranges = new Stack<Vector2Int>();
+        ranges.Push(new Vector2Int(0, count - 1));
+
+        while (ranges.Count > 0)
+        {
+            Vector2Int range = ranges.Pop();
+            float greatestDistanceSqr = 0f;
+            int greatestDistanceIndex = -1;
+            Vector2 start = points[range.x];
+            Vector2 end = points[range.y];
+            for (int i = range.x + 1; i < range.y; i++)
+            {
+                float distanceSqr = PointToSegmentDistanceSqr(points[i], start, end);
+                if (distanceSqr > greatestDistanceSqr)
+                {
+                    greatestDistanceSqr = distanceSqr;
+                    greatestDistanceIndex = i;
+                }
+            }
+
+            if (greatestDistanceIndex < 0 || greatestDistanceSqr <= toleranceSqr)
+                continue;
+
+            keep[greatestDistanceIndex] = true;
+            ranges.Push(new Vector2Int(range.x, greatestDistanceIndex));
+            ranges.Push(new Vector2Int(greatestDistanceIndex, range.y));
+        }
+
+        var result = new List<Vector2>();
+        for (int i = 0; i < count; i++)
+        {
+            if (keep[i])
+                result.Add(points[i]);
+        }
+
         return result;
+    }
+
+    static float PointToSegmentDistanceSqr(Vector2 point, Vector2 start, Vector2 end)
+    {
+        Vector2 segment = end - start;
+        float segmentLengthSqr = Vector2.Dot(segment, segment);
+        if (segmentLengthSqr <= EPS * EPS)
+            return Vector2.SqrMagnitude(point - start);
+
+        float t = Mathf.Clamp01(Vector2.Dot(point - start, segment) / segmentLengthSqr);
+        return Vector2.SqrMagnitude(point - (start + segment * t));
     }
 
     static List<Vector2> CombinePolygonParts(params List<Vector2>[] parts)

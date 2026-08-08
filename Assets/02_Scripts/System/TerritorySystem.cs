@@ -3,15 +3,16 @@ using System.Collections.Generic;
 using Dev.Local;
 using Dev.Network;
 using Fusion;
+using ProjectIO.Territory;
 using UnityEngine;
 
 public class TerritorySystem : NetworkSystemBase
 {
     const int TerritoryVertexSyncChunkSize = 10;
     const float MinExpansionMoveDistanceSqr = 0.01f;
-    const float MinTurnSegmentDistanceSqr = 0.0001f;
-    const float TurnDirectionDotThreshold = 0.99f;
-    const float MinTurnLateralDistance = 0.05f;
+    const float CalculationPointDistanceSqr = 0.04f;
+    const float CalculationTurnDotThreshold = 0.995f;
+    const float CalculationTurnLateralDistance = 0.08f;
 
     [Header("Initial Territory")]
     [SerializeField] int circlePointCount;
@@ -25,6 +26,9 @@ public class TerritorySystem : NetworkSystemBase
     bool isIntersected = false;
     bool isRecoveringFromLifeline = false;
     readonly List<Vector2> temporaryTerritoryVertices = new();
+    readonly List<Vector2> calculationPath = new();
+    readonly TerritoryTrailSegmentIndex trailSegmentIndex = new();
+    TerritoryTrailChunkRenderer trailChunkRenderer;
 
     public Territory Territory;
     public TerritoryVisible TerritoryVisible;
@@ -48,6 +52,10 @@ public class TerritorySystem : NetworkSystemBase
     public override void SetUp()
     {
         TerritoryVisible = Dev.Network.StageBootstrapper.Instance.TerritoryVisible;
+        trailChunkRenderer = gameObject.GetComponent<TerritoryTrailChunkRenderer>();
+        if (trailChunkRenderer == null)
+            trailChunkRenderer = gameObject.AddComponent<TerritoryTrailChunkRenderer>();
+        trailChunkRenderer.Initialize(lineRenderer);
 
         GenerateInitialTerritory();
 
@@ -91,12 +99,19 @@ public class TerritorySystem : NetworkSystemBase
     {
         isExpanding = true;
         playerPath.Clear();
+        calculationPath.Clear();
+        trailSegmentIndex.Clear();
+        trailChunkRenderer?.Begin();
     }
 
     private void StopExpanding()
     {
         playerPath.Clear();
-        lineRenderer.positionCount = 0;
+        calculationPath.Clear();
+        if (lineRenderer != null)
+            lineRenderer.positionCount = 0;
+        trailSegmentIndex.Clear();
+        trailChunkRenderer?.Clear();
         isExpanding = false;
     }
 
@@ -113,13 +128,51 @@ public class TerritorySystem : NetworkSystemBase
         isRecoveringFromLifeline = true;
     }
 
-    private void AddExpandingPathPoint(Vector2 point)
+    private void AddExpandingPathPoint(Vector2 point, bool forceCalculationPoint = false)
     {
+        if (playerPath.Count > 0)
+            trailSegmentIndex.Add(playerPath[^1], point);
+
         playerPath.Add(point);
-        lineRenderer.positionCount = playerPath.Count + 1;
-        var converted = playerPath.ConvertAll(p => new Vector3(p.x, 0, p.y));
-        converted.Add(new Vector3(point.x, 0, point.y));
-        lineRenderer.SetPositions(converted.ToArray());
+        AddCalculationPathPoint(point, forceCalculationPoint);
+        trailChunkRenderer?.Append(point);
+    }
+
+    private void AddCalculationPathPoint(Vector2 point, bool force)
+    {
+        int count = calculationPath.Count;
+        if (force || count < 2)
+        {
+            calculationPath.Add(point);
+            return;
+        }
+
+        Vector2 lastPoint = calculationPath[^1];
+        if (Vector2.SqrMagnitude(point - lastPoint) >= CalculationPointDistanceSqr)
+        {
+            calculationPath.Add(point);
+            return;
+        }
+
+        Vector2 previousPoint = calculationPath[^2];
+        Vector2 previousSegment = lastPoint - previousPoint;
+        Vector2 currentSegment = point - lastPoint;
+        if (Vector2.SqrMagnitude(previousSegment) <= 0.0001f ||
+            Vector2.SqrMagnitude(currentSegment) <= 0.0001f)
+            return;
+
+        float directionDot = Vector2.Dot(
+            previousSegment.normalized,
+            currentSegment.normalized);
+        if (directionDot >= CalculationTurnDotThreshold)
+            return;
+
+        float lateralDistance = Mathf.Abs(
+            previousSegment.x * (lastPoint.y - point.y) -
+            (previousPoint.x - point.x) * previousSegment.y) /
+            Mathf.Sqrt(Vector2.SqrMagnitude(previousSegment));
+        if (lateralDistance >= CalculationTurnLateralDistance)
+            calculationPath.Add(point);
     }
 
     public bool TryGetCurrentExpansionPath(List<Vector3> results)
@@ -128,11 +181,14 @@ public class TerritorySystem : NetworkSystemBase
             return false;
 
         results.Clear();
-        if (!isExpanding || lineRenderer == null || lineRenderer.positionCount < 2)
+        if (!isExpanding || playerPath.Count < 2)
             return false;
 
-        for (int i = 0; i < lineRenderer.positionCount; i++)
-            results.Add(lineRenderer.GetPosition(i));
+        for (int i = 0; i < playerPath.Count; i++)
+        {
+            Vector2 point = playerPath[i];
+            results.Add(new Vector3(point.x, 0f, point.y));
+        }
 
         return results.Count >= 2;
     }
@@ -140,6 +196,10 @@ public class TerritorySystem : NetworkSystemBase
     public void HandlePlayerPositionChanged(Vector3 position, PlayerRunner playerRunner, object sender) // 러너만
     {
         var currentPosition = new Vector2(position.x, position.z);
+
+        if (!Object.HasStateAuthority)
+            return;
+
         bool isInTerritory = Territory.IsPointInPolygon(currentPosition);
 
         if (isRecoveringFromLifeline)
@@ -159,13 +219,15 @@ public class TerritorySystem : NetworkSystemBase
             {
                 if (playerPath.Count > 1)
                 {
-                    AddExpandingPathPoint(currentPosition);
+                    AddExpandingPathPoint(currentPosition, true);
+                    RPC_AddExpandingPathPoint(currentPosition);
                     if (Object.HasStateAuthority)
                     {
                         ExpandTerritoryFromCurrentPath();
                     }
                 }
                 StopExpanding();
+                RPC_StopExpanding();
                 Debug.Log("다시 들어옴");
             }
             previousPosition = currentPosition;
@@ -176,75 +238,44 @@ public class TerritorySystem : NetworkSystemBase
             {
                 Debug.Log("나감");
                 StartExpanding();
-                AddExpandingPathPoint(previousPosition);
-                AddExpandingPathPoint(currentPosition);
+                RPC_StartExpanding();
+                AddExpandingPathPoint(previousPosition, true);
+                RPC_AddExpandingPathPoint(previousPosition);
+                AddExpandingPathPoint(currentPosition, true);
+                RPC_AddExpandingPathPoint(currentPosition);
                 previousPosition = currentPosition;
                 return;
             }
 
             if (Vector2.SqrMagnitude(currentPosition - previousPosition) > MinExpansionMoveDistanceSqr)
             {
-                bool shouldAddTurnPoint = ShouldAddTurnPoint(currentPosition);
+                bool shouldAddTurnPoint = true;
 
                 // 러너가 자신이 지나온 길을 다시 밟으면 게임 오버
                 if (CheckPlayerRunnerCrossedOwnPath(currentPosition, shouldAddTurnPoint, playerRunner))
                     return;
 
                 if (shouldAddTurnPoint)
-                    AddExpandingPathPoint(previousPosition);
-
-                if (lineRenderer.positionCount > 0)
                 {
-                    lineRenderer.SetPosition(lineRenderer.positionCount - 1, new Vector3(currentPosition.x, 0, currentPosition.y));
+                    AddExpandingPathPoint(currentPosition);
+                    RPC_AddExpandingPathPoint(currentPosition);
                 }
+
                 previousPosition = currentPosition;
             }
         }
     }
 
-    private bool ShouldAddTurnPoint(Vector2 currentPosition)
-    {
-        if (playerPath.Count < 2)
-            return false;
-
-        Vector2 lastFixedPoint = playerPath[^1];
-        Vector2 previousSegment = previousPosition - lastFixedPoint;
-        Vector2 currentSegment = currentPosition - previousPosition;
-        if (Vector2.SqrMagnitude(previousSegment) <= MinTurnSegmentDistanceSqr ||
-            Vector2.SqrMagnitude(currentSegment) <= MinTurnSegmentDistanceSqr)
-            return false;
-
-        float dir = Vector2.Dot(previousSegment.normalized, currentSegment.normalized);
-        if (dir >= TurnDirectionDotThreshold)
-            return false;
-
-        return GetPointLineDistance(currentPosition, lastFixedPoint, previousPosition) >= MinTurnLateralDistance;
-    }
-
-    private static float GetPointLineDistance(Vector2 point, Vector2 lineStart, Vector2 lineEnd)
-    {
-        Vector2 line = lineEnd - lineStart;
-        float lineLengthSqr = Vector2.SqrMagnitude(line);
-        if (lineLengthSqr <= Mathf.Epsilon)
-            return Vector2.Distance(point, lineStart);
-
-        return Mathf.Abs(line.x * (lineStart.y - point.y) - (lineStart.x - point.x) * line.y) /
-               Mathf.Sqrt(lineLengthSqr);
-    }
-
-    [Rpc(RpcSources.All, RpcTargets.All, Channel = RpcChannel.Reliable)]
+    [Rpc(RpcSources.StateAuthority, RpcTargets.Proxies, Channel = RpcChannel.Reliable)]
     public void RPC_StartExpanding()
     {
-        isExpanding = true;
-        playerPath.Clear();
+        StartExpanding();
     }
 
-    [Rpc(RpcSources.All, RpcTargets.All, Channel = RpcChannel.Reliable)]
+    [Rpc(RpcSources.StateAuthority, RpcTargets.Proxies, Channel = RpcChannel.Reliable)]
     public void RPC_StopExpanding()
     {
-        playerPath.Clear();
-        lineRenderer.positionCount = 0;
-        isExpanding = false;
+        StopExpanding();
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.All, Channel = RpcChannel.Reliable)]
@@ -253,14 +284,10 @@ public class TerritorySystem : NetworkSystemBase
         StartLifelineRecovery(safePosition);
     }
 
-    [Rpc(RpcSources.All, RpcTargets.All, Channel = RpcChannel.Reliable)]
+    [Rpc(RpcSources.StateAuthority, RpcTargets.Proxies, Channel = RpcChannel.Reliable)]
     public void RPC_AddExpandingPathPoint(Vector2 point)
     {
-        playerPath.Add(point);
-        lineRenderer.positionCount = playerPath.Count + 1;
-        var converted = playerPath.ConvertAll(p => new Vector3(p.x, 0, p.y));
-        converted.Add(new Vector3(point.x, 0, point.y));
-        lineRenderer.SetPositions(converted.ToArray());
+        AddExpandingPathPoint(point);
     }
 
     private void ExpandTerritoryFromCurrentPath()
@@ -371,6 +398,15 @@ public class TerritorySystem : NetworkSystemBase
         Vector2 prevPos = previousPosition;
         if (Vector2.SqrMagnitude(currPos - prevPos) <= 0.0001f)
             return false;
+
+        if (Application.isPlaying)
+        {
+            return trailSegmentIndex.Intersects(
+                currPos,
+                prevPos,
+                playerPath[^2],
+                playerPath[^1]);
+        }
 
         int checkedSegmentCount = includesPendingTurnPoint ? count - 1 : count - 2;
         for (int i = 0; i < checkedSegmentCount; i++) // 현재 경로와 직전 인접 선분은 제외

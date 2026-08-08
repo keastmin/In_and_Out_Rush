@@ -28,7 +28,10 @@ namespace Dev.Local
                 return;
             }
 
+            Mesh previousMesh = _meshFilter.mesh;
             _meshFilter.mesh = mesh;
+            if (previousMesh != null)
+                Destroy(previousMesh);
         }
     }
 }

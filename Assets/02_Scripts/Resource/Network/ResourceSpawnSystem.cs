@@ -26,6 +26,8 @@ namespace Dev.Network
         [Header("Resource Settings")]
         [SerializeField] private ResourcePlacementSettings _mineralPlacementSettings;
         [SerializeField] private ResourcePlacementSettings _gasPlacementSettings;
+        [SerializeField] private NetworkObject _resourceZonePrefab;
+        [SerializeField] private int _randomSeed = 20260808;
 
         [Header("Spawn Area")]
         [SerializeField, Min(0f)] private float _worldSpawnRadius = 250f;
@@ -36,6 +38,7 @@ namespace Dev.Network
         [SerializeField, Min(0f)] private float _mineralObstaclePadding = 0f;
 
         private readonly List<PlacedResource> _placedResources = new();
+        private readonly List<ResourceZone> _resourceZones = new();
         private IReadOnlyList<WorldObstacle> _worldObstacles;
         private Vector3 _startPosition;
         private bool _hasStartPosition;
@@ -64,7 +67,17 @@ namespace Dev.Network
                 return;
             }
 
+            BindTerritoryExpansion();
+
             GenerateResources();
+        }
+
+        protected override void OnTearDown()
+        {
+            if (_territorySystem != null)
+                _territorySystem.OnTerritoryExpandedEvent -= HandleTerritoryExpanded;
+
+            base.OnTearDown();
         }
 
         private void ResolveReferences()
@@ -104,7 +117,9 @@ namespace Dev.Network
 
         public void GenerateResources()
         {
+            DespawnGeneratedZones();
             _placedResources.Clear();
+            _resourceZones.Clear();
             SpawnResourcesByZone(_mineralPlacementSettings);
             SpawnResourcesByZone(_gasPlacementSettings);
         }
@@ -153,7 +168,7 @@ namespace Dev.Network
                     }
 
                     var zonePlacedResources = new List<PlacedResource>(zoneChunks.Count);
-                    var zoneResources = new List<ResourceVisible>(zoneChunks.Count);
+                    var zoneEntries = new List<ResourceZoneEntry>(zoneChunks.Count);
 
                     for (int i = 0; i < zoneChunks.Count; i++)
                     {
@@ -173,25 +188,31 @@ namespace Dev.Network
                             continue;
                         }
 
-                        if (!TrySpawnResource(settings.ResourceType, chunk, position, out ResourceVisible resource))
-                            continue;
-
                         zonePlacedResources.Add(new PlacedResource(position, chunk.MinDistance));
-                        zoneResources.Add(resource);
+                        zoneEntries.Add(new ResourceZoneEntry(position, chunk.Amount));
                     }
 
-                    if (zoneResources.Count == 0)
+                    if (zoneEntries.Count == 0)
                     {
                         skippedZoneCount++;
                         continue;
                     }
 
-                    for (int i = 0; i < zoneResources.Count; i++)
+                    if (!SpawnResourceZone(
+                        settings.ResourceType,
+                        ringIndex,
+                        sectorIndex,
+                        zoneEntries))
                     {
-                        BindResource(zoneResources[i]);
+                        skippedZoneCount++;
+                        continue;
+                    }
+
+                    for (int i = 0; i < zoneEntries.Count; i++)
+                    {
                         _placedResources.Add(zonePlacedResources[i]);
                         spawnedCount++;
-                        spawnedAmount += zoneResources[i].Amount;
+                        spawnedAmount += zoneEntries[i].Amount;
                     }
                 }
             }
@@ -360,27 +381,154 @@ namespace Dev.Network
             return true;
         }
 
-        private bool TrySpawnResource(
+        private bool SpawnResourceZone(
             ResourceType resourceType,
-            ResourceChunkPlacementSettings chunk,
-            Vector3 position,
-            out ResourceVisible resource)
+            int ringIndex,
+            int sectorIndex,
+            IReadOnlyList<ResourceZoneEntry> entries)
         {
-            resource = null;
-            NetworkObject spawnedObject = Runner.Spawn(chunk.Prefab, position, Quaternion.identity);
+            if (_resourceZonePrefab == null)
+            {
+                Debug.LogError(
+                    $"{nameof(ResourceSpawnSystem)} requires a {nameof(ResourceZone)} prefab.",
+                    this);
+                return false;
+            }
+
+            Vector3 zonePosition = CalculateZoneCenter(resourceType, ringIndex, sectorIndex);
+            int seed = CreateZoneSeed(resourceType, ringIndex, sectorIndex);
+            NetworkObject spawnedObject = Runner.Spawn(
+                _resourceZonePrefab,
+                zonePosition,
+                Quaternion.identity,
+                PlayerRef.None,
+                (_, networkObject) =>
+                {
+                    if (!networkObject.TryGetComponent(out ResourceZone resourceZone))
+                        return;
+
+                    resourceZone.InitializeState(resourceType, seed, entries);
+                });
+
             if (spawnedObject == null)
                 return false;
 
-            if (!spawnedObject.TryGetComponent(out resource))
+            if (!spawnedObject.TryGetComponent(out ResourceZone spawnedZone))
             {
-                Debug.LogWarning($"Spawned {resourceType} prefab does not contain {nameof(ResourceVisible)}.");
+                Debug.LogError(
+                    $"Resource zone prefab {_resourceZonePrefab.name} does not contain {nameof(ResourceZone)}.",
+                    _resourceZonePrefab);
                 Runner.Despawn(spawnedObject);
                 return false;
             }
 
-            resource.Type = resourceType;
-            resource.Amount = chunk.Amount;
+            _resourceZones.Add(spawnedZone);
             return true;
+        }
+
+        private Vector3 CalculateZoneCenter(
+            ResourceType resourceType,
+            int ringIndex,
+            int sectorIndex)
+        {
+            ResourcePlacementSettings settings = resourceType == ResourceType.Mineral
+                ? _mineralPlacementSettings
+                : _gasPlacementSettings;
+
+            if (settings == null)
+                return Vector3.zero;
+
+            float innerRadius = _worldSpawnRadius * Mathf.Sqrt((float)ringIndex / settings.RingCount);
+            float outerRadius = _worldSpawnRadius * Mathf.Sqrt((float)(ringIndex + 1) / settings.RingCount);
+            float startAngle = Mathf.PI * 2f * sectorIndex / settings.SectorCount;
+            float endAngle = Mathf.PI * 2f * (sectorIndex + 1) / settings.SectorCount;
+            float radius = (innerRadius + outerRadius) * 0.5f;
+            float angle = (startAngle + endAngle) * 0.5f;
+
+            return new Vector3(
+                Mathf.Cos(angle) * radius,
+                0f,
+                Mathf.Sin(angle) * radius);
+        }
+
+        private int CreateZoneSeed(ResourceType resourceType, int ringIndex, int sectorIndex)
+        {
+            unchecked
+            {
+                int seed = _randomSeed;
+                seed = seed * 31 + (int)resourceType;
+                seed = seed * 31 + ringIndex;
+                seed = seed * 31 + sectorIndex;
+                return seed;
+            }
+        }
+
+        private void BindTerritoryExpansion()
+        {
+            if (_territorySystem == null)
+                return;
+
+            _territorySystem.OnTerritoryExpandedEvent -= HandleTerritoryExpanded;
+            _territorySystem.OnTerritoryExpandedEvent += HandleTerritoryExpanded;
+        }
+
+        private void HandleTerritoryExpanded(Territory territory, TerritorySystem sender)
+        {
+            if (!HasStateAuthority || territory == null)
+                return;
+
+            int mineralAmount = 0;
+            int gasAmount = 0;
+
+            for (int i = 0; i < _resourceZones.Count; i++)
+            {
+                ResourceZone resourceZone = _resourceZones[i];
+                if (resourceZone == null)
+                    continue;
+
+                int collectedAmount = resourceZone.CollectWithin(territory);
+                if (resourceZone.ResourceType == ResourceType.Mineral)
+                    mineralAmount += collectedAmount;
+                else
+                    gasAmount += collectedAmount;
+            }
+
+            if (_resourceSystem == null)
+            {
+                if (mineralAmount > 0 || gasAmount > 0)
+                {
+                    Debug.LogWarning(
+                        $"Resource collection skipped because {nameof(ResourceSystem)} is missing.",
+                        this);
+                }
+
+                return;
+            }
+
+            if (mineralAmount > 0)
+            {
+                _resourceSystem.RPC_GetMineral(mineralAmount);
+                _resourceView?.SetMineral(_resourceSystem.Mineral);
+            }
+
+            if (gasAmount > 0)
+            {
+                _resourceSystem.RPC_GetGas(gasAmount);
+                _resourceView?.SetGas(_resourceSystem.Gas);
+            }
+        }
+
+        private void DespawnGeneratedZones()
+        {
+            if (!HasStateAuthority || Runner == null)
+                return;
+
+            for (int i = _resourceZones.Count - 1; i >= 0; i--)
+            {
+                ResourceZone resourceZone = _resourceZones[i];
+                if (resourceZone != null && resourceZone.Object != null && resourceZone.Object.IsValid)
+                    Runner.Despawn(resourceZone.Object);
+            }
         }
 
         private bool IsValidResourcePosition(Vector3 position, ResourceChunkPlacementSettings chunk)
@@ -511,61 +659,5 @@ namespace Dev.Network
             return offsetX * offsetX + offsetZ * offsetZ;
         }
 
-        private void BindResource(ResourceVisible resource)
-        {
-            if (_territorySystem == null)
-            {
-                Debug.LogWarning($"{nameof(ResourceSpawnSystem)} cannot bind {resource.name}: territory system is missing.");
-                return;
-            }
-
-            void HandleTerritoryExpanded(Territory territory, TerritorySystem territorySystem)
-            {
-                if (resource == null || resource.Object == null || !resource.Object.IsValid)
-                {
-                    _territorySystem.OnTerritoryExpandedEvent -= HandleTerritoryExpanded;
-                    return;
-                }
-
-                var xzPosition = new Vector2(resource.transform.position.x, resource.transform.position.z);
-                if (!territory.IsPointInPolygon(xzPosition))
-                    return;
-
-                _territorySystem.OnTerritoryExpandedEvent -= HandleTerritoryExpanded;
-                resource.Collect();
-            }
-
-            _territorySystem.OnTerritoryExpandedEvent += HandleTerritoryExpanded;
-            resource.OnCollected += HandleResourceCollected;
-        }
-
-        private void HandleResourceCollected(ResourceType type, int amount, ResourceVisible resource, object context)
-        {
-            if (_resourceSystem == null)
-            {
-                Debug.LogWarning($"Resource collection skipped because {nameof(ResourceSystem)} is missing.");
-                return;
-            }
-
-            if (resource != null)
-                resource.OnCollected -= HandleResourceCollected;
-
-            switch (type)
-            {
-                case ResourceType.Mineral:
-                    _resourceSystem.RPC_GetMineral(amount);
-                    if (_resourceView != null)
-                        _resourceView.SetMineral(_resourceSystem.Mineral);
-                    break;
-                case ResourceType.Gas:
-                    _resourceSystem.RPC_GetGas(amount);
-                    if (_resourceView != null)
-                        _resourceView.SetGas(_resourceSystem.Gas);
-                    break;
-            }
-
-            if (resource != null && resource.Object != null && resource.Object.IsValid)
-                Runner.Despawn(resource.Object);
-        }
     }
 }

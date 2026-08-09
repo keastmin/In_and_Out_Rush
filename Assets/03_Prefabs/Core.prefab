@@ -65,6 +65,8 @@ MonoBehaviour:
   _resourceView: {fileID: 0}
   _mineralPlacementSettings: {fileID: 11400000, guid: ae0d1b0debc5438285dfa36a9357c0a3, type: 2}
   _gasPlacementSettings: {fileID: 11400000, guid: 6dab86e714554e12b6fdd266a53da513, type: 2}
+  _resourceZonePrefab: {fileID: 1000000000000000003, guid: 27e5bdcc06fc601478fe41b781539ce4, type: 3}
+  _randomSeed: 20260808
   _worldSpawnRadius: 250
   _maxRetryCount: 10
   _rockSpawner: {fileID: 0}

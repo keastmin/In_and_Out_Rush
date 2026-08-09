@@ -220,7 +220,7 @@ namespace Dev.Network
 
         private void InitializeObjects()
         {
-            SpawnRocks(); // 바위 오브젝트 스폰
+            SpawnObstacles(); // 장애물 오브젝트 스폰
             YOUInitializeObjects();
             KIMInitializeObjects();
         }

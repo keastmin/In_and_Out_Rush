@@ -200,15 +200,15 @@ namespace Dev.Network
             if (!HasStateAuthority || vertices == null)
                 return;
 
-            _rockSpawner.DespawnRocksOverlappingTrack(Runner, vertices, trackSystem != null ? trackSystem.TrackLineWidth : 0f);
+            _obstacleSpawner.DespawnObstaclesOverlappingTrack(Runner, vertices, trackSystem != null ? trackSystem.TrackLineWidth : 0f);
         }
 
         private void HandleTerritoryExpanded(Territory territory, TerritorySystem sender)
         {
-            if (!HasStateAuthority || Runner == null || territory == null || _rockSpawner == null)
+            if (!HasStateAuthority || Runner == null || territory == null || _obstacleSpawner == null)
                 return;
 
-            _rockSpawner.DespawnRocksOverlappingTerritory(Runner, territory);
+            _obstacleSpawner.DespawnObstaclesOverlappingTerritory(Runner, territory);
         }
 
         private void StartTrackMonsterSettlement()

@@ -34,7 +34,7 @@ namespace Dev.Network
         [SerializeField, Min(1)] private int _maxRetryCount = 10;
 
         [Header("Obstacle Avoidance")]
-        [SerializeField] private InfiniteGridRockSpawner _rockSpawner;
+        [SerializeField] private InfiniteGridObstacleSpawner _obstacleSpawner;
         [SerializeField, Min(0f)] private float _mineralObstaclePadding = 0f;
 
         private readonly List<PlacedResource> _placedResources = new();
@@ -105,14 +105,14 @@ namespace Dev.Network
 
         private void ResolveWorldObstacles()
         {
-            if (_rockSpawner == null && StageBootstrapper.Instance != null && StageBootstrapper.Instance.Grid != null)
-                StageBootstrapper.Instance.Grid.TryGetComponent(out _rockSpawner);
+            if (_obstacleSpawner == null && StageBootstrapper.Instance != null && StageBootstrapper.Instance.Grid != null)
+                StageBootstrapper.Instance.Grid.TryGetComponent(out _obstacleSpawner);
 
-            if (_rockSpawner == null)
-                _rockSpawner = UnityEngine.Object.FindFirstObjectByType<InfiniteGridRockSpawner>();
+            if (_obstacleSpawner == null)
+                _obstacleSpawner = UnityEngine.Object.FindFirstObjectByType<InfiniteGridObstacleSpawner>();
 
-            if (_worldObstacles == null && _rockSpawner != null)
-                InitializeWorldObstacles(_rockSpawner.SpawnedRocks);
+            if (_worldObstacles == null && _obstacleSpawner != null)
+                InitializeWorldObstacles(_obstacleSpawner.SpawnedObstacles);
         }
 
         public void GenerateResources()

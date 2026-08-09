@@ -4,65 +4,63 @@ using UnityEngine;
 
 namespace KIM.Dev
 {
-    public sealed class InfiniteGridRockSpawner : MonoBehaviour
+    public sealed class InfiniteGridObstacleSpawner : MonoBehaviour
     {
-        [Header("Network Rock Prefabs")]
-        [SerializeField] private NetworkObject[] _rockPrefabs;
+        [Header("Obstacle Spawn Data")]
+        [SerializeField] private ObstacleSpawnData[] _obstacleSpawnData;
 
         [Header("Distribution")]
-        [SerializeField, Min(1)] private int _spawnCountPerPrefab = 4;
         [SerializeField, Min(0f)] private float _maximumHalfExtent = 220f;
         [SerializeField, Range(0f, 0.45f)] private float _edgePaddingRatio = 0.08f;
         [SerializeField, Min(0f)] private float _centerExclusionRadius = 40f;
         [SerializeField, Range(0f, 0.45f)] private float _cellJitterRatio = 0.2f;
         [SerializeField, Min(1)] private int _placementRetryCount = 24;
         [SerializeField, Min(0f)] private float _minimumSpacing = 24f;
-        [SerializeField] private float _heightOffset;
         [SerializeField] private int _randomSeed = 20260720;
 
-        private readonly List<NetworkObject> _validRockPrefabs = new();
+        private readonly List<ObstacleSpawnData> _validObstacleSpawnData = new();
         private readonly List<Vector3> _spawnedPositions = new();
-        private readonly List<WorldObstacle> _spawnedRocks = new();
+        private readonly List<WorldObstacle> _spawnedObstacles = new();
         private InfiniteGrid _grid;
         private MeshRenderer _groundRenderer;
         private bool _spawnStarted;
 
-        public IReadOnlyList<WorldObstacle> SpawnedRocks => _spawnedRocks;
+        public IReadOnlyList<WorldObstacle> SpawnedObstacles => _spawnedObstacles;
 
-        public void DespawnRocksOverlappingTrack(NetworkRunner runner, IReadOnlyList<Vector3> trackVertices, float trackLineWidth)
+        public void DespawnObstaclesOverlappingTrack(NetworkRunner runner, IReadOnlyList<Vector3> trackVertices, float trackLineWidth)
         {
             if (runner == null || trackVertices == null || trackVertices.Count < 2)
                 return;
 
             float trackRadius = Mathf.Max(0f, trackLineWidth * 0.5f);
-            for (int i = _spawnedRocks.Count - 1; i >= 0; i--)
+            for (int i = _spawnedObstacles.Count - 1; i >= 0; i--)
             {
-                WorldObstacle rock = _spawnedRocks[i];
-                if (!ShouldDespawnRock(rock, trackVertices, trackRadius))
+                WorldObstacle obstacle = _spawnedObstacles[i];
+                if (!ShouldDespawnObstacle(obstacle, trackVertices, trackRadius))
                     continue;
 
-                DespawnRock(runner, rock);
-                _spawnedRocks.RemoveAt(i);
+                DespawnObstacle(runner, obstacle);
+                _spawnedObstacles.RemoveAt(i);
             }
         }
 
-        public void DespawnRocksOverlappingTerritory(NetworkRunner runner, Territory territory)
+        public void DespawnObstaclesOverlappingTerritory(NetworkRunner runner, Territory territory)
         {
             if (runner == null || territory == null || territory.Vertices == null || territory.Vertices.Count < 3)
                 return;
 
-            for (int i = _spawnedRocks.Count - 1; i >= 0; i--)
+            for (int i = _spawnedObstacles.Count - 1; i >= 0; i--)
             {
-                WorldObstacle rock = _spawnedRocks[i];
-                if (!ShouldDespawnRock(rock, territory))
+                WorldObstacle obstacle = _spawnedObstacles[i];
+                if (!ShouldDespawnObstacle(obstacle, territory))
                     continue;
 
-                DespawnRock(runner, rock);
-                _spawnedRocks.RemoveAt(i);
+                DespawnObstacle(runner, obstacle);
+                _spawnedObstacles.RemoveAt(i);
             }
         }
 
-        public void SpawnRocks()
+        public void SpawnObstacles()
         {
             _grid = GetComponent<InfiniteGrid>();
             _groundRenderer = GetComponent<MeshRenderer>();
@@ -82,17 +80,17 @@ namespace KIM.Dev
             if (!_grid.HasStateAuthority)
                 return;
 
-            SpawnRocksInternal();
+            SpawnObstaclesInternal();
         }
 
-        private void SpawnRocksInternal()
+        private void SpawnObstaclesInternal()
         {
             if (_spawnStarted || _grid.Runner == null)
                 return;
 
             _spawnStarted = true;
-            CollectValidPrefabs();
-            if (_validRockPrefabs.Count == 0)
+            CollectValidSpawnData();
+            if (_validObstacleSpawnData.Count == 0)
             {
                 Debug.LogError("Infinite Grid에 배치할 네트워크 바위 프리팹이 없습니다.");
                 return;
@@ -109,10 +107,11 @@ namespace KIM.Dev
 
             var random = new System.Random(_randomSeed);
             _spawnedPositions.Clear();
-            _spawnedRocks.Clear();
+            _spawnedObstacles.Clear();
 
-            int columnCount = _validRockPrefabs.Count;
-            int rowCount = Mathf.Max(1, _spawnCountPerPrefab);
+            int spawnCount = GetTotalSpawnCount();
+            int columnCount = Mathf.CeilToInt(Mathf.Sqrt(spawnCount));
+            int rowCount = Mathf.CeilToInt((float)spawnCount / columnCount);
             float cellWidth = usableHalfExtentX * 2f / columnCount;
             float cellDepth = usableHalfExtentZ * 2f / rowCount;
 
@@ -120,8 +119,12 @@ namespace KIM.Dev
             {
                 for (int column = 0; column < columnCount; column++)
                 {
-                    int prefabIndex = (column + row) % columnCount;
-                    NetworkObject prefab = _validRockPrefabs[prefabIndex];
+                    int spawnIndex = row * columnCount + column;
+                    if (spawnIndex >= spawnCount)
+                        continue;
+
+                    ObstacleSpawnData spawnData = GetSpawnDataForIndex(spawnIndex);
+                    NetworkObject prefab = spawnData.Prefab;
                     if (!TryFindSpawnPosition(
                             random,
                             groundBounds,
@@ -133,6 +136,7 @@ namespace KIM.Dev
                             columnCount,
                             cellWidth,
                             cellDepth,
+                            spawnData.HeightOffset,
                             out Vector3 spawnPosition))
                     {
                         Debug.LogWarning($"{prefab.name}의 바위 배치 위치를 찾지 못했습니다.");
@@ -142,72 +146,95 @@ namespace KIM.Dev
                     float yaw = NextRange(random, 0f, 360f);
                     Quaternion rotation = Quaternion.Euler(0f, yaw, 0f);
                     int instanceNumber = row + 1;
-                    NetworkObject spawnedRock = _grid.Runner.Spawn(
+                    NetworkObject spawnedObstacle = _grid.Runner.Spawn(
                         prefab,
                         spawnPosition,
                         rotation,
                         PlayerRef.None,
                         (_, spawnedObject) => spawnedObject.name = $"{prefab.name}_{instanceNumber:00}");
 
-                    if (spawnedRock == null)
+                    if (spawnedObstacle == null)
                         continue;
 
                     _spawnedPositions.Add(spawnPosition);
-                    if (TryGetWorldObstacle(spawnedRock, out WorldObstacle worldObstacle))
+                    if (TryGetWorldObstacle(spawnedObstacle, out WorldObstacle worldObstacle))
                     {
-                        _spawnedRocks.Add(worldObstacle);
+                        _spawnedObstacles.Add(worldObstacle);
                     }
                     else
                     {
-                        Debug.LogError($"{spawnedRock.name}에 WorldObstacle 컴포넌트가 없어 바위 목록에 등록할 수 없습니다.", spawnedRock);
+                        Debug.LogError($"{spawnedObstacle.name}에 WorldObstacle 컴포넌트가 없어 장애물 목록에 등록할 수 없습니다.", spawnedObstacle);
                     }
                 }
             }
         }
 
-        private void CollectValidPrefabs()
+        private void CollectValidSpawnData()
         {
-            _validRockPrefabs.Clear();
-            if (_rockPrefabs == null)
+            _validObstacleSpawnData.Clear();
+            if (_obstacleSpawnData == null)
                 return;
 
-            for (int i = 0; i < _rockPrefabs.Length; i++)
+            for (int i = 0; i < _obstacleSpawnData.Length; i++)
             {
-                NetworkObject prefab = _rockPrefabs[i];
-                if (prefab != null && !_validRockPrefabs.Contains(prefab))
-                    _validRockPrefabs.Add(prefab);
+                ObstacleSpawnData spawnData = _obstacleSpawnData[i];
+                if (spawnData != null && spawnData.IsAvailable)
+                    _validObstacleSpawnData.Add(spawnData);
             }
         }
 
-        private static bool TryGetWorldObstacle(NetworkObject spawnedRock, out WorldObstacle worldObstacle)
+        private int GetTotalSpawnCount()
+        {
+            int totalSpawnCount = 0;
+            for (int i = 0; i < _validObstacleSpawnData.Count; i++)
+                totalSpawnCount += _validObstacleSpawnData[i].SpawnCount;
+
+            return Mathf.Max(1, totalSpawnCount);
+        }
+
+        private ObstacleSpawnData GetSpawnDataForIndex(int spawnIndex)
+        {
+            for (int i = 0; i < _validObstacleSpawnData.Count; i++)
+            {
+                ObstacleSpawnData spawnData = _validObstacleSpawnData[i];
+                if (spawnIndex < spawnData.SpawnCount)
+                    return spawnData;
+
+                spawnIndex -= spawnData.SpawnCount;
+            }
+
+            return _validObstacleSpawnData[_validObstacleSpawnData.Count - 1];
+        }
+
+        private static bool TryGetWorldObstacle(NetworkObject spawnedObstacle, out WorldObstacle worldObstacle)
         {
             worldObstacle = null;
-            return spawnedRock != null &&
-                   (spawnedRock.TryGetComponent(out worldObstacle) ||
-                    spawnedRock.GetComponentInChildren<WorldObstacle>() is WorldObstacle childWorldObstacle &&
+            return spawnedObstacle != null &&
+                   (spawnedObstacle.TryGetComponent(out worldObstacle) ||
+                    spawnedObstacle.GetComponentInChildren<WorldObstacle>() is WorldObstacle childWorldObstacle &&
                     (worldObstacle = childWorldObstacle) != null);
         }
 
-        private static bool ShouldDespawnRock(
-            WorldObstacle rock,
+        private static bool ShouldDespawnObstacle(
+            WorldObstacle obstacle,
             IReadOnlyList<Vector3> trackVertices,
             float trackRadius)
         {
-            return rock == null ||
-                   DoesTrackOverlapObstacleBounds(trackVertices, trackRadius, rock.Bounds);
+            return obstacle == null ||
+                   DoesTrackOverlapObstacleBounds(trackVertices, trackRadius, obstacle.Bounds);
         }
 
-        private static bool ShouldDespawnRock(WorldObstacle rock, Territory territory)
+        private static bool ShouldDespawnObstacle(WorldObstacle obstacle, Territory territory)
         {
-            return rock == null || DoesTerritoryOverlapObstacleBounds(territory, rock.Bounds);
+            return obstacle == null || DoesTerritoryOverlapObstacleBounds(territory, obstacle.Bounds);
         }
 
-        private static void DespawnRock(NetworkRunner runner, WorldObstacle rock)
+        private static void DespawnObstacle(NetworkRunner runner, WorldObstacle obstacle)
         {
-            if (rock == null)
+            if (obstacle == null)
                 return;
 
-            NetworkObject networkObject = rock.GetComponentInParent<NetworkObject>();
+            NetworkObject networkObject = obstacle.GetComponentInParent<NetworkObject>();
             if (networkObject == null || !networkObject.IsValid || !networkObject.HasStateAuthority)
                 return;
 
@@ -225,6 +252,7 @@ namespace KIM.Dev
             int columnCount,
             float cellWidth,
             float cellDepth,
+            float heightOffset,
             out Vector3 position)
         {
             float minX = groundBounds.center.x - usableHalfExtentX;
@@ -233,7 +261,7 @@ namespace KIM.Dev
             float centerZ = minZ + cellDepth * (row + 0.5f);
             float jitterX = cellWidth * _cellJitterRatio;
             float jitterZ = cellDepth * _cellJitterRatio;
-            float groundHeight = groundBounds.max.y + _heightOffset;
+            float groundHeight = groundBounds.max.y + heightOffset;
 
             for (int attempt = 0; attempt < _placementRetryCount; attempt++)
             {

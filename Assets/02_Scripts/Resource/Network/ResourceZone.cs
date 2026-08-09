@@ -55,6 +55,24 @@ namespace Dev.Network
 
         public int EntryCount => Mathf.Clamp(ResourceCount, 0, MaxEntries);
 
+        public bool HasUncollectedResourceWithin(Vector3 worldPosition, float radius)
+        {
+            float radiusSqr = Mathf.Max(0f, radius) * Mathf.Max(0f, radius);
+
+            for (int i = 0; i < EntryCount; i++)
+            {
+                if (IsCollected(i))
+                    continue;
+
+                Vector3 offset = Entries[i].WorldPosition - worldPosition;
+                offset.y = 0f;
+                if (offset.sqrMagnitude <= radiusSqr)
+                    return true;
+            }
+
+            return false;
+        }
+
         public void InitializeState(
             Dev.ResourceType resourceType,
             int seed,

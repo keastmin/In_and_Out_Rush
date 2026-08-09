@@ -33,15 +33,21 @@ namespace Dev.Network
         [SerializeField, Min(0f)] private float _worldSpawnRadius = 250f;
         [SerializeField, Min(1)] private int _maxRetryCount = 10;
 
+        [Header("Client Resource Visibility")]
+        [SerializeField, Min(0.1f)] private float _resourceInterestRadius = 128f;
+        [SerializeField, Min(0.05f)] private float _resourceInterestRefreshInterval = 0.25f;
+
         [Header("Obstacle Avoidance")]
         [SerializeField] private InfiniteGridObstacleSpawner _obstacleSpawner;
         [SerializeField, Min(0f)] private float _mineralObstaclePadding = 0f;
 
         private readonly List<PlacedResource> _placedResources = new();
         private readonly List<ResourceZone> _resourceZones = new();
+        private readonly Dictionary<ResourceZone, HashSet<PlayerRef>> _forcedInterestPlayers = new();
         private IReadOnlyList<WorldObstacle> _worldObstacles;
         private Vector3 _startPosition;
         private bool _hasStartPosition;
+        private TickTimer _resourceInterestRefreshTimer;
 
         public void SetStartPosition(Vector3 startPosition)
         {
@@ -70,6 +76,10 @@ namespace Dev.Network
             BindTerritoryExpansion();
 
             GenerateResources();
+            RefreshClientResourceInterest();
+            _resourceInterestRefreshTimer = TickTimer.CreateFromSeconds(
+                Runner,
+                _resourceInterestRefreshInterval);
         }
 
         protected override void OnTearDown()
@@ -77,7 +87,19 @@ namespace Dev.Network
             if (_territorySystem != null)
                 _territorySystem.OnTerritoryExpandedEvent -= HandleTerritoryExpanded;
 
+            _forcedInterestPlayers.Clear();
+            _resourceInterestRefreshTimer = default;
+
             base.OnTearDown();
+        }
+
+        public override void FixedUpdateNetwork()
+        {
+            if (Object == null || !Object.HasStateAuthority || !_resourceInterestRefreshTimer.ExpiredOrNotRunning(Runner))
+                return;
+
+            RefreshClientResourceInterest();
+            _resourceInterestRefreshTimer = TickTimer.CreateFromSeconds(Runner, _resourceInterestRefreshInterval);
         }
 
         private void ResolveReferences()
@@ -528,6 +550,46 @@ namespace Dev.Network
                 ResourceZone resourceZone = _resourceZones[i];
                 if (resourceZone != null && resourceZone.Object != null && resourceZone.Object.IsValid)
                     Runner.Despawn(resourceZone.Object);
+            }
+
+            _forcedInterestPlayers.Clear();
+        }
+
+        private void RefreshClientResourceInterest()
+        {
+            float interestRadius = Mathf.Max(0.1f, _resourceInterestRadius);
+
+            for (int zoneIndex = 0; zoneIndex < _resourceZones.Count; zoneIndex++)
+            {
+                ResourceZone resourceZone = _resourceZones[zoneIndex];
+                if (resourceZone == null || resourceZone.Object == null || !resourceZone.Object.IsValid)
+                    continue;
+
+                if (!_forcedInterestPlayers.TryGetValue(resourceZone, out HashSet<PlayerRef> forcedPlayers))
+                {
+                    forcedPlayers = new HashSet<PlayerRef>();
+                    _forcedInterestPlayers.Add(resourceZone, forcedPlayers);
+                }
+
+                foreach (PlayerRef player in Runner.ActivePlayers)
+                {
+                    if (!Runner.TryGetPlayerObject(player, out NetworkObject playerObject))
+                        continue;
+
+                    bool shouldForceInterest = resourceZone.HasUncollectedResourceWithin(
+                        playerObject.transform.position,
+                        interestRadius);
+
+                    if (shouldForceInterest)
+                    {
+                        if (forcedPlayers.Add(player))
+                            resourceZone.Object.SetPlayerAlwaysInterested(player, true);
+                    }
+                    else if (forcedPlayers.Remove(player))
+                    {
+                        resourceZone.Object.SetPlayerAlwaysInterested(player, false);
+                    }
+                }
             }
         }
 

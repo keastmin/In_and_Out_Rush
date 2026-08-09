@@ -122,6 +122,9 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
     public override void FixedUpdateNetwork()
     {
         if (!CanAccessNetworkState || !Object.HasStateAuthority) { return; }
+        if (TryDestroyInsideTerritory())
+            return;
+
         if (IsStunned)
         {
             StopByStun();
@@ -164,6 +167,16 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
 
     protected bool IsPositionInTerritory(Vector2 position)
         => territory != null && territory.IsPointInPolygon(position);
+
+    private bool TryDestroyInsideTerritory()
+    {
+        var xzPosition = new Vector2(transform.position.x, transform.position.z);
+        if (!IsPositionInTerritory(xzPosition))
+            return false;
+
+        DestroyMonster();
+        return true;
+    }
 
     private static bool IsPositionInActiveSanctuary(Vector3 position)
         => Dev.Network.StageBootstrapper.Instance != null &&

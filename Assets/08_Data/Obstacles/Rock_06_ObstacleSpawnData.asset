@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 58f332cbcdd106a45bdd382b5595e0ce, type: 3}
   m_Name: Rock_06_ObstacleSpawnData
   m_EditorClassIdentifier: 
-  _prefab: {fileID: 6844603691446843582, guid: b2981534d2ac4244fafb153e0cb4c9c2, type: 3}
+  _prefab: {fileID: 5858834698672161792, guid: b7a11b2ea1c4406e8399e3e7eaefc21c, type: 3}
   _spawnCount: 20
   _heightOffset: -1

@@ -192,8 +192,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   duration: 2
-  movementSpeedInTiles: 3
   initialDiameterInTiles: 1
   finalDiameterInTiles: 6
-  ringThicknessInTiles: 0.2
-  lineSegments: 48
+  domeHorizontalSegments: 48
+  domeVerticalSegments: 10
+  domeColor: {r: 0.25, g: 0.75, b: 1, a: 0.25}

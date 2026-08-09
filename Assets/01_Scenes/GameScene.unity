@@ -2317,6 +2317,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Fog of War System
       objectReference: {fileID: 0}
+    - target: {fileID: 5400355807062306309, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8092433541136705184, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
       propertyPath: m_LocalPosition.x
       value: 213.17992

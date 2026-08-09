@@ -69,7 +69,7 @@ MonoBehaviour:
   _randomSeed: 20260808
   _worldSpawnRadius: 250
   _maxRetryCount: 10
-  _rockSpawner: {fileID: 0}
+  _obstacleSpawner: {fileID: 0}
   _mineralObstaclePadding: 0
 --- !u!114 &7761316472097650306
 MonoBehaviour:
@@ -137,7 +137,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _grid: {fileID: 0}
-  _rockSpawner: {fileID: 0}
+  _obstacleSpawner: {fileID: 0}
   _laboratoryPrefab: {fileID: 0}
   _NetworkLaboratory: {fileID: 0}
   _store: {fileID: 835821744579008095}

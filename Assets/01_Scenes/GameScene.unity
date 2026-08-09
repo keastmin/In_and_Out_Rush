@@ -2393,10 +2393,6 @@ PrefabInstance:
       propertyPath: _territorySystem
       value: 
       objectReference: {fileID: 1028244186}
-    - target: {fileID: 4082752266359308800, guid: 4860868dac3037343a9034cbfef85387, type: 3}
-      propertyPath: _spawnCountPerPrefab
-      value: 6
-      objectReference: {fileID: 0}
     - target: {fileID: 5379209773506943472, guid: 4860868dac3037343a9034cbfef85387, type: 3}
       propertyPath: m_Name
       value: Infinite Grid Ground
@@ -3683,7 +3679,7 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 886242802}
     - target: {fileID: 7251378647776299556, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: _rockSpawner
+      propertyPath: _obstacleSpawner
       value: 
       objectReference: {fileID: 1774563717}
     - target: {fileID: 7251378647776299556, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
@@ -3755,7 +3751,7 @@ PrefabInstance:
       value: 2015209220
       objectReference: {fileID: 0}
     - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: _rockSpawner
+      propertyPath: _obstacleSpawner
       value: 
       objectReference: {fileID: 1774563717}
     - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}

@@ -8,7 +8,7 @@ namespace Dev.Network
     {
         [Header("Scene Load Entities")]
         [SerializeField] private InfiniteGrid _grid;
-        [SerializeField] private InfiniteGridRockSpawner _rockSpawner;
+        [SerializeField] private InfiniteGridObstacleSpawner _obstacleSpawner;
 
         [Header("Prefabs")]
         [SerializeField] private Laboratory _laboratoryPrefab;
@@ -61,12 +61,12 @@ namespace Dev.Network
 
         }
 
-        private void SpawnRocks()
+        private void SpawnObstacles()
         {
             if (!HasStateAuthority)
                 return;
 
-            _rockSpawner.SpawnRocks();
+            _obstacleSpawner.SpawnObstacles();
         }
 
         private void KIMInitializeWorldObstacleConsumer(IWorldObstacleConsumer consumer)
@@ -74,7 +74,7 @@ namespace Dev.Network
             if (!HasStateAuthority || consumer == null)
                 return;
 
-            consumer.InitializeWorldObstacles(_rockSpawner.SpawnedRocks);
+            consumer.InitializeWorldObstacles(_obstacleSpawner.SpawnedObstacles);
         }
 
         private void HandleKimRoundStarting(int round, TimeSystem sender, object context)

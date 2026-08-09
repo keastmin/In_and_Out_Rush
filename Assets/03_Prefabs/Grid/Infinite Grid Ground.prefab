@@ -154,17 +154,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3f205466cee3465388d6b4f2ef467adb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _rockPrefabs:
-  - {fileID: 7052097930572686336, guid: 81a23d4bdb27489c93ca87a7e482c399, type: 3}
-  - {fileID: 5215269356588812288, guid: 2e4319b9f99540f98a063f14992ebc0a, type: 3}
-  - {fileID: 5858834698672161792, guid: b7a11b2ea1c4406e8399e3e7eaefc21c, type: 3}
-  _spawnCountPerPrefab: 4
+  _obstacleSpawnData:
+  - {fileID: 11400000, guid: 87dd16ec94c04efca9ef43093a80ac5e, type: 2}
+  - {fileID: 11400000, guid: 2c860cb4bbdf4b23ba68adb9df83d2be, type: 2}
+  - {fileID: 11400000, guid: e3bca867910942f7946589c1e1b7a2d4, type: 2}
   _maximumHalfExtent: 220
   _edgePaddingRatio: 0.08
   _cellJitterRatio: 0.2
   _placementRetryCount: 24
   _minimumSpacing: 24
-  _heightOffset: 0
   _randomSeed: 20260720
 --- !u!114 &7928665524494258476
 MonoBehaviour:

@@ -10,6 +10,10 @@ namespace KIM.Dev
     {
         private TowerBuildManager _towerBuildManager;
         private PlayerBuilderCinemachineController _cameraController;
+        private NetworkTransform _networkTransform;
+        private float _nextAoiPositionReportTime;
+
+        private const float AoiPositionReportInterval = 0.1f;
 
         [Header("Click")]
         [SerializeField] private LayerMask _clickDetectLayer;
@@ -109,6 +113,7 @@ namespace KIM.Dev
         public override void Spawned()
         {
             base.Spawned();
+            TryGetComponent(out _networkTransform);
         }
 
         public void InitializeCinemachineController(
@@ -130,11 +135,49 @@ namespace KIM.Dev
 
         private void Update()
         {
+            UpdateAoiPositionFromCamera();
             CleanupInvalidTowerReferences();
             StateMachine.Update();
             _cameraController?.SetGameplayInputEnabled(
                 !ReferenceEquals(StateMachine.CurrentState, StateMachine.DragState));
             _resourceSystemTestInput.Tick(this);
+        }
+
+        private void UpdateAoiPositionFromCamera()
+        {
+            if (!HasInputAuthority || Time.unscaledTime < _nextAoiPositionReportTime)
+                return;
+
+            if (_cameraController == null ||
+                !_cameraController.TryGetGroundFocusPosition(out Vector3 cameraGroundPosition))
+            {
+                return;
+            }
+
+            _nextAoiPositionReportTime = Time.unscaledTime + AoiPositionReportInterval;
+
+            if (HasStateAuthority)
+            {
+                SetAoiPosition(cameraGroundPosition);
+                return;
+            }
+
+            RPC_ReportAoiPosition(cameraGroundPosition);
+        }
+
+        [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+        private void RPC_ReportAoiPosition(Vector3 cameraGroundPosition)
+        {
+            SetAoiPosition(cameraGroundPosition);
+        }
+
+        private void SetAoiPosition(Vector3 cameraGroundPosition)
+        {
+            if (!HasStateAuthority || _networkTransform == null)
+                return;
+
+            cameraGroundPosition.y = 0f;
+            _networkTransform.Teleport(cameraGroundPosition);
         }
 
         #region 초기화 로직

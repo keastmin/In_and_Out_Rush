@@ -25,6 +25,34 @@ namespace KIM.Dev
 
         public CinemachineCamera Camera => _camera;
 
+        public bool TryGetGroundFocusPosition(out Vector3 groundPosition)
+        {
+            if (_camera == null)
+            {
+                groundPosition = default;
+                return false;
+            }
+
+            Transform cameraTransform = _camera.transform;
+            Vector3 forward = cameraTransform.forward;
+            if (Mathf.Abs(forward.y) <= Mathf.Epsilon)
+            {
+                groundPosition = default;
+                return false;
+            }
+
+            float distanceToGround = -cameraTransform.position.y / forward.y;
+            if (distanceToGround < 0f)
+            {
+                groundPosition = default;
+                return false;
+            }
+
+            groundPosition = cameraTransform.position + forward * distanceToGround;
+            groundPosition.y = 0f;
+            return true;
+        }
+
         private void Awake()
         {
             _camera = GetComponent<CinemachineCamera>();

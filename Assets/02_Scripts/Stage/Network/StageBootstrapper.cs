@@ -121,14 +121,20 @@ namespace Dev.Network
             if (runnerPlayer == PlayerRef.None)
                 PlayerRunner = Runner.Spawn(runnerPrefab, Vector3.zero - (Vector3.forward * 4f), Quaternion.identity);
             else
+            {
                 PlayerRunner = Runner.Spawn(runnerPrefab, Vector3.zero - (Vector3.forward * 4f), Quaternion.identity, runnerPlayer);
+                Runner.SetPlayerObject(runnerPlayer, PlayerRunner.Object);
+            }
             PlayerRunner.name = $"{Runner.name} - Player Runner";
 
             var builderPlayer = NetworkManager.Instance.Registry.GetPlayerRefFromPosition(PlayerPosition.Builder);
             if (builderPlayer == PlayerRef.None)
                 PlayerBuilder = Runner.Spawn(builderPrefab, Vector3.zero, Quaternion.identity);
             else
+            {
                 PlayerBuilder = Runner.Spawn(builderPrefab, Vector3.zero, Quaternion.identity, builderPlayer);
+                Runner.SetPlayerObject(builderPlayer, PlayerBuilder.Object);
+            }
             PlayerBuilder.name = $"{Runner.name} - Player Builder";
 
             Debug.Log($"{Runner.name} - Player spawned");
@@ -252,6 +258,29 @@ namespace Dev.Network
         {
             // 러너의 핑 가이드 참조 전달
             _pingSystem.InitializePingSystem(PlayerRunner.PingGuide);
+        }
+
+        public override void FixedUpdateNetwork()
+        {
+            if (!Runner.IsServer)
+                return;
+
+            const float aoiRadius = 128f;
+
+            foreach (PlayerRef player in Runner.ActivePlayers)
+            {
+                if (!Runner.TryGetPlayerObject(
+                        player,
+                        out NetworkObject playerObject))
+                {
+                    continue;
+                }
+
+                Runner.AddPlayerAreaOfInterest(
+                    player,
+                    playerObject.transform.position,
+                    aoiRadius);
+            }
         }
     }
 }

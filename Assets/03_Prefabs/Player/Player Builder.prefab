@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 5337325868287337551}
   - component: {fileID: 1425796438643454213}
   - component: {fileID: 8593551356125243380}
+  - component: {fileID: 9020526367619471675}
   m_Layer: 10
   m_Name: Player Builder
   m_TagString: Untagged
@@ -148,4 +149,22 @@ MonoBehaviour:
   - {fileID: 1348447139255107765}
   - {fileID: 5337325868287337551}
   - {fileID: 1425796438643454213}
+  - {fileID: 9020526367619471675}
   ForceRemoteRenderTimeframe: 0
+--- !u!114 &9020526367619471675
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2585997719371933276}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0

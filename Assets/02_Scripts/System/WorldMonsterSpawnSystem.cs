@@ -82,7 +82,7 @@ public class WorldMonsterSpawnSystem : NetworkSystemBase
             var monster = Runner.Spawn(prefab, randomSpawnPosition, Quaternion.identity, PlayerRef.None, (runner, obj) =>
             {
                 obj.name = $"{prefab.name}_{spawnSequence}";
-                obj.transform.SetParent(monsterParentTransform);
+                // obj.transform.SetParent(monsterParentTransform);
             });
 
             if (monster == null)

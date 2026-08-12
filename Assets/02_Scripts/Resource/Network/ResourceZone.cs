@@ -44,8 +44,11 @@ namespace Dev.Network
         [SerializeField] private GameObject _gasPrefab;
 
         private readonly List<Dev.Local.ResourceVisible> _localResources = new();
+        private readonly List<ResourceZoneEntry> _builtEntries = new();
         private int _builtSeed;
         private int _builtEntryCount = -1;
+        private Dev.ResourceType _builtResourceType;
+        private bool _hasBuiltState;
         private bool _missingVisualPrefabLogged;
 
         public Dev.ResourceType ResourceType => (Dev.ResourceType)Mathf.Clamp(
@@ -81,20 +84,24 @@ namespace Dev.Network
             if (!HasStateAuthority || entries == null)
                 return;
 
-            Seed = seed;
-            NetworkResourceType = (int)resourceType;
-            ResourceCount = Mathf.Min(entries.Count, MaxEntries);
+            int resourceCount = Mathf.Min(entries.Count, MaxEntries);
 
             NetworkArray<ResourceZoneEntry> networkEntries = Entries;
             for (int i = 0; i < MaxEntries; i++)
                 networkEntries[i] = default;
 
-            for (int i = 0; i < ResourceCount; i++)
+            for (int i = 0; i < resourceCount; i++)
                 networkEntries[i] = entries[i];
 
             NetworkArray<uint> collectedBits = CollectedBits;
             for (int i = 0; i < CollectionWordCount; i++)
                 collectedBits[i] = 0u;
+
+            // ResourceCount is used by proxies as the data-ready boundary. Set it
+            // only after the entries and collection state have been written.
+            Seed = seed;
+            NetworkResourceType = (int)resourceType;
+            ResourceCount = resourceCount;
         }
 
         public int CollectWithin(Territory territory)
@@ -176,13 +183,27 @@ namespace Dev.Network
             if (!IsInSimulation())
                 return;
 
+            Debug.Log(
+                $"ResourceZone Enter: {name}, " +
+                $"Simulation={Object.IsInSimulation}, " +
+                $"Type={ResourceType}, " +
+                $"Count={EntryCount}, " +
+                $"Prefab={GetLocalPrefab()?.name}");
+
             int entryCount = EntryCount;
-            if (_builtSeed == Seed && _builtEntryCount == entryCount)
+            // ResourceCount and Entries can arrive in different network updates.
+            // Do not cache a zero/default entry state as a completed build.
+            if (!AreEntriesReady(entryCount))
+                return;
+
+            if (IsBuiltStateCurrent(entryCount))
                 return;
 
             ClearLocalResources();
             _builtSeed = Seed;
             _builtEntryCount = entryCount;
+            _builtResourceType = ResourceType;
+            _builtEntries.Clear();
 
             GameObject prefab = GetLocalPrefab();
             if (prefab == null)
@@ -196,14 +217,19 @@ namespace Dev.Network
                 }
 
                 for (int i = 0; i < entryCount; i++)
+                {
                     _localResources.Add(null);
+                    _builtEntries.Add(Entries[i]);
+                }
 
+                _hasBuiltState = true;
                 return;
             }
 
             for (int i = 0; i < entryCount; i++)
             {
                 ResourceZoneEntry entry = Entries[i];
+                _builtEntries.Add(entry);
                 GameObject instance = Instantiate(prefab, entry.WorldPosition, Quaternion.identity);
                 instance.name = $"{name}_Resource_{i:00}";
                 instance.transform.localScale = Vector3.one * GetVisualScale(entry.Amount);
@@ -223,7 +249,48 @@ namespace Dev.Network
                 _localResources.Add(resource);
             }
 
+            _hasBuiltState = true;
+
             ApplyCollectionVisibility();
+        }
+
+        private bool AreEntriesReady(int entryCount)
+        {
+            if (entryCount <= 0)
+                return false;
+
+            for (int i = 0; i < entryCount; i++)
+            {
+                if (Entries[i].Amount <= 0)
+                    return false;
+            }
+
+            return true;
+        }
+
+        private bool IsBuiltStateCurrent(int entryCount)
+        {
+            if (!_hasBuiltState ||
+                _builtSeed != Seed ||
+                _builtEntryCount != entryCount ||
+                _builtResourceType != ResourceType ||
+                _builtEntries.Count != entryCount)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < entryCount; i++)
+            {
+                ResourceZoneEntry currentEntry = Entries[i];
+                ResourceZoneEntry builtEntry = _builtEntries[i];
+                if (currentEntry.Amount != builtEntry.Amount ||
+                    currentEntry.Position != builtEntry.Position)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private void ApplyCollectionVisibility()
@@ -247,6 +314,8 @@ namespace Dev.Network
             }
 
             _localResources.Clear();
+            _builtEntries.Clear();
+            _hasBuiltState = false;
             _builtEntryCount = -1;
         }
 

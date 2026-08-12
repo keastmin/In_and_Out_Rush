@@ -292,11 +292,11 @@ public class TerritorySystem : NetworkSystemBase
 
     private void ExpandTerritoryFromCurrentPath()
     {
-        Debug.Log($"{Runner.name} - Expanding territory with path: {playerPath.Count}");
+        Debug.Log($"{Runner.name} - Expanding territory with path: {calculationPath.Count}");
 
-        if (!Territory.TryExpand(playerPath))
+        if (!Territory.TryExpand(calculationPath))
         {
-            Debug.LogWarning($"{Runner.name} - Territory expansion rejected. Path point count: {playerPath.Count}");
+            Debug.LogWarning($"{Runner.name} - Territory expansion rejected. Path point count: {calculationPath.Count}");
             return;
         }
 

@@ -56,24 +56,33 @@ public class Centipede : WorldMonster
     {
         if (isPatrolling == false)
         {
+            StopMovement();
+
             var randomTargetPosition = patrolPivotPosition + Random.insideUnitSphere * patrolRadius;
             if (!IsPositionInRunnerSafeZone(randomTargetPosition))
             {
-                originalPosition = transform.position;
-                progressivePosition = transform.position;
+                originalPosition = RigidbodyPosition;
+                progressivePosition = RigidbodyPosition;
                 patrolTargetPosition = randomTargetPosition;
-                patrolTargetPosition.y = transform.position.y;
+                patrolTargetPosition.y = RigidbodyPosition.y;
                 elapsedTime = 0;
-                distance = Vector3.Distance(transform.position, randomTargetPosition);
+                distance = Vector3.Distance(RigidbodyPosition, randomTargetPosition);
                 isPatrolling = true;
                 // Debug.Log("!!: " + distance);
             }
         }
         else
         {
+            float deltaTime = Runner.DeltaTime;
+            if (deltaTime <= Mathf.Epsilon)
+            {
+                StopMovement();
+                return;
+            }
+
             elapsedTime += Runner.DeltaTime; // Fusion 고정 틱 델타타임 사용
             Vector3 direction = (patrolTargetPosition - originalPosition).normalized;
-            Vector3 nextProgressivePosition = progressivePosition + movementSpeed * Runner.DeltaTime * direction;
+            Vector3 nextProgressivePosition = progressivePosition + movementSpeed * deltaTime * direction;
             if (IsPositionInRunnerSafeZone(nextProgressivePosition))
             {
                 isPatrolling = false;
@@ -83,14 +92,16 @@ public class Centipede : WorldMonster
 
             progressivePosition = nextProgressivePosition;
             // Debug.Log("??: " + Vector3.Distance(progressivePosition, originalPosition));
-            if (distance < Vector3.Distance(progressivePosition, originalPosition))
+            if (distance <= Vector3.Distance(progressivePosition, originalPosition))
             {
                 isPatrolling = false;
+                StopMovement();
                 return;
             }
             var verticalDirection = Quaternion.AngleAxis(90f, Vector3.up) * direction;
             var verticalMovement = segmentAmplitude * Mathf.Sin(elapsedTime * segmentFrequency) * verticalDirection;
-            rigidBody.linearVelocity = progressivePosition + verticalMovement - transform.position;
+            Vector3 desiredPosition = progressivePosition + verticalMovement;
+            SetMovementVelocity((desiredPosition - RigidbodyPosition) / deltaTime);
             // TODO: 안닿게 하려면 길찾기 알고리즘이 필요함
             // if (territory.IsPointInPolygon(new Vector2(transform.position.x, transform.position.z)))
             // {

@@ -26,13 +26,13 @@ public class ShooterWorldMonster : WorldMonster
         if (IsTargetInRunnerSafeZone(playerTransform))
             return;
 
-        Vector3 toPlayer = playerTransform.position - transform.position;
+        Vector3 toPlayer = playerTransform.position - RigidbodyPosition;
         toPlayer.y = 0f;
         if (toPlayer.sqrMagnitude > detectionRadius * detectionRadius)
             return;
 
         Vector3 direction = GetFireDirection();
-        transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+        SetRigidbodyRotation(Quaternion.LookRotation(direction, Vector3.up));
 
         if (!_fireTimer.ExpiredOrNotRunning(Runner))
             return;

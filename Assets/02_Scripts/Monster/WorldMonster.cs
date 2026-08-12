@@ -14,6 +14,8 @@ public class WorldMonster : Monster
     protected Vector3 patrolTargetPosition;
     protected bool isPatrolling = false;
 
+    protected override bool ShouldDestroyInsideTerritory => true;
+
 #if UNITY_EDITOR
     void OnDrawGizmosSelected()
     {
@@ -46,31 +48,60 @@ public class WorldMonster : Monster
     {
         if (isPatrolling == false)
         {
+            StopMovement();
+
             var patrolPivotPosition2d = new Vector2(patrolPivotPosition.x, patrolPivotPosition.z);
             var randomTargetPosition = patrolPivotPosition2d + Random.insideUnitCircle * patrolRadius;
             if (!IsPositionInRunnerSafeZone(randomTargetPosition))
             {
-                patrolTargetPosition = new Vector3(randomTargetPosition.x, transform.position.y, randomTargetPosition.y);
+                patrolTargetPosition = new Vector3(randomTargetPosition.x, RigidbodyPosition.y, randomTargetPosition.y);
                 isPatrolling = true;
             }
+
+            return;
         }
-        else
+
+        float deltaTime = Runner.DeltaTime;
+        if (deltaTime <= Mathf.Epsilon)
         {
-            Vector3 direction = (patrolTargetPosition - transform.position).normalized;
-            Vector3 nextPosition = transform.position + Time.deltaTime * movementSpeed * direction;
-            if (IsPositionInRunnerSafeZone(nextPosition))
-            {
-                isPatrolling = false;
-                StopMovement();
-                return;
-            }
-
-            transform.position = nextPosition;
-
-            if (Vector3.Distance(transform.position, patrolTargetPosition) < arrivalThreshold)
-            {
-                isPatrolling = false; // 목표 위치에 도달하면 다시 순찰 시작
-            }
+            StopMovement();
+            return;
         }
+
+        Vector3 currentPosition = RigidbodyPosition;
+        Vector3 toTarget = patrolTargetPosition - currentPosition;
+        float distance = toTarget.magnitude;
+        if (distance <= arrivalThreshold)
+        {
+            isPatrolling = false;
+            StopMovement();
+            return;
+        }
+
+        Vector3 direction = toTarget / distance;
+        float targetDistance = Mathf.Max(0f, distance - arrivalThreshold);
+        float moveDistance = Mathf.Min(
+            Mathf.Max(0f, movementSpeed) * deltaTime,
+            targetDistance);
+
+        if (moveDistance <= Mathf.Epsilon)
+        {
+            isPatrolling = false;
+            StopMovement();
+            return;
+        }
+
+        Vector3 nextPosition = currentPosition + direction * moveDistance;
+        if (IsPositionInRunnerSafeZone(nextPosition))
+        {
+            isPatrolling = false;
+            StopMovement();
+            return;
+        }
+
+        SetMovementVelocity(direction * (moveDistance / deltaTime));
+
+        if (moveDistance >= targetDistance)
+            isPatrolling = false;
     }
 }

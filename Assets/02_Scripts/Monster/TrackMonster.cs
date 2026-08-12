@@ -68,15 +68,20 @@ public class TrackMonster : Monster, IFogOfWarAlwaysVisible
     protected virtual void FollowTrack()
     {
         if (track == null || track.Vertices == null || track.Vertices.Length == 0)
+        {
+            StopMovement();
             return;
+        }
 
         Vector3 target = track.Vertices[currentPointIndex];
-        Vector3 moveDir = target - transform.position;
+        Vector3 moveDir = target - RigidbodyPosition;
         moveDir.y = 0f;
         float distance = moveDir.magnitude;
 
         if (distance < arrivalThreshold)
         {
+            StopMovement();
+
             if (currentPointIndex == track.Vertices.Length - 1)
             {
                 CompleteLap();
@@ -87,16 +92,29 @@ public class TrackMonster : Monster, IFogOfWarAlwaysVisible
             return;
         }
 
-        Vector3 move = EffectiveMovementSpeed * Time.deltaTime * moveDir.normalized;
-        if (move.magnitude > distance)
-            move = moveDir;
+        float deltaTime = Runner.DeltaTime;
+        if (deltaTime <= Mathf.Epsilon)
+        {
+            StopMovement();
+            return;
+        }
 
-        transform.position += move;
-        transform.LookAt(target);
+        float moveDistance = Mathf.Min(
+            Mathf.Max(0f, EffectiveMovementSpeed) * deltaTime,
+            distance);
+        if (moveDistance <= Mathf.Epsilon)
+        {
+            StopMovement();
+            return;
+        }
+
+        Vector3 direction = moveDir / distance;
+        SetMovementVelocity(direction * (moveDistance / deltaTime));
+        SetRigidbodyRotation(Quaternion.LookRotation(direction, Vector3.up));
     }
 
     private float EffectiveMovementSpeed
-        => !_isInternalized && IsPositionOutsideTerritory(transform.position)
+        => !_isInternalized && IsPositionOutsideTerritory(RigidbodyPosition)
             ? movementSpeed * Mathf.Max(1f, _outsideTerritorySpeedMultiplier)
             : movementSpeed;
 

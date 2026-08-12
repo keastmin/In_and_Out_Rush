@@ -38,11 +38,12 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
     public override void Spawned()
     {
         base.Spawned();
+        rigidBody = GetComponent<Rigidbody>();
+
         if (Object.HasStateAuthority)
         {
             maxHealth = health;
             Health = maxHealth;
-            rigidBody = GetComponent<Rigidbody>();
             Initialize();
         }
     }
@@ -145,8 +146,26 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
 
     protected virtual void StopMovement()
     {
+        if (rigidBody == null)
+            return;
+
+        rigidBody.linearVelocity = Vector3.zero;
+        rigidBody.angularVelocity = Vector3.zero;
+    }
+
+    protected Vector3 RigidbodyPosition
+        => rigidBody != null ? rigidBody.position : transform.position;
+
+    protected void SetMovementVelocity(Vector3 velocity)
+    {
         if (rigidBody != null)
-            rigidBody.linearVelocity = Vector3.zero;
+            rigidBody.linearVelocity = velocity;
+    }
+
+    protected void SetRigidbodyRotation(Quaternion rotation)
+    {
+        if (rigidBody != null)
+            rigidBody.rotation = rotation;
     }
 
     protected bool IsPositionInRunnerSafeZone(Vector3 position)
@@ -168,9 +187,14 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
     protected bool IsPositionInTerritory(Vector2 position)
         => territory != null && territory.IsPointInPolygon(position);
 
+    protected virtual bool ShouldDestroyInsideTerritory => false;
+
     private bool TryDestroyInsideTerritory()
     {
-        var xzPosition = new Vector2(transform.position.x, transform.position.z);
+        if (!ShouldDestroyInsideTerritory)
+            return false;
+
+        var xzPosition = new Vector2(RigidbodyPosition.x, RigidbodyPosition.z);
         if (!IsPositionInTerritory(xzPosition))
             return false;
 
@@ -190,7 +214,7 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
             return;
         }
 
-        var xzPosition = new Vector2(transform.position.x, transform.position.z);
+        var xzPosition = new Vector2(RigidbodyPosition.x, RigidbodyPosition.z);
         if (territory.IsPointInPolygon(xzPosition))
         {
             DestroyMonster();

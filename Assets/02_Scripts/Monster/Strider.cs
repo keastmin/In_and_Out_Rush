@@ -38,11 +38,11 @@ public sealed class Strider : WorldMonster
             return;
 
         State = MovementState.Resting;
-        SlideTarget = transform.position;
+        SlideTarget = RigidbodyPosition;
         SlideDirection = Vector3.zero;
         RestTimer = default;
         isPatrolling = false;
-        patrolTargetPosition = transform.position;
+        patrolTargetPosition = RigidbodyPosition;
         StopMovement();
     }
 
@@ -90,8 +90,8 @@ public sealed class Strider : WorldMonster
 
             randomDirection.Normalize();
             Vector3 direction = new(randomDirection.x, 0f, randomDirection.y);
-            Vector3 targetPosition = transform.position + direction * slideDistance;
-            targetPosition.y = transform.position.y;
+            Vector3 targetPosition = RigidbodyPosition + direction * slideDistance;
+            targetPosition.y = RigidbodyPosition.y;
 
             if (IsPositionInRunnerSafeZone(targetPosition))
                 continue;
@@ -119,10 +119,18 @@ public sealed class Strider : WorldMonster
 
         FaceSlideDirection();
 
+        float deltaTime = Runner.DeltaTime;
+        if (deltaTime <= Mathf.Epsilon)
+        {
+            BeginRest();
+            return;
+        }
+
+        Vector3 currentPosition = RigidbodyPosition;
         Vector3 nextPosition = Vector3.MoveTowards(
-            transform.position,
+            currentPosition,
             SlideTarget,
-            slideSpeed * Runner.DeltaTime);
+            slideSpeed * deltaTime);
 
         if (IsPositionInRunnerSafeZone(nextPosition))
         {
@@ -130,20 +138,28 @@ public sealed class Strider : WorldMonster
             return;
         }
 
-        transform.position = nextPosition;
+        Vector3 displacement = nextPosition - currentPosition;
+        if (displacement.sqrMagnitude <= PositionEpsilonSqr)
+        {
+            BeginRest();
+            return;
+        }
+
+        SetMovementVelocity(displacement / deltaTime);
 
         if ((SlideTarget - nextPosition).sqrMagnitude <= PositionEpsilonSqr)
-            BeginRest();
+            BeginRest(false);
     }
 
-    private void BeginRest()
+    private void BeginRest(bool stopMovement = true)
     {
         State = MovementState.Resting;
-        SlideTarget = transform.position;
+        SlideTarget = RigidbodyPosition;
         SlideDirection = Vector3.zero;
         isPatrolling = false;
-        patrolTargetPosition = transform.position;
-        StopMovement();
+        patrolTargetPosition = RigidbodyPosition;
+        if (stopMovement)
+            StopMovement();
 
         RestTimer = _restDuration > 0f
             ? TickTimer.CreateFromSeconds(Runner, _restDuration)
@@ -165,6 +181,6 @@ public sealed class Strider : WorldMonster
     private void FaceSlideDirection()
     {
         if (SlideDirection.sqrMagnitude > PositionEpsilonSqr)
-            transform.rotation = Quaternion.LookRotation(SlideDirection, Vector3.up);
+            SetRigidbodyRotation(Quaternion.LookRotation(SlideDirection, Vector3.up));
     }
 }

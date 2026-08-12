@@ -23,7 +23,7 @@ namespace KIM.Dev
         private bool _isViewActive;
         private bool _isLocked;
 
-        public CinemachineCamera Camera => _camera;
+        public CinemachineCamera CineCamera => _camera;
 
         public bool TryGetGroundFocusPosition(out Vector3 groundPosition)
         {
@@ -105,11 +105,13 @@ namespace KIM.Dev
             if (_camera == null)
                 return;
 
-            Transform sourceTransform = sourceCamera.transform;
+            Camera outputCamera = Camera.main;
+            Transform sourceTransform = outputCamera != null
+                ? outputCamera.transform
+                : sourceCamera.transform;
             _camera.Lens = sourceCamera.Lens;
-            _camera.ForceCameraPosition(
-                sourceTransform.position,
-                sourceTransform.rotation);
+            ResetZoomState();
+            SetCameraPose(sourceTransform.position, sourceTransform.rotation);
         }
 
         public void SetLaboratoryTarget(Transform laboratoryTarget)
@@ -212,10 +214,21 @@ namespace KIM.Dev
 
         private void ResetRuntimeState()
         {
+            ResetZoomState();
+            _isLocked = false;
+        }
+
+        private void ResetZoomState()
+        {
             _cameraZoomDistance = 0f;
             _zoomTargetDistance = 0f;
             _zoomVelocity = 0f;
-            _isLocked = false;
+        }
+
+        private void SetCameraPose(Vector3 position, Quaternion rotation)
+        {
+            _camera.transform.SetPositionAndRotation(position, rotation);
+            _camera.ForceCameraPosition(position, rotation);
         }
 
         private static Vector3 GetMoveDirection(

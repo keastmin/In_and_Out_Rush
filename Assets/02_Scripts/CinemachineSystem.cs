@@ -57,10 +57,15 @@ public class CinemachineSystem : MonoBehaviour
         if (_isLookingAtRunner == isLookingAtRunner)
             return;
 
-        _isLookingAtRunner = isLookingAtRunner;
-        if (isLookingAtRunner)
+        SetRunnerObservation(isLookingAtRunner);
+    }
+
+    private void SetRunnerObservation(bool isActive)
+    {
+        _isLookingAtRunner = isActive;
+        if (isActive)
         {
-            _runnerController.ApplyObservationView(_builderController.Camera);
+            _runnerController.ApplyObservationView(_builderController.CineCamera);
             _builderController.SetViewActive(false);
             SetPriority(PlayerPosition.Runner);
         }

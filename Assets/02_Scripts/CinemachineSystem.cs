@@ -66,6 +66,7 @@ public class CinemachineSystem : MonoBehaviour
         }
         else
         {
+            _builderController.AdoptView(_playerRunnerCamera);
             SetPriority(PlayerPosition.Builder);
             _builderController.SetViewActive(true);
         }

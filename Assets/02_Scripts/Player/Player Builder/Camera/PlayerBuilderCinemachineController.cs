@@ -94,6 +94,24 @@ namespace KIM.Dev
             _isViewActive = isActive;
         }
 
+        public void AdoptView(CinemachineCamera sourceCamera)
+        {
+            if (sourceCamera == null)
+                return;
+
+            if (_camera == null)
+                _camera = GetComponent<CinemachineCamera>();
+
+            if (_camera == null)
+                return;
+
+            Transform sourceTransform = sourceCamera.transform;
+            _camera.Lens = sourceCamera.Lens;
+            _camera.ForceCameraPosition(
+                sourceTransform.position,
+                sourceTransform.rotation);
+        }
+
         public void SetLaboratoryTarget(Transform laboratoryTarget)
         {
             _laboratoryTarget = laboratoryTarget;

@@ -85,13 +85,14 @@ public class Stalker : WorldMonster
 
     private float GetPlanarSqrDistance(Vector3 targetPosition)
     {
-        Vector3 offset = targetPosition - transform.position;
+        Vector3 offset = targetPosition - RigidbodyPosition;
         offset.y = 0f;
         return offset.sqrMagnitude;
     }
 
     private void Attack()
     {
+        StopMovement();
         FaceTarget();
         _attackElapsedTime += Runner.DeltaTime * _attackSpeed;
         if (_attackElapsedTime >= 1f)
@@ -104,6 +105,7 @@ public class Stalker : WorldMonster
 
     public void StartChasing(Transform target)
     {
+        StopMovement();
         attackTargetTransform = target;
         _isChasing = true;
         _isAttacking = false;
@@ -118,22 +120,43 @@ public class Stalker : WorldMonster
             return;
         }
 
-        Vector3 toTarget = attackTargetPosition - transform.position;
+        float deltaTime = Runner.DeltaTime;
+        if (deltaTime <= Mathf.Epsilon)
+        {
+            StopMovement();
+            return;
+        }
+
+        Vector3 currentPosition = RigidbodyPosition;
+        Vector3 toTarget = attackTargetPosition - currentPosition;
         toTarget.y = 0f;
 
         float distance = toTarget.magnitude;
+        if (distance <= GetAttackRangeThreshold())
+        {
+            StopMovement();
+            return;
+        }
+
         float moveDistance = Mathf.Min(
-            movementSpeed * Runner.DeltaTime,
+            Mathf.Max(0f, movementSpeed) * deltaTime,
             Mathf.Max(0f, distance - GetAttackRangeThreshold()));
 
-        Vector3 nextPosition = transform.position + toTarget.normalized * moveDistance;
+        if (moveDistance <= Mathf.Epsilon)
+        {
+            StopMovement();
+            return;
+        }
+
+        Vector3 direction = toTarget / distance;
+        Vector3 nextPosition = currentPosition + direction * moveDistance;
         if (IsPositionInRunnerSafeZone(nextPosition))
         {
             StopChasing();
             return;
         }
 
-        transform.position = nextPosition;
+        SetMovementVelocity(direction * (moveDistance / deltaTime));
         FaceTarget();
     }
 
@@ -147,11 +170,11 @@ public class Stalker : WorldMonster
 
     private void FaceTarget()
     {
-        Vector3 lookDirection = attackTargetTransform.position - transform.position;
+        Vector3 lookDirection = attackTargetTransform.position - RigidbodyPosition;
         lookDirection.y = 0f;
 
         if (lookDirection.sqrMagnitude > 0.0001f)
-            transform.rotation = Quaternion.LookRotation(lookDirection, Vector3.up);
+            SetRigidbodyRotation(Quaternion.LookRotation(lookDirection, Vector3.up));
     }
 
     private void OnDrawGizmosSelected()

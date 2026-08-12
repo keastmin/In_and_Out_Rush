@@ -51,7 +51,7 @@ public class SandTomb : WorldMonster
         if (!HasStateAuthority || IsStunned) return;
         if (playerTransform == null) return;
 
-        var distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
+        var distanceToPlayer = Vector3.Distance(RigidbodyPosition, playerTransform.position);
         UpdateActivation(distanceToPlayer);
 
         if (State == SandTombState.Active)

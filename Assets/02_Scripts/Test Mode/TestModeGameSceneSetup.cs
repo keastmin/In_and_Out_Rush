@@ -63,7 +63,17 @@ namespace KIM.Dev
                 if (!joinedRunner.IsServer || joinedRunner.LocalPlayer != player || NetworkManager.Instance != null)
                     return;
 
-                NetworkManager networkManager = joinedRunner.Spawn(_networkManagerPrefab);
+                NetworkManager networkManager = joinedRunner.Spawn(
+                    _networkManagerPrefab,
+                    Vector3.zero,
+                    Quaternion.identity,
+                    PlayerRef.None,
+                    onBeforeSpawned: (_, networkObject) =>
+                    {
+                        NetworkManager manager = networkObject.GetComponent<NetworkManager>();
+                        manager?.SetTestModeVariable(true, _playerPosition);
+                    }
+                );
 
                 if (networkManager == null)
                 {
@@ -73,7 +83,7 @@ namespace KIM.Dev
                     return;
                 }
 
-                networkManager.SetTestModeVariable(true, _playerPosition);
+                // networkManager.SetTestModeVariable(true, _playerPosition);
             });
 
             // 입력을 제공하도록 설정

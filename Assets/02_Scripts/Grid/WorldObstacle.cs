@@ -6,10 +6,12 @@ namespace KIM.Dev
     public sealed class WorldObstacle : MonoBehaviour
     {
         [SerializeField] private Collider _collider;
+        [SerializeField] private Transform _despawnPoint;
         private Collider[] _colliders;
 
         public Collider Collider => _collider;
         public Vector3 Position => transform.position;
+        public Vector3 DespawnPosition => (_despawnPoint != null ? _despawnPoint : transform).position;
         public Bounds Bounds => CreateBounds();
         public Vector3 Size => Bounds.size;
 

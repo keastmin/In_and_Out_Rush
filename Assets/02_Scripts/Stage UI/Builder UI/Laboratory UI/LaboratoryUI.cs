@@ -316,7 +316,6 @@ namespace KIM.Dev
             if (!TrySendRunnerUpgradeRequest(request))
                 return;
 
-            ResourceSystem.Instance.DeductCost(cost);
             currentUpgradeCount = nextLevel;
             UpgradeTextChange(textUGUI, text, currentUpgradeCount);
         }

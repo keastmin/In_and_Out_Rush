@@ -478,14 +478,41 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     }
 #endif
 
-    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    private void RPC_RequestLaboratoryUpgrade(int upgradeType, int nextLevel, float amount)
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority, Channel = RpcChannel.Reliable)]
+    private void RPC_RequestLaboratoryUpgrade(
+        int upgradeType,
+        int nextLevel,
+        float amount,
+        Cost cost)
     {
-        if (!HasStateAuthority) return;
-        if (!Enum.IsDefined(typeof(RunnerLaboratoryUpgradeType), upgradeType)) return;
-        if (nextLevel <= 0 || amount <= 0f) return;
+        TryApplyLaboratoryUpgrade(
+            (RunnerLaboratoryUpgradeType)upgradeType,
+            nextLevel,
+            amount,
+            cost);
+    }
 
-        _upgradeHandler.ApplyLaboratoryUpgrade(this, (RunnerLaboratoryUpgradeType)upgradeType, amount);
+    private bool TryApplyLaboratoryUpgrade(
+        RunnerLaboratoryUpgradeType upgradeType,
+        int nextLevel,
+        float amount,
+        Cost cost)
+    {
+        if (!HasStateAuthority ||
+            upgradeType == RunnerLaboratoryUpgradeType.Weapon ||
+            !Enum.IsDefined(typeof(RunnerLaboratoryUpgradeType), upgradeType) ||
+            nextLevel <= 0 ||
+            amount <= 0f)
+        {
+            return false;
+        }
+
+        ResourceSystem resourceSystem = ResourceSystem.Instance;
+        if (resourceSystem == null || !resourceSystem.TryDeductCost(cost))
+            return false;
+
+        _upgradeHandler.ApplyLaboratoryUpgrade(this, upgradeType, amount);
+        return true;
     }
 
     // IDamageable
@@ -515,12 +542,26 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     // IRunnerLaboratoryUpgradeReceiver
     public bool TryRequestLaboratoryUpgrade(RunnerLaboratoryUpgradeRequest request)
     {
-        if (!Enum.IsDefined(typeof(RunnerLaboratoryUpgradeType), request.Type))
+        if (!Enum.IsDefined(typeof(RunnerLaboratoryUpgradeType), request.Type) ||
+            request.Type == RunnerLaboratoryUpgradeType.Weapon)
             return false;
         if (request.NextLevel <= 0 || request.Amount <= 0f)
             return false;
 
-        RPC_RequestLaboratoryUpgrade((int)request.Type, request.NextLevel, request.Amount);
+        if (HasStateAuthority)
+        {
+            return TryApplyLaboratoryUpgrade(
+                request.Type,
+                request.NextLevel,
+                request.Amount,
+                request.Cost);
+        }
+
+        RPC_RequestLaboratoryUpgrade(
+            (int)request.Type,
+            request.NextLevel,
+            request.Amount,
+            request.Cost);
         return true;
     }
 

@@ -158,7 +158,6 @@ namespace KIM.Dev
             if (!TrySendRunnerUpgradeRequest(request))
                 return;
 
-            ResourceSystem.Instance.DeductCost(cost);
             currentUpgradeCount = nextLevel;
             RefreshUpgradeDisplay(currentUpgradeCount, maxUpgradeCount, baseCost, levelText, mineralCostText, gasCostText);
         }

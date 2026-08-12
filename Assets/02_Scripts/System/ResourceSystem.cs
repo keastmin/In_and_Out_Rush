@@ -61,6 +61,21 @@ namespace KIM.Dev
             RPC_DeductCost(cost);
         }
 
+        public bool TryDeductCost(Cost cost)
+        {
+            if (!HasStateAuthority ||
+                cost.Mineral < 0 ||
+                cost.Gas < 0 ||
+                !IsResourceSufficient(cost))
+            {
+                return false;
+            }
+
+            Mineral -= cost.Mineral;
+            Gas -= cost.Gas;
+            return true;
+        }
+
         /// <summary>
         /// RPC로 자원 차감을 호스트에게 요청
         /// </summary>

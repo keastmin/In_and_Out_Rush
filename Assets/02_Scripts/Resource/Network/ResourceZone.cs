@@ -23,6 +23,7 @@ namespace Dev.Network
         public const int MaxEntries = 96;
 
         private const int CollectionWordCount = (MaxEntries + 31) / 32;
+        private const float DefaultLocalVisibilityRadius = 128f;
 
         [Networked]
         public int Seed { get; private set; }
@@ -42,6 +43,7 @@ namespace Dev.Network
         [Header("Local Resource Views")]
         [SerializeField] private GameObject _mineralPrefab;
         [SerializeField] private GameObject _gasPrefab;
+        [SerializeField, Min(0f)] private float _localVisibilityRadius = DefaultLocalVisibilityRadius;
 
         private readonly List<Dev.Local.ResourceVisible> _localResources = new();
         private readonly List<ResourceZoneEntry> _builtEntries = new();
@@ -50,6 +52,9 @@ namespace Dev.Network
         private Dev.ResourceType _builtResourceType;
         private bool _hasBuiltState;
         private bool _missingVisualPrefabLogged;
+        private bool _invalidVisualPrefabLogged;
+        private bool _networkSpawned;
+        private PlayerRunner _runnerReference;
 
         public Dev.ResourceType ResourceType => (Dev.ResourceType)Mathf.Clamp(
             NetworkResourceType,
@@ -129,38 +134,49 @@ namespace Dev.Network
         public override void Spawned()
         {
             base.Spawned();
+            _networkSpawned = true;
             EnsureLocalResources();
         }
 
         public override void Render()
         {
-            if (!IsInSimulation())
+            EnsureLocalResources();
+            UpdateLocalResourceVisibility();
+        }
+
+        private void LateUpdate()
+        {
+            // Fusion's Render/SimulationEnter callbacks are AOI-driven. Local
+            // visuals must also retry when the network snapshot and the local
+            // PlayerRunner become ready on different frames.
+            if (!CanReadNetworkState())
                 return;
 
             EnsureLocalResources();
-            ApplyCollectionVisibility();
+            UpdateLocalResourceVisibility();
         }
 
         public void SimulationEnter()
         {
             EnsureLocalResources();
-            ApplyCollectionVisibility();
+            UpdateLocalResourceVisibility();
         }
 
         public void SimulationExit()
         {
-            ClearLocalResources();
+            SetLocalResourcesActive(false);
         }
 
         public override void Despawned(NetworkRunner runner, bool hasState)
         {
+            _networkSpawned = false;
             ClearLocalResources();
             base.Despawned(runner, hasState);
         }
 
-        private bool IsInSimulation()
+        private bool CanReadNetworkState()
         {
-            return Object != null && Object.IsValid && Object.IsInSimulation;
+            return _networkSpawned && Object != null && Object.IsValid;
         }
 
         private bool IsCollected(int index)
@@ -180,15 +196,8 @@ namespace Dev.Network
 
         private void EnsureLocalResources()
         {
-            if (!IsInSimulation())
+            if (!CanReadNetworkState())
                 return;
-
-            Debug.Log(
-                $"ResourceZone Enter: {name}, " +
-                $"Simulation={Object.IsInSimulation}, " +
-                $"Type={ResourceType}, " +
-                $"Count={EntryCount}, " +
-                $"Prefab={GetLocalPrefab()?.name}");
 
             int entryCount = EntryCount;
             // ResourceCount and Entries can arrive in different network updates.
@@ -230,28 +239,11 @@ namespace Dev.Network
             {
                 ResourceZoneEntry entry = Entries[i];
                 _builtEntries.Add(entry);
-                GameObject instance = Instantiate(prefab, entry.WorldPosition, Quaternion.identity);
-                instance.name = $"{name}_Resource_{i:00}";
-                instance.transform.localScale = Vector3.one * GetVisualScale(entry.Amount);
-
-                if (!instance.TryGetComponent(out Dev.Local.ResourceVisible resource))
-                {
-                    Debug.LogWarning(
-                        $"Local resource prefab {prefab.name} does not contain {nameof(Dev.Local.ResourceVisible)}.",
-                        prefab);
-                    Destroy(instance);
-                    _localResources.Add(null);
-                    continue;
-                }
-
-                resource.Type = ResourceType;
-                resource.Amount = entry.Amount;
-                _localResources.Add(resource);
+                _localResources.Add(null);
             }
 
             _hasBuiltState = true;
-
-            ApplyCollectionVisibility();
+            UpdateLocalResourceVisibility();
         }
 
         private bool AreEntriesReady(int entryCount)
@@ -293,14 +285,118 @@ namespace Dev.Network
             return true;
         }
 
-        private void ApplyCollectionVisibility()
+        private void UpdateLocalResourceVisibility()
         {
+            if (!_hasBuiltState || !TryGetRunnerPosition(out Vector3 runnerPosition))
+                return;
+
+            GameObject prefab = GetLocalPrefab();
+            if (prefab == null)
+                return;
+
+            // Existing Resource Zone prefab assets were created before this field
+            // existed, so Unity can deserialize the missing value as zero. A zero
+            // radius would make every local resource invisible unless the runner
+            // stands on the exact resource position.
+            float visibilityRadius = _localVisibilityRadius > 0f
+                ? _localVisibilityRadius
+                : DefaultLocalVisibilityRadius;
+            float visibilityRadiusSqr = visibilityRadius * visibilityRadius;
             int count = Mathf.Min(EntryCount, _localResources.Count);
+
             for (int i = 0; i < count; i++)
+            {
+                ResourceZoneEntry entry = Entries[i];
+                Vector3 offset = entry.WorldPosition - runnerPosition;
+                offset.y = 0f;
+                bool shouldRender = !IsCollected(i) && offset.sqrMagnitude <= visibilityRadiusSqr;
+                Dev.Local.ResourceVisible resource = _localResources[i];
+
+                if (!shouldRender)
+                {
+                    if (resource != null)
+                        resource.gameObject.SetActive(false);
+
+                    continue;
+                }
+
+                if (resource == null)
+                {
+                    GameObject instance = Instantiate(prefab, entry.WorldPosition, Quaternion.identity);
+                    instance.name = $"{name}_Resource_{i:00}";
+                    instance.transform.localScale = Vector3.one * GetVisualScale(entry.Amount);
+
+                    if (!instance.TryGetComponent(out resource))
+                    {
+                        if (!_invalidVisualPrefabLogged)
+                        {
+                            Debug.LogWarning(
+                                $"Local resource prefab {prefab.name} does not contain {nameof(Dev.Local.ResourceVisible)}.",
+                                prefab);
+                            _invalidVisualPrefabLogged = true;
+                        }
+
+                        Destroy(instance);
+                        continue;
+                    }
+
+                    resource.Type = ResourceType;
+                    resource.Amount = entry.Amount;
+                    _localResources[i] = resource;
+                }
+
+                resource.gameObject.SetActive(true);
+            }
+        }
+
+        private bool TryGetRunnerPosition(out Vector3 runnerPosition)
+        {
+            runnerPosition = default;
+
+            // Prefer this client/server's own player object. StageBootstrapper's
+            // shared PlayerRunner can refer to another player's proxy (or to a
+            // non-input-authority runner), which would make local culling use a
+            // stale position while the camera is moving elsewhere.
+            if (Runner != null &&
+                Runner.LocalPlayer != PlayerRef.None &&
+                Runner.TryGetPlayerObject(Runner.LocalPlayer, out NetworkObject localPlayerObject) &&
+                localPlayerObject != null)
+            {
+                PlayerRunner localRunner = localPlayerObject.GetComponent<PlayerRunner>();
+                if (localRunner != null)
+                {
+                    _runnerReference = localRunner;
+                }
+                else
+                {
+                    runnerPosition = localPlayerObject.transform.position;
+                    return true;
+                }
+            }
+
+            StageBootstrapper stageBootstrapper = StageBootstrapper.Instance;
+            if (_runnerReference == null &&
+                stageBootstrapper != null &&
+                stageBootstrapper.PlayerRunner != null)
+                _runnerReference = stageBootstrapper.PlayerRunner;
+
+            if (_runnerReference == null)
+                _runnerReference = UnityEngine.Object.FindFirstObjectByType<PlayerRunner>();
+
+            if (_runnerReference == null)
+                return false;
+
+            runnerPosition = _runnerReference.transform.position;
+            return true;
+        }
+
+        private void SetLocalResourcesActive(bool isActive)
+        {
+            for (int i = 0; i < _localResources.Count; i++)
             {
                 Dev.Local.ResourceVisible resource = _localResources[i];
                 if (resource != null)
-                    resource.gameObject.SetActive(!IsCollected(i));
+                    resource.gameObject.SetActive(isActive);
             }
         }
 

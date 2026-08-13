@@ -30,6 +30,12 @@ namespace KIM.Dev
         private const string LobbyInitializationFailedMessage = "Failed to initialize the lobby. Please try again.";
         private const string LobbySceneName = "LobbyScene";
         private const string GameSceneName = "GameScene";
+        private const string GameWorldSceneName = "GameWorld";
+        private const string GamePresentationSceneName = "GamePresentation";
+        private const string GameRootSceneName = "GameRoot";
+        private const string GameWorldScenePath = "Assets/01_Scenes/GameWorld.unity";
+        private const string GamePresentationScenePath = "Assets/01_Scenes/GamePresentation.unity";
+        private const string GameRootScenePath = "Assets/01_Scenes/GameRoot.unity";
         private const float LobbyInitializationTimeoutSeconds = 10f;
 
         public static MatchMaker Instance { get; private set; } // 싱글턴 인스턴스
@@ -56,6 +62,7 @@ namespace KIM.Dev
         private bool _hostShutdownWasIntentional;
         private bool _hostShutdownWasGame;
         private bool _quitApplicationAfterShutdown;
+        private bool _isGameSceneLoading;
         private string _pendingRemoteShutdownMessage;
 
         private void Awake()
@@ -248,8 +255,56 @@ namespace KIM.Dev
         // 대기실에서 게임 시작 버튼 클릭 시 호출되는 메서드
         public async void OnClickStartButton()
         {
-            var sceneRef = SceneRef.FromIndex(SceneUtility.GetBuildIndexByScenePath("Assets/01_Scenes/GameScene.unity"));
-            await Runner.LoadScene(sceneRef, LoadSceneMode.Single);
+            if (Runner == null || !Runner.IsServer || _isGameSceneLoading)
+                return;
+
+            if (AreAdditiveGameScenesLoaded())
+                return;
+
+            _isGameSceneLoading = true;
+            try
+            {
+                await LoadAdditiveGameScenesAsync();
+            }
+            finally
+            {
+                _isGameSceneLoading = false;
+            }
+        }
+
+        private async Task LoadAdditiveGameScenesAsync()
+        {
+            if (!await LoadSceneByPathAsync(GameWorldScenePath, LoadSceneMode.Single))
+                return;
+            if (!await LoadSceneByPathAsync(GamePresentationScenePath, LoadSceneMode.Additive))
+                return;
+            await LoadSceneByPathAsync(GameRootScenePath, LoadSceneMode.Additive);
+        }
+
+        private async Task<bool> LoadSceneByPathAsync(string scenePath, LoadSceneMode loadMode)
+        {
+            int buildIndex = SceneUtility.GetBuildIndexByScenePath(scenePath);
+            if (buildIndex < 0)
+            {
+                Debug.LogError($"Scene is missing from Build Settings: {scenePath}");
+                return false;
+            }
+
+            await Runner.LoadScene(SceneRef.FromIndex(buildIndex), loadMode);
+            return true;
+        }
+
+        private static bool AreAdditiveGameScenesLoaded()
+        {
+            return IsSceneLoaded(GameWorldSceneName) &&
+                   IsSceneLoaded(GamePresentationSceneName) &&
+                   IsSceneLoaded(GameRootSceneName);
+        }
+
+        private static bool IsSceneLoaded(string sceneName)
+        {
+            Scene scene = SceneManager.GetSceneByName(sceneName);
+            return scene.IsValid() && scene.isLoaded;
         }
 
         public async void QuitGame()
@@ -330,6 +385,9 @@ namespace KIM.Dev
 
         private bool IsInGame()
         {
+            if (AreAdditiveGameScenesLoaded())
+                return true;
+
             Scene currentScene = SceneManager.GetActiveScene();
             if (currentScene.name == LobbySceneName)
                 return false;
@@ -409,7 +467,8 @@ namespace KIM.Dev
 
         public void OnSceneLoadDone(NetworkRunner runner)
         {
-            if (GameManager.Instance != null && SceneManager.GetActiveScene().name == GameSceneName)
+            if (GameManager.Instance != null &&
+                (SceneManager.GetActiveScene().name == GameSceneName || AreAdditiveGameScenesLoaded()))
             {
                 GameManager.Instance.SetGameMode(GameState.Game);
                 OnStartGame?.Invoke();

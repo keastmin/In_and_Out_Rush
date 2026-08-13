@@ -121,10 +121,10 @@ namespace Dev.Network
                 _territorySystem = StageBootstrapper.Instance.TerritorySystem;
 
             if (_territorySystem == null)
-                _territorySystem = UnityEngine.Object.FindFirstObjectByType<TerritorySystem>();
+                _territorySystem = UnityEngine.Object.FindFirstObjectByType<TerritorySystem>(FindObjectsInactive.Include);
 
             if (_resourceView == null)
-                _resourceView = UnityEngine.Object.FindFirstObjectByType<Local.ResourceView>();
+                _resourceView = UnityEngine.Object.FindFirstObjectByType<Local.ResourceView>(FindObjectsInactive.Include);
 
             ResolveWorldObstacles();
 
@@ -138,7 +138,7 @@ namespace Dev.Network
                 StageBootstrapper.Instance.Grid.TryGetComponent(out _obstacleSpawner);
 
             if (_obstacleSpawner == null)
-                _obstacleSpawner = UnityEngine.Object.FindFirstObjectByType<InfiniteGridObstacleSpawner>();
+                _obstacleSpawner = UnityEngine.Object.FindFirstObjectByType<InfiniteGridObstacleSpawner>(FindObjectsInactive.Include);
 
             if (_worldObstacles == null && _obstacleSpawner != null)
                 InitializeWorldObstacles(_obstacleSpawner.SpawnedObstacles);

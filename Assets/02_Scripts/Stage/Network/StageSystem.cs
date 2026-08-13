@@ -15,6 +15,11 @@ namespace Dev.Network
         private bool _isGameOverPresented = false;
         private bool _isReturningToTitle = false;
 
+        public void SetStageResultView(StageResultView stageResultView)
+        {
+            _stageResultView = stageResultView;
+        }
+
         public void Victory()
         {
             //if (Object.HasStateAuthority)

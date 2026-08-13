@@ -97,7 +97,14 @@ namespace Dev.Network
         }
 
         private bool IsSessionReady()
-            => NetworkManager.Instance != null && NetworkManager.Instance.Registry != null;
+        {
+            if (!AreAdditiveSceneReferencesReady())
+                ResolveAdditiveSceneReferences();
+
+            return NetworkManager.Instance != null &&
+                   NetworkManager.Instance.Registry != null &&
+                   AreAdditiveSceneReferencesReady();
+        }
 
         private bool ArePlayersReady()
             => PlayerRunner != null && PlayerBuilder != null;

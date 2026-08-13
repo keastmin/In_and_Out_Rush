@@ -1,4 +1,6 @@
 using Fusion;
+using System.Collections.Generic;
+using Dev.Local;
 using UnityEngine;
 using KIM.Dev;
 
@@ -17,6 +19,106 @@ namespace Dev.Network
         [HideInInspector] [Networked] public Laboratory NetworkLaboratory { get; private set; }
         private Laboratory _localLaboratory;
         private TowerBuildManager _towerBuildManager;
+        private bool _additiveSceneReferencesReady;
+
+        private void Awake()
+        {
+            ResolveAdditiveSceneReferences();
+        }
+
+        private void ResolveAdditiveSceneReferences()
+        {
+            _grid ??= FindFirstObjectByType<InfiniteGrid>(FindObjectsInactive.Include);
+            _obstacleSpawner ??= FindFirstObjectByType<InfiniteGridObstacleSpawner>(FindObjectsInactive.Include);
+            _pingSystem ??= FindFirstObjectByType<PingSystem>(FindObjectsInactive.Include);
+            _towerUpgradeManager ??= FindFirstObjectByType<TowerUpgradeManager>(FindObjectsInactive.Include);
+            _fogOfWarSystem ??= FindFirstObjectByType<FogOfWarSystem>(FindObjectsInactive.Include);
+            CinemachineSystem ??= FindFirstObjectByType<global::CinemachineSystem>(FindObjectsInactive.Include);
+            UIController ??= FindFirstObjectByType<global::StageUIController>(FindObjectsInactive.Include);
+            TerritoryVisible ??= FindFirstObjectByType<Dev.Local.TerritoryVisible>(FindObjectsInactive.Include);
+            TrackVisible ??= FindFirstObjectByType<Dev.Local.TrackVisible>(FindObjectsInactive.Include);
+            ResourceSystem ??= GetComponentInChildren<KIM.Dev.ResourceSystem>(true);
+            ResourceSystem ??= FindFirstObjectByType<KIM.Dev.ResourceSystem>(FindObjectsInactive.Include);
+
+            _store ??= FindFirstObjectByType<Store>(FindObjectsInactive.Include);
+            _stageSystem ??= FindFirstObjectByType<StageSystem>(FindObjectsInactive.Include);
+            _resourceSpawnSystem ??= FindFirstObjectByType<ResourceSpawnSystem>(FindObjectsInactive.Include);
+            timeSystem ??= FindFirstObjectByType<TimeSystem>(FindObjectsInactive.Include);
+            roundTrackSystem ??= FindFirstObjectByType<TrackSystem>(FindObjectsInactive.Include);
+            territorySystem ??= FindFirstObjectByType<TerritorySystem>(FindObjectsInactive.Include);
+            trackMonsterSpawnSystem ??= FindFirstObjectByType<TrackMonsterSpawnSystem>(FindObjectsInactive.Include);
+            worldMonsterSpawnSystem ??= FindFirstObjectByType<WorldMonsterSpawnSystem>(FindObjectsInactive.Include);
+            sacredZoneSystem ??= FindFirstObjectByType<SacredZoneSystem>(FindObjectsInactive.Include);
+            _stageResultView ??= FindFirstObjectByType<StageResultView>(FindObjectsInactive.Include);
+
+            NetworkSystemBase[] discoveredSystems = FindObjectsByType<NetworkSystemBase>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None);
+            if (discoveredSystems.Length > 0)
+                systems = OrderSystems(discoveredSystems);
+
+            _stageSystem?.SetStageResultView(_stageResultView);
+            _additiveSceneReferencesReady = HasRequiredAdditiveSceneReferences();
+        }
+
+        private bool AreAdditiveSceneReferencesReady()
+        {
+            return _additiveSceneReferencesReady;
+        }
+
+        private bool HasRequiredAdditiveSceneReferences()
+        {
+            return _grid != null &&
+                   _obstacleSpawner != null &&
+                   _pingSystem != null &&
+                   _towerUpgradeManager != null &&
+                   _fogOfWarSystem != null &&
+                   CinemachineSystem != null &&
+                   UIController != null &&
+                   TerritoryVisible != null &&
+                   TrackVisible != null &&
+                   ResourceSystem != null &&
+                   _store != null &&
+                   _stageSystem != null &&
+                   _resourceSpawnSystem != null &&
+                   timeSystem != null &&
+                   roundTrackSystem != null &&
+                   territorySystem != null &&
+                   trackMonsterSpawnSystem != null &&
+                   worldMonsterSpawnSystem != null &&
+                   sacredZoneSystem != null &&
+                   _stageResultView != null &&
+                   systems != null &&
+                   systems.Length > 0;
+        }
+
+        private static NetworkSystemBase[] OrderSystems(NetworkSystemBase[] discoveredSystems)
+        {
+            var orderedSystems = new List<NetworkSystemBase>(discoveredSystems.Length);
+            AddSystem<TerritorySystem>(orderedSystems, discoveredSystems);
+            AddSystem<TrackSystem>(orderedSystems, discoveredSystems);
+            AddSystem<TrackMonsterSpawnSystem>(orderedSystems, discoveredSystems);
+            AddSystem<WorldMonsterSpawnSystem>(orderedSystems, discoveredSystems);
+
+            for (int i = 0; i < discoveredSystems.Length; i++)
+            {
+                NetworkSystemBase system = discoveredSystems[i];
+                if (system != null && !orderedSystems.Contains(system))
+                    orderedSystems.Add(system);
+            }
+
+            return orderedSystems.ToArray();
+        }
+
+        private static void AddSystem<T>(List<NetworkSystemBase> orderedSystems, NetworkSystemBase[] discoveredSystems)
+            where T : NetworkSystemBase
+        {
+            for (int i = 0; i < discoveredSystems.Length; i++)
+            {
+                if (discoveredSystems[i] is T typedSystem)
+                    orderedSystems.Add(typedSystem);
+            }
+        }
 
         private void KIMInitializeHost()
         {

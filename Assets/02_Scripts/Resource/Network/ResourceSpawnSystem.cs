@@ -7,6 +7,9 @@ namespace Dev.Network
 {
     public class ResourceSpawnSystem : System, IWorldObstacleConsumer
     {
+        private const float DefaultResourceInterestRadius = 128f;
+        private const float DefaultResourceInterestRefreshInterval = 0.25f;
+
         private readonly struct PlacedResource
         {
             public readonly Vector3 Position;
@@ -26,8 +29,9 @@ namespace Dev.Network
         [Header("Resource Settings")]
         [SerializeField] private ResourcePlacementSettings _mineralPlacementSettings;
         [SerializeField] private ResourcePlacementSettings _gasPlacementSettings;
+        // Kept for compatibility with the existing Core prefab and editor builder.
+        // Resource generation now spawns the individual resource prefabs below.
         [SerializeField] private NetworkObject _resourceZonePrefab;
-        [SerializeField] private int _randomSeed = 20260808;
 
         [Header("Spawn Area")]
         [SerializeField, Min(0f)] private float _worldSpawnRadius = 250f;
@@ -42,8 +46,8 @@ namespace Dev.Network
         [SerializeField, Min(0f)] private float _mineralObstaclePadding = 0f;
 
         private readonly List<PlacedResource> _placedResources = new();
-        private readonly List<ResourceZone> _resourceZones = new();
-        private readonly Dictionary<ResourceZone, HashSet<PlayerRef>> _forcedInterestPlayers = new();
+        private readonly List<ResourceVisible> _spawnedResources = new();
+        private readonly Dictionary<ResourceVisible, HashSet<PlayerRef>> _forcedInterestPlayers = new();
         private IReadOnlyList<WorldObstacle> _worldObstacles;
         private Vector3 _startPosition;
         private bool _hasStartPosition;
@@ -79,7 +83,7 @@ namespace Dev.Network
             RefreshClientResourceInterest();
             _resourceInterestRefreshTimer = TickTimer.CreateFromSeconds(
                 Runner,
-                _resourceInterestRefreshInterval);
+                GetResourceInterestRefreshInterval());
         }
 
         protected override void OnTearDown()
@@ -87,6 +91,7 @@ namespace Dev.Network
             if (_territorySystem != null)
                 _territorySystem.OnTerritoryExpandedEvent -= HandleTerritoryExpanded;
 
+            DespawnGeneratedResources();
             _forcedInterestPlayers.Clear();
             _resourceInterestRefreshTimer = default;
 
@@ -99,7 +104,9 @@ namespace Dev.Network
                 return;
 
             RefreshClientResourceInterest();
-            _resourceInterestRefreshTimer = TickTimer.CreateFromSeconds(Runner, _resourceInterestRefreshInterval);
+            _resourceInterestRefreshTimer = TickTimer.CreateFromSeconds(
+                Runner,
+                GetResourceInterestRefreshInterval());
         }
 
         private void ResolveReferences()
@@ -139,9 +146,12 @@ namespace Dev.Network
 
         public void GenerateResources()
         {
-            DespawnGeneratedZones();
+            if (!HasStateAuthority)
+                return;
+
+            DespawnGeneratedResources();
             _placedResources.Clear();
-            _resourceZones.Clear();
+            _spawnedResources.Clear();
             SpawnResourcesByZone(_mineralPlacementSettings);
             SpawnResourcesByZone(_gasPlacementSettings);
         }
@@ -190,7 +200,7 @@ namespace Dev.Network
                     }
 
                     var zonePlacedResources = new List<PlacedResource>(zoneChunks.Count);
-                    var zoneEntries = new List<ResourceZoneEntry>(zoneChunks.Count);
+                    var zoneResources = new List<ResourceVisible>(zoneChunks.Count);
 
                     for (int i = 0; i < zoneChunks.Count; i++)
                     {
@@ -210,31 +220,31 @@ namespace Dev.Network
                             continue;
                         }
 
+                        if (!TrySpawnResource(
+                                settings.ResourceType,
+                                chunk,
+                                position,
+                                out ResourceVisible resource))
+                        {
+                            continue;
+                        }
+
                         zonePlacedResources.Add(new PlacedResource(position, chunk.MinDistance));
-                        zoneEntries.Add(new ResourceZoneEntry(position, chunk.Amount));
+                        zoneResources.Add(resource);
                     }
 
-                    if (zoneEntries.Count == 0)
+                    if (zoneResources.Count == 0)
                     {
                         skippedZoneCount++;
                         continue;
                     }
 
-                    if (!SpawnResourceZone(
-                        settings.ResourceType,
-                        ringIndex,
-                        sectorIndex,
-                        zoneEntries))
+                    for (int i = 0; i < zoneResources.Count; i++)
                     {
-                        skippedZoneCount++;
-                        continue;
-                    }
-
-                    for (int i = 0; i < zoneEntries.Count; i++)
-                    {
+                        RegisterSpawnedResource(zoneResources[i]);
                         _placedResources.Add(zonePlacedResources[i]);
                         spawnedCount++;
-                        spawnedAmount += zoneEntries[i].Amount;
+                        spawnedAmount += zoneResources[i].Amount;
                     }
                 }
             }
@@ -251,10 +261,19 @@ namespace Dev.Network
             for (int i = 0; i < chunks.Count; i++)
             {
                 ResourceChunkPlacementSettings chunk = chunks[i];
-                if (!chunk.Prefab.TryGetComponent<ResourceVisible>(out _))
+                if (chunk == null || chunk.Prefab == null)
                 {
                     Debug.LogWarning(
-                        $"{resourceType} prefab {chunk.Prefab.name} does not contain {nameof(ResourceVisible)}.");
+                        $"{resourceType} resource chunk is missing its prefab.");
+                    return false;
+                }
+
+                if (!chunk.Prefab.TryGetComponent<NetworkObject>(out _) ||
+                    !chunk.Prefab.TryGetComponent<ResourceVisible>(out _))
+                {
+                    Debug.LogWarning(
+                        $"{resourceType} prefab {chunk.Prefab.name} must contain both " +
+                        $"{nameof(NetworkObject)} and {nameof(ResourceVisible)}.");
                     return false;
                 }
             }
@@ -403,86 +422,55 @@ namespace Dev.Network
             return true;
         }
 
-        private bool SpawnResourceZone(
+        private bool TrySpawnResource(
             ResourceType resourceType,
-            int ringIndex,
-            int sectorIndex,
-            IReadOnlyList<ResourceZoneEntry> entries)
+            ResourceChunkPlacementSettings chunk,
+            Vector3 position,
+            out ResourceVisible resource)
         {
-            if (_resourceZonePrefab == null)
+            resource = null;
+            if (Runner == null || !HasStateAuthority || chunk == null || chunk.Prefab == null)
+                return false;
+
+            if (!chunk.Prefab.TryGetComponent(out NetworkObject resourcePrefab))
             {
-                Debug.LogError(
-                    $"{nameof(ResourceSpawnSystem)} requires a {nameof(ResourceZone)} prefab.",
-                    this);
+                Debug.LogWarning(
+                    $"{resourceType} prefab {chunk.Prefab.name} does not contain {nameof(NetworkObject)}.",
+                    chunk.Prefab);
                 return false;
             }
 
-            Vector3 zonePosition = CalculateZoneCenter(resourceType, ringIndex, sectorIndex);
-            int seed = CreateZoneSeed(resourceType, ringIndex, sectorIndex);
             NetworkObject spawnedObject = Runner.Spawn(
-                _resourceZonePrefab,
-                zonePosition,
+                resourcePrefab,
+                position,
                 Quaternion.identity,
-                PlayerRef.None,
-                (_, networkObject) =>
-                {
-                    if (!networkObject.TryGetComponent(out ResourceZone resourceZone))
-                        return;
-
-                    resourceZone.InitializeState(resourceType, seed, entries);
-                });
-
+                PlayerRef.None);
             if (spawnedObject == null)
                 return false;
 
-            if (!spawnedObject.TryGetComponent(out ResourceZone spawnedZone))
+            if (!spawnedObject.TryGetComponent(out resource))
             {
-                Debug.LogError(
-                    $"Resource zone prefab {_resourceZonePrefab.name} does not contain {nameof(ResourceZone)}.",
-                    _resourceZonePrefab);
+                Debug.LogWarning(
+                    $"Spawned {resourceType} prefab {chunk.Prefab.name} does not contain " +
+                    $"{nameof(ResourceVisible)}.",
+                    chunk.Prefab);
                 Runner.Despawn(spawnedObject);
                 return false;
             }
 
-            _resourceZones.Add(spawnedZone);
+            resource.Type = resourceType;
+            resource.Amount = chunk.Amount;
             return true;
         }
 
-        private Vector3 CalculateZoneCenter(
-            ResourceType resourceType,
-            int ringIndex,
-            int sectorIndex)
+        private void RegisterSpawnedResource(ResourceVisible resource)
         {
-            ResourcePlacementSettings settings = resourceType == ResourceType.Mineral
-                ? _mineralPlacementSettings
-                : _gasPlacementSettings;
+            if (resource == null)
+                return;
 
-            if (settings == null)
-                return Vector3.zero;
-
-            float innerRadius = _worldSpawnRadius * Mathf.Sqrt((float)ringIndex / settings.RingCount);
-            float outerRadius = _worldSpawnRadius * Mathf.Sqrt((float)(ringIndex + 1) / settings.RingCount);
-            float startAngle = Mathf.PI * 2f * sectorIndex / settings.SectorCount;
-            float endAngle = Mathf.PI * 2f * (sectorIndex + 1) / settings.SectorCount;
-            float radius = (innerRadius + outerRadius) * 0.5f;
-            float angle = (startAngle + endAngle) * 0.5f;
-
-            return new Vector3(
-                Mathf.Cos(angle) * radius,
-                0f,
-                Mathf.Sin(angle) * radius);
-        }
-
-        private int CreateZoneSeed(ResourceType resourceType, int ringIndex, int sectorIndex)
-        {
-            unchecked
-            {
-                int seed = _randomSeed;
-                seed = seed * 31 + (int)resourceType;
-                seed = seed * 31 + ringIndex;
-                seed = seed * 31 + sectorIndex;
-                return seed;
-            }
+            resource.OnCollected -= HandleResourceCollected;
+            resource.OnCollected += HandleResourceCollected;
+            _spawnedResources.Add(resource);
         }
 
         private void BindTerritoryExpansion()
@@ -499,98 +487,193 @@ namespace Dev.Network
             if (!HasStateAuthority || territory == null)
                 return;
 
-            int mineralAmount = 0;
-            int gasAmount = 0;
-
-            for (int i = 0; i < _resourceZones.Count; i++)
+            for (int i = _spawnedResources.Count - 1; i >= 0; i--)
             {
-                ResourceZone resourceZone = _resourceZones[i];
-                if (resourceZone == null)
-                    continue;
-
-                int collectedAmount = resourceZone.CollectWithin(territory);
-                if (resourceZone.ResourceType == ResourceType.Mineral)
-                    mineralAmount += collectedAmount;
-                else
-                    gasAmount += collectedAmount;
-            }
-
-            if (_resourceSystem == null)
-            {
-                if (mineralAmount > 0 || gasAmount > 0)
+                ResourceVisible resource = _spawnedResources[i];
+                if (!IsSpawnedResourceValid(resource))
                 {
-                    Debug.LogWarning(
-                        $"Resource collection skipped because {nameof(ResourceSystem)} is missing.",
-                        this);
+                    RemoveSpawnedResource(resource);
+                    continue;
                 }
 
-                return;
-            }
-
-            if (mineralAmount > 0)
-            {
-                _resourceSystem.RPC_GetMineral(mineralAmount);
-                _resourceView?.SetMineral(_resourceSystem.Mineral);
-            }
-
-            if (gasAmount > 0)
-            {
-                _resourceSystem.RPC_GetGas(gasAmount);
-                _resourceView?.SetGas(_resourceSystem.Gas);
+                Vector2 resourcePosition = new(resource.transform.position.x, resource.transform.position.z);
+                if (territory.IsPointInPolygon(resourcePosition))
+                    resource.Collect();
             }
         }
 
-        private void DespawnGeneratedZones()
+        private void HandleResourceCollected(
+            ResourceType type,
+            int amount,
+            ResourceVisible resource,
+            object context)
         {
-            if (!HasStateAuthority || Runner == null)
-                return;
+            RemoveSpawnedResource(resource);
 
-            for (int i = _resourceZones.Count - 1; i >= 0; i--)
+            if (_resourceSystem == null)
             {
-                ResourceZone resourceZone = _resourceZones[i];
-                if (resourceZone != null && resourceZone.Object != null && resourceZone.Object.IsValid)
-                    Runner.Despawn(resourceZone.Object);
+                Debug.LogWarning(
+                    $"Resource collection skipped because {nameof(ResourceSystem)} is missing.",
+                    this);
+            }
+            else
+            {
+                switch (type)
+                {
+                    case ResourceType.Mineral:
+                        _resourceSystem.RPC_GetMineral(amount);
+                        _resourceView?.SetMineral(_resourceSystem.Mineral);
+                        break;
+                    case ResourceType.Gas:
+                        _resourceSystem.RPC_GetGas(amount);
+                        _resourceView?.SetGas(_resourceSystem.Gas);
+                        break;
+                }
             }
 
+            if (resource != null &&
+                resource.Object != null &&
+                resource.Object.IsValid &&
+                Runner != null &&
+                HasStateAuthority)
+            {
+                Runner.Despawn(resource.Object);
+            }
+        }
+
+        private void DespawnGeneratedResources()
+        {
+            bool canDespawn = HasStateAuthority && Runner != null;
+            for (int i = _spawnedResources.Count - 1; i >= 0; i--)
+            {
+                ResourceVisible resource = _spawnedResources[i];
+                if (resource != null)
+                {
+                    resource.OnCollected -= HandleResourceCollected;
+
+                    if (canDespawn && resource.Object != null && resource.Object.IsValid)
+                        Runner.Despawn(resource.Object);
+                }
+            }
+
+            _spawnedResources.Clear();
             _forcedInterestPlayers.Clear();
+        }
+
+        private void RemoveSpawnedResource(ResourceVisible resource)
+        {
+            if (resource != null)
+            {
+                resource.OnCollected -= HandleResourceCollected;
+                _forcedInterestPlayers.Remove(resource);
+            }
+
+            _spawnedResources.Remove(resource);
+        }
+
+        private static bool IsSpawnedResourceValid(ResourceVisible resource)
+        {
+            return resource != null &&
+                   resource.Object != null &&
+                   resource.Object.IsValid;
         }
 
         private void RefreshClientResourceInterest()
         {
-            float interestRadius = Mathf.Max(0.1f, _resourceInterestRadius);
+            if (Runner == null)
+                return;
 
-            for (int zoneIndex = 0; zoneIndex < _resourceZones.Count; zoneIndex++)
+            float interestRadius = GetResourceInterestRadius();
+            float interestRadiusSqr = interestRadius * interestRadius;
+            var activePlayers = new HashSet<PlayerRef>();
+            foreach (PlayerRef player in Runner.ActivePlayers)
+                activePlayers.Add(player);
+
+            for (int resourceIndex = _spawnedResources.Count - 1; resourceIndex >= 0; resourceIndex--)
             {
-                ResourceZone resourceZone = _resourceZones[zoneIndex];
-                if (resourceZone == null || resourceZone.Object == null || !resourceZone.Object.IsValid)
-                    continue;
-
-                if (!_forcedInterestPlayers.TryGetValue(resourceZone, out HashSet<PlayerRef> forcedPlayers))
+                ResourceVisible resource = _spawnedResources[resourceIndex];
+                if (!IsSpawnedResourceValid(resource))
                 {
-                    forcedPlayers = new HashSet<PlayerRef>();
-                    _forcedInterestPlayers.Add(resourceZone, forcedPlayers);
+                    RemoveSpawnedResource(resource);
+                    continue;
                 }
 
-                foreach (PlayerRef player in Runner.ActivePlayers)
+                if (!_forcedInterestPlayers.TryGetValue(resource, out HashSet<PlayerRef> forcedPlayers))
                 {
-                    if (!Runner.TryGetPlayerObject(player, out NetworkObject playerObject))
-                        continue;
+                    forcedPlayers = new HashSet<PlayerRef>();
+                    _forcedInterestPlayers.Add(resource, forcedPlayers);
+                }
 
-                    bool shouldForceInterest = resourceZone.HasUncollectedResourceWithin(
-                        playerObject.transform.position,
-                        interestRadius);
+                foreach (PlayerRef player in activePlayers)
+                {
+                    if (!TryGetPlayerPosition(player, out Vector3 playerPosition))
+                    {
+                        if (forcedPlayers.Remove(player))
+                            resource.Object.SetPlayerAlwaysInterested(player, false);
+
+                        continue;
+                    }
+
+                    Vector3 offset = resource.transform.position - playerPosition;
+                    offset.y = 0f;
+                    bool shouldForceInterest = offset.sqrMagnitude <= interestRadiusSqr;
 
                     if (shouldForceInterest)
                     {
                         if (forcedPlayers.Add(player))
-                            resourceZone.Object.SetPlayerAlwaysInterested(player, true);
+                            resource.Object.SetPlayerAlwaysInterested(player, true);
                     }
                     else if (forcedPlayers.Remove(player))
                     {
-                        resourceZone.Object.SetPlayerAlwaysInterested(player, false);
+                        resource.Object.SetPlayerAlwaysInterested(player, false);
                     }
                 }
+
+                if (forcedPlayers.Count == 0)
+                    continue;
+
+                var inactivePlayers = new List<PlayerRef>();
+                foreach (PlayerRef player in forcedPlayers)
+                {
+                    if (!activePlayers.Contains(player))
+                        inactivePlayers.Add(player);
+                }
+
+                for (int i = 0; i < inactivePlayers.Count; i++)
+                {
+                    PlayerRef player = inactivePlayers[i];
+                    resource.Object.SetPlayerAlwaysInterested(player, false);
+                    forcedPlayers.Remove(player);
+                }
             }
+        }
+
+        private bool TryGetPlayerPosition(PlayerRef player, out Vector3 playerPosition)
+        {
+            playerPosition = default;
+            if (Runner == null ||
+                !Runner.TryGetPlayerObject(player, out NetworkObject playerObject) ||
+                playerObject == null)
+            {
+                return false;
+            }
+
+            playerPosition = playerObject.transform.position;
+            return true;
+        }
+
+        private float GetResourceInterestRadius()
+        {
+            return _resourceInterestRadius > 0f
+                ? _resourceInterestRadius
+                : DefaultResourceInterestRadius;
+        }
+
+        private float GetResourceInterestRefreshInterval()
+        {
+            return _resourceInterestRefreshInterval > 0f
+                ? _resourceInterestRefreshInterval
+                : DefaultResourceInterestRefreshInterval;
         }
 
         private bool IsValidResourcePosition(Vector3 position, ResourceChunkPlacementSettings chunk)

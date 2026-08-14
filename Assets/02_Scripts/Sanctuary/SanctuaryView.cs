@@ -52,9 +52,7 @@ public class SanctuaryView : MonoBehaviour
 
     public void SetVertices(List<Vector2> vertices)
     {
-        _territory.Vertices.Clear();
-        if (vertices != null)
-            _territory.Vertices.AddRange(vertices);
+        _territory.ReplaceVertices(vertices);
 
         Mesh mesh = Territory.GenerateMesh(_territory.Vertices);
         if (mesh == null)

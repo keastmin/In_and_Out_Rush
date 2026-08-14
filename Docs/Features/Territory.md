@@ -2,7 +2,7 @@
 
 Status: Migrating to chunk-based pipeline
 
-Last reviewed: 2026-08-14
+Last reviewed: 2026-08-15
 
 ## 책임
 
@@ -18,6 +18,7 @@ Last reviewed: 2026-08-14
 
 - `TerritorySystem`, `Territory`, `TerritoryExpansion`, `TerritoryVisible`
 - `TerritoryTrailSegmentIndex`, `TerritoryTrailChunkRenderer`
+- `TerritoryBoundsIndex`, `TerritoryMeshData`
 - `.agents/skills/build-chunk-territory/`
 
 ## 주요 소비자
@@ -36,7 +37,14 @@ Grid 표시, Fog of War, Resource 수집·Spawn, Track·World Monster, Sacred Zo
 - 좌표·revision·변경 Chunk 계약
 - Legacy와 새 경로의 중복 이벤트·표현
 - 모든 소비자 전환 여부와 롤백
+- `Territory.Vertices`를 갱신하는 현재 seam이 `ReplaceVertices`를 통해 bounds
+  cache를 같은 시점에 갱신하는지
+- 확장 결과의 검증된 triangle data를 Host mesh에 재사용하고 같은 polygon을
+  중복 triangulation하지 않는지
 
 ## 기술 부채
 
 현재 기능 문서와 장기 milestone 문서가 분리되어 있지 않은 부분이 있다. Territory Skill은 장기 마이그레이션 절차를 계속 소유한다.
+Legacy polygon은 계속 authoritative다. 이번 성능 slice의 bounds index와 mesh
+data는 Chunk Territory cutover가 아니며, 공개 mutable `Vertices`를 직접 쓰는
+새 소비자를 추가하지 않는다.

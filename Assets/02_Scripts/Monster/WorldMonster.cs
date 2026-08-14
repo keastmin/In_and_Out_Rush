@@ -3,6 +3,7 @@ using UnityEditor;
 #endif
 using System.Collections.Generic;
 using KIM.Dev;
+using ProjectIO.Monsters;
 using UnityEngine;
 
 public class WorldMonster : Monster
@@ -20,6 +21,7 @@ public class WorldMonster : Monster
     protected bool isPatrolling = false;
 
     private IReadOnlyList<WorldObstacle> worldObstacles;
+    private WorldObstacleBoundsIndex worldObstacleBoundsIndex;
     private float obstaclePathClearance = -1f;
 
     protected override bool ShouldDestroyInsideTerritory => true;
@@ -48,6 +50,11 @@ public class WorldMonster : Monster
     public void SetWorldObstacles(IReadOnlyList<WorldObstacle> worldObstacles)
     {
         this.worldObstacles = worldObstacles;
+    }
+
+    public void SetWorldObstacleIndex(WorldObstacleBoundsIndex obstacleBoundsIndex)
+    {
+        worldObstacleBoundsIndex = obstacleBoundsIndex;
     }
 
     public override void Initialize()
@@ -151,6 +158,9 @@ public class WorldMonster : Monster
             return false;
 
         float clearance = ResolveObstaclePathClearance();
+        if (worldObstacleBoundsIndex != null)
+            return worldObstacleBoundsIndex.IsPathBlocked(startPosition, endPosition, clearance);
+
         for (int i = 0; i < worldObstacles.Count; i++)
         {
             WorldObstacle obstacle = worldObstacles[i];

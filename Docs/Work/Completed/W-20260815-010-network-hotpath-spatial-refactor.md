@@ -1,6 +1,6 @@
 # W-20260815-010 Network hot-path spatial refactor
 
-Status: Reserved
+Status: Completed
 
 ## 동기화 기준
 
@@ -130,11 +130,52 @@ ProjectSettings와 Photon/Fusion third-party source는 수정하지 않는다.
 
 ## 실제 변경
 
-예약 Push와 검증 후 작성.
+- `ProjectIO.Monsters` 순수 assembly에 `MonsterChunkCoordinate`와
+  `WorldMonsterChunkIndex<T>`를 추가했다. World monster Spawn record는 pivot
+  Chunk에 한 번 등록되고 refresh는 player 주변 후보와 활성 record만 순회한다.
+- `WorldObstacleBoundsIndex` Unity adapter가 obstacle collider bounds를 한 번
+  snapshot하고 segment AABB와 겹치는 Chunk의 후보만 기존 정밀 판정으로
+  넘긴다. 파괴된 Unity obstacle reference는 query에서 제외한다.
+- Monster AI, 이동, 공격, stun의 Fusion tick cadence는 변경하지 않았다.
+- `TerritoryBoundsIndex`를 추가하고 초기 생성, authoritative expansion, proxy
+  vertex 수신, Sanctuary 갱신이 `ReplaceVertices`/동일 mutation seam에서
+  bounds cache를 갱신하게 했다. bounds 밖 query는 polygon edge 순회 전에
+  종료한다.
+- 확장 후보 검증에서 만든 `TerritoryMeshData`의 정점과 triangle을 Host mesh에
+  재사용해 선택 polygon의 적용 및 표시 단계에서 중복 triangulation을 없앴다.
+- Territory aggregate marker 아래에 계산, mesh, vertex sync, consumer event
+  marker를 추가했다.
+- Host/Server AOI는 매 tick player별 이전 region을 clear하고 현재 PlayerObject
+  위치의 반경 128 region 하나만 등록한다. AOI cell size는 Host/Server에서
+  64로 한 번 설정하며 Shared Mode 제한을 지킨다.
+- Monster, Territory, Stage 기능 문서에 새 entry point와 검증 계약을 기록했다.
 
 ## 검증 결과
 
-예약 Push와 구현 후 작성.
+- 예약 commit `f490168f4fa13ad6c0bae9b978efcfa969bd0ba8` Push 후
+  `VerifyReservation`이 `READY_TO_IMPLEMENT`를 반환했다.
+- 열린 원본 Editor를 종료하지 않고, source/assembly/package 설정을 복제한
+  임시 Unity 6000.0.69f1 프로젝트에서 전체 script import와 compile이 return
+  code 0으로 완료됐다. C# compiler error는 없었다.
+- 원본의 `dotnet build Assembly-CSharp.csproj --no-restore`는 열린 Editor가 새
+  asmdef와 source를 아직 `.csproj`에 반영하기 전에 실행되어 새 타입 누락
+  오류로 실패했으며 검증 결과로 채택하지 않았다. 새 AssetDatabase에서 수행한
+  위 Unity compile을 authoritative compile 결과로 사용한다.
+- 같은 임시 Unity 프로젝트의 `ProjectIO.Monsters.Tests` EditMode 테스트는
+  3/3 통과했다. 주변 범위 선택, zero-radius Chunk, clear 동작을 검증했다.
+- 별도 .NET smoke harness에서도 실제 `WorldMonsterChunkIndex` source의 범위
+  선택과 clear가 통과했다. 임시 검증 프로젝트와 산출물은 이후 삭제했다.
+- 새 `.cs`/asmdef의 `.meta` pairing과 asmdef JSON parse가 통과했다.
+- `Territory.Vertices` mutation 정적 검색 결과 현재 network와 Sanctuary 갱신은
+  `ReplaceVertices`를 거치며, Local 초기 생성은 cache 최초 query 전에 list를
+  설정한다.
+- `git diff --check` 통과. 예약 외 Scene, Prefab, ScriptableObject,
+  ProjectSettings, Package, Fusion source 변경은 없다.
+- 작업자는 제시된 Host/Client 플레이 수동 테스트를 완료했으며 별도 이상을
+  보고하지 않았다. Host-as-Runner와 client-owned Runner 영역 확장, world
+  monster streaming/장애물 회피, AOI enter/exit와 Late Join 표시 확인을
+  포함한다.
+- profiler before/after 수치 capture는 별도 측정 항목으로 남긴다.
 
 ## 남은 위험
 
@@ -145,3 +186,8 @@ ProjectSettings와 Photon/Fusion third-party source는 수정하지 않는다.
   rollback한다.
 - Legacy polygon의 공개 mutable vertex list 때문에 모든 현재 mutation seam이
   cache invalidation을 거치는지 정적 검색과 Host/Client 확장으로 확인해야 한다.
+- obstacle bounds는 초기 authoritative obstacle 배치 후 정적인 계약이다. 향후
+  obstacle을 이동시키는 기능이 생기면 index rebuild/update seam이 필요하다.
+- 실제 profiler 재측정 전에는 네 marker의 CPU 비중 감소를 수치로 단정하지
+  않는다. 특히 `NotifyExpansionConsumers`에 남는 비용은 다음 consumer별
+  bounded slice로 분리한다.

@@ -11,6 +11,12 @@ namespace Dev.Network
     public partial class StageBootstrapper : Entity
     {
         private static readonly ProfilerMarker FixedUpdateMarker = new("StageBootstrapper.FixedUpdateNetwork");
+        private static readonly ProfilerMarker ConfigureAreaOfInterestMarker =
+            new("StageBootstrapper.ConfigureAreaOfInterestGrid");
+        private static readonly ProfilerMarker RegisterAreaOfInterestMarker =
+            new("StageBootstrapper.RegisterPlayerAreaOfInterest");
+        private const float PlayerAreaOfInterestRadius = 128f;
+        private const int AreaOfInterestCellSize = 64;
 
         [Networked] public PlayerRunner PlayerRunner { get; private set; }
         [Networked] public PlayerBuilder PlayerBuilder { get; private set; }
@@ -46,6 +52,7 @@ namespace Dev.Network
         public TrackVisible TrackVisible;
 
         private bool _initialized = false;
+        private bool _isAreaOfInterestGridConfigured;
 
         public bool IsInitialized => _initialized;
 
@@ -277,23 +284,46 @@ namespace Dev.Network
                 if (!Runner.IsServer)
                     return;
 
-                const float aoiRadius = 128f;
+                ConfigureAreaOfInterestGrid();
 
-                foreach (PlayerRef player in Runner.ActivePlayers)
+                using (RegisterAreaOfInterestMarker.Auto())
                 {
-                    if (!Runner.TryGetPlayerObject(
-                            player,
-                            out NetworkObject playerObject))
+                    foreach (PlayerRef player in Runner.ActivePlayers)
                     {
-                        continue;
-                    }
+                        if (!Runner.TryGetPlayerObject(
+                                player,
+                                out NetworkObject playerObject))
+                        {
+                            continue;
+                        }
 
-                    Runner.AddPlayerAreaOfInterest(
-                        player,
-                        playerObject.transform.position,
-                        aoiRadius);
+                        if (Runner.GameMode != GameMode.Shared)
+                            Runner.ClearPlayerAreaOfInterest(player);
+
+                        Runner.AddPlayerAreaOfInterest(
+                            player,
+                            playerObject.transform.position,
+                            PlayerAreaOfInterestRadius);
+                    }
                 }
             }
+        }
+
+        private void ConfigureAreaOfInterestGrid()
+        {
+            if (_isAreaOfInterestGridConfigured)
+                return;
+
+            if (Runner.GameMode == GameMode.Shared)
+            {
+                _isAreaOfInterestGridConfigured = true;
+                return;
+            }
+
+            using (ConfigureAreaOfInterestMarker.Auto())
+                Runner.SetAreaOfInterestCellSize(AreaOfInterestCellSize);
+
+            _isAreaOfInterestGridConfigured = true;
         }
     }
 }

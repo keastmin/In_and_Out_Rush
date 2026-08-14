@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using ProjectIO.Territory;
 using UnityEngine;
 
 public class Territory
@@ -9,6 +10,7 @@ public class Territory
     const float PrototypeSimplificationTolerance = 0.1f;
 
     public List<Vector2> Vertices = new();
+    readonly TerritoryBoundsIndex boundsIndex = new();
 
     struct Intersection
     {
@@ -32,11 +34,18 @@ public class Territory
 
     public bool TryExpand(List<Vector2> path)
     {
-        return ExpandInternal(path);
+        return ExpandInternal(path, out _);
     }
 
-    bool ExpandInternal(List<Vector2> path)
+    public bool TryExpand(List<Vector2> path, out TerritoryMeshData meshData)
     {
+        return ExpandInternal(path, out meshData);
+    }
+
+    bool ExpandInternal(List<Vector2> path, out TerritoryMeshData meshData)
+    {
+        meshData = null;
+
         if (Vertices == null || Vertices.Count < 3)
             return false;
 
@@ -62,10 +71,11 @@ public class Territory
             return false;
         }
 
-        if (!TryBuildExpandedPolygon(exit, enter, normalizedPath, out List<Vector2> expandedPolygon))
+        if (!TryBuildExpandedPolygon(exit, enter, normalizedPath, out meshData))
             return false;
 
-        return ApplyNewPolygon(expandedPolygon);
+        ApplyNewPolygon(meshData.Vertices);
+        return true;
     }
 
     bool FindIntersections(List<Vector2> playerPath)
@@ -313,9 +323,13 @@ public class Territory
         intersections.Sort((a, b) => a.PathOrder.CompareTo(b.PathOrder));
     }
 
-    bool TryBuildExpandedPolygon(Intersection exit, Intersection enter, List<Vector2> playerPath, out List<Vector2> expandedPolygon)
+    bool TryBuildExpandedPolygon(
+        Intersection exit,
+        Intersection enter,
+        List<Vector2> playerPath,
+        out TerritoryMeshData meshData)
     {
-        expandedPolygon = null;
+        meshData = null;
 
         List<Vector2> pathSegment = BuildPathSegment(exit, enter, playerPath);
         List<Vector2> boundaryExitToEnter = BuildBoundaryArc(exit, enter);
@@ -326,11 +340,11 @@ public class Territory
         List<Vector2> candidateFromPathThenBoundary = CombinePolygonParts(pathSegment, boundaryEnterToExit);
         List<Vector2> candidateFromBoundaryThenPath = CombinePolygonParts(boundaryExitToEnter, reversedPathSegment);
 
-        expandedPolygon = SelectExpandedCandidate(candidateFromPathThenBoundary, candidateFromBoundaryThenPath);
-        if (expandedPolygon == null)
+        meshData = SelectExpandedCandidate(candidateFromPathThenBoundary, candidateFromBoundaryThenPath);
+        if (meshData == null)
             Debug.LogWarning("Territory expansion skipped. No valid expanded polygon candidate was found.");
 
-        return expandedPolygon != null;
+        return meshData != null;
     }
 
     List<Vector2> BuildPathSegment(Intersection from, Intersection to, List<Vector2> playerPath)
@@ -370,10 +384,10 @@ public class Territory
         return arc;
     }
 
-    List<Vector2> SelectExpandedCandidate(List<Vector2> candidateA, List<Vector2> candidateB)
+    TerritoryMeshData SelectExpandedCandidate(List<Vector2> candidateA, List<Vector2> candidateB)
     {
         float oldArea = Mathf.Abs(Area(Vertices));
-        List<Vector2> best = null;
+        TerritoryMeshData best = null;
         float bestArea = float.MinValue;
 
         TryUseCandidate(candidateA);
@@ -383,20 +397,25 @@ public class Territory
 
         void TryUseCandidate(List<Vector2> candidate)
         {
-            if (!TryGetExpandedCandidateInfo(candidate, oldArea, out float candidateArea))
+            if (!TryGetExpandedCandidateInfo(candidate, oldArea, out float candidateArea, out TerritoryMeshData candidateData))
                 return;
 
             if (best == null || candidateArea > bestArea)
             {
-                best = candidate;
+                best = candidateData;
                 bestArea = candidateArea;
             }
         }
     }
 
-    bool TryGetExpandedCandidateInfo(List<Vector2> candidate, float oldArea, out float candidateArea)
+    bool TryGetExpandedCandidateInfo(
+        List<Vector2> candidate,
+        float oldArea,
+        out float candidateArea,
+        out TerritoryMeshData meshData)
     {
         candidateArea = 0f;
+        meshData = null;
 
         if (candidate == null || candidate.Count < 3)
             return false;
@@ -405,19 +424,34 @@ public class Territory
         if (candidateArea <= oldArea + EPS)
             return false;
 
-        return TryBuildMeshData(candidate, false, out _, out _);
+        if (!TryBuildMeshData(candidate, false, out List<Vector2> normalizedPolygon, out List<int> triangles))
+            return false;
+
+        candidateArea = Mathf.Abs(Area(normalizedPolygon));
+        if (candidateArea <= oldArea + EPS)
+            return false;
+
+        meshData = new TerritoryMeshData(normalizedPolygon, triangles);
+        return true;
     }
 
-    bool ApplyNewPolygon(List<Vector2> newPoly)
+    void ApplyNewPolygon(List<Vector2> newPoly)
     {
-        if (!TryBuildMeshData(newPoly, true, out List<Vector2> normalizedPolygon, out _))
+        Vertices.Clear();
+        Vertices.AddRange(newPoly);
+        boundsIndex.Rebuild(Vertices);
+    }
+
+    public void ReplaceVertices(IReadOnlyList<Vector2> vertices)
+    {
+        Vertices.Clear();
+        if (vertices != null)
         {
-            return false;
+            for (int i = 0; i < vertices.Count; i++)
+                Vertices.Add(vertices[i]);
         }
 
-        Vertices.Clear();
-        Vertices.AddRange(normalizedPolygon);
-        return true;
+        boundsIndex.Rebuild(Vertices);
     }
 
     bool PointInPolygon(Vector2 point, List<Vector2> poly)
@@ -466,6 +500,36 @@ public class Territory
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
 
+        return mesh;
+    }
+
+    public static Mesh GenerateMesh(TerritoryMeshData meshData)
+    {
+        if (meshData == null ||
+            meshData.Vertices == null ||
+            meshData.Vertices.Count < 3 ||
+            meshData.Triangles == null ||
+            meshData.Triangles.Count < 3)
+        {
+            return null;
+        }
+
+        Vector3[] vertices = new Vector3[meshData.Vertices.Count];
+        for (int i = 0; i < meshData.Vertices.Count; i++)
+            vertices[i] = new Vector3(meshData.Vertices[i].x, 0f, meshData.Vertices[i].y);
+
+        var mesh = new Mesh
+        {
+            name = "PolygonMesh",
+            vertices = vertices
+        };
+
+        if (vertices.Length > 65535)
+            mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+
+        mesh.triangles = meshData.Triangles.ToArray();
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
         return mesh;
     }
 
@@ -926,6 +990,12 @@ public class Territory
 
     public bool IsPointInPolygon(Vector2 point)
     {
+        if (!boundsIndex.IsValid)
+            boundsIndex.Rebuild(Vertices);
+
+        if (!boundsIndex.Contains(point))
+            return false;
+
         return PointInPolygon(point, Vertices);
     }
 }

@@ -1,0 +1,21 @@
+{
+  "name": "ProjectIO.Monsters.Tests",
+  "rootNamespace": "ProjectIO.Monsters.Tests",
+  "references": [
+    "ProjectIO.Monsters"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

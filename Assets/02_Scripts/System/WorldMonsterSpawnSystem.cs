@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Dev.Network;
 using Fusion;
 using KIM.Dev;
+using ProjectIO.Monsters;
 using Unity.Profiling;
 using UnityEngine;
 
@@ -25,13 +26,19 @@ public class WorldMonsterSpawnSystem : NetworkSystemBase, IWorldObstacleConsumer
 
     private readonly List<SandTomb> _placedSandTombs = new();
     private readonly List<WorldMonsterSpawnRecord> _spawnRecords = new();
+    private readonly List<WorldMonsterSpawnRecord> _activeSpawnRecords = new();
+    private readonly List<WorldMonsterSpawnRecord> _nearbySpawnRecords = new();
+    private readonly WorldMonsterChunkIndex<WorldMonsterSpawnRecord> _spawnChunkIndex = new();
     private IReadOnlyList<WorldObstacle> _worldObstacles;
+    private WorldObstacleBoundsIndex _worldObstacleBoundsIndex;
     private TickTimer _streamingRefreshTimer;
     private bool _hasPreparedSpawnRecords;
 
     public void InitializeWorldObstacles(IReadOnlyList<WorldObstacle> worldObstacles)
     {
         _worldObstacles = worldObstacles;
+        _worldObstacleBoundsIndex = new WorldObstacleBoundsIndex(chunkSize);
+        _worldObstacleBoundsIndex.Rebuild(worldObstacles);
     }
 
     public override void SetUp()
@@ -104,7 +111,11 @@ public class WorldMonsterSpawnSystem : NetworkSystemBase, IWorldObstacleConsumer
         }
 
         _spawnRecords.Clear();
+        _activeSpawnRecords.Clear();
+        _nearbySpawnRecords.Clear();
+        _spawnChunkIndex.Clear();
         _worldObstacles = null;
+        _worldObstacleBoundsIndex = null;
         _hasPreparedSpawnRecords = false;
         _streamingRefreshTimer = default;
     }
@@ -141,10 +152,12 @@ public class WorldMonsterSpawnSystem : NetworkSystemBase, IWorldObstacleConsumer
                 continue;
             }
 
-            _spawnRecords.Add(new WorldMonsterSpawnRecord(
+            var record = new WorldMonsterSpawnRecord(
                 prefab,
                 randomSpawnPosition,
-                _spawnRecords.Count + 1));
+                _spawnRecords.Count + 1);
+            _spawnRecords.Add(record);
+            _spawnChunkIndex.Add(GetChunk(record.PivotPosition), record);
         }
     }
 
@@ -156,54 +169,71 @@ public class WorldMonsterSpawnSystem : NetworkSystemBase, IWorldObstacleConsumer
         if (playerTransform == null)
             return;
 
-        Vector2Int playerChunk = GetChunk(playerTransform.position);
+        MonsterChunkCoordinate playerChunk = GetChunk(playerTransform.position);
         int remainingSpawns = maxSpawnsPerRefresh;
 
-        for (int i = 0; i < _spawnRecords.Count; i++)
+        RefreshActiveRecords(playerChunk, territory);
+
+        int dormantChunkPadding = Mathf.CeilToInt(
+            Mathf.Max(0f, dormantWanderRadius) / Mathf.Max(1f, chunkSize));
+        _spawnChunkIndex.CollectRange(
+            playerChunk,
+            activeChunkRadius + dormantChunkPadding,
+            _nearbySpawnRecords);
+
+        for (int i = 0; i < _nearbySpawnRecords.Count; i++)
         {
-            WorldMonsterSpawnRecord record = _spawnRecords[i];
-            if (record.IsDestroyed)
+            WorldMonsterSpawnRecord record = _nearbySpawnRecords[i];
+            if (record.IsDestroyed || record.ActiveMonster != null)
                 continue;
 
-            WorldMonster activeMonster = record.ActiveMonster;
-            if (activeMonster != null && (activeMonster.Object == null || !activeMonster.Object.IsValid))
+            Vector3 currentPosition = record.Position;
+            if (territory.IsPointInPolygon(new Vector2(currentPosition.x, currentPosition.z)))
             {
-                record.ActiveMonster = null;
                 record.IsDestroyed = true;
-                continue;
-            }
-
-            Vector3 currentPosition = activeMonster != null
-                ? activeMonster.transform.position
-                : record.Position;
-            if (activeMonster == null &&
-                territory.IsPointInPolygon(new Vector2(currentPosition.x, currentPosition.z)))
-            {
-                record.ActiveMonster = null;
-                record.IsDestroyed = true;
-
-                if (activeMonster != null)
-                    activeMonster.DestroyMonster();
-
                 continue;
             }
 
             bool shouldBeActive = IsWithinActiveChunkRange(record.Position, playerChunk);
             if (shouldBeActive)
             {
-                if (activeMonster == null && remainingSpawns-- > 0)
-                    SpawnRecord(record, territory, i);
+                if (remainingSpawns-- > 0)
+                    SpawnRecord(record, territory, record.SpawnSequence);
 
                 continue;
             }
 
-            if (activeMonster != null)
+            record.AdvanceDormantPosition(Runner.SimulationTime, dormantWanderRadius);
+            if (territory.IsPointInPolygon(new Vector2(record.Position.x, record.Position.z)))
+                record.IsDestroyed = true;
+        }
+    }
+
+    private void RefreshActiveRecords(MonsterChunkCoordinate playerChunk, Territory territory)
+    {
+        for (int i = _activeSpawnRecords.Count - 1; i >= 0; i--)
+        {
+            WorldMonsterSpawnRecord record = _activeSpawnRecords[i];
+            WorldMonster activeMonster = record.ActiveMonster;
+
+            if (record.IsDestroyed ||
+                activeMonster == null ||
+                activeMonster.Object == null ||
+                !activeMonster.Object.IsValid)
             {
-                record.SetPosition(activeMonster.transform.position);
                 record.ActiveMonster = null;
-                Runner.Despawn(activeMonster.Object);
+                record.IsDestroyed = true;
+                _activeSpawnRecords.RemoveAt(i);
+                continue;
             }
 
+            if (IsWithinActiveChunkRange(record.Position, playerChunk))
+                continue;
+
+            record.SetPosition(activeMonster.transform.position);
+            record.ActiveMonster = null;
+            _activeSpawnRecords.RemoveAt(i);
+            Runner.Despawn(activeMonster.Object);
             record.AdvanceDormantPosition(Runner.SimulationTime, dormantWanderRadius);
             if (territory.IsPointInPolygon(new Vector2(record.Position.x, record.Position.z)))
                 record.IsDestroyed = true;
@@ -224,6 +254,7 @@ public class WorldMonsterSpawnSystem : NetworkSystemBase, IWorldObstacleConsumer
             spawnedMonster.SetPlayerTransform(playerTransform);
             spawnedMonster.SetPatrolPivotPosition(record.PivotPosition);
             spawnedMonster.SetWorldObstacles(_worldObstacles);
+            spawnedMonster.SetWorldObstacleIndex(_worldObstacleBoundsIndex);
             spawnedMonster.RegisterTerritoryExpansion(territorySystem);
         });
 
@@ -234,21 +265,22 @@ public class WorldMonsterSpawnSystem : NetworkSystemBase, IWorldObstacleConsumer
         }
 
         record.ActiveMonster = monster;
+        _activeSpawnRecords.Add(record);
     }
 
-    private Vector2Int GetChunk(Vector3 position)
+    private MonsterChunkCoordinate GetChunk(Vector3 position)
     {
         float safeChunkSize = Mathf.Max(1f, chunkSize);
-        return new Vector2Int(
+        return new MonsterChunkCoordinate(
             Mathf.FloorToInt(position.x / safeChunkSize),
             Mathf.FloorToInt(position.z / safeChunkSize));
     }
 
-    private bool IsWithinActiveChunkRange(Vector3 position, Vector2Int playerChunk)
+    private bool IsWithinActiveChunkRange(Vector3 position, MonsterChunkCoordinate playerChunk)
     {
-        Vector2Int monsterChunk = GetChunk(position);
-        return Mathf.Abs(monsterChunk.x - playerChunk.x) <= activeChunkRadius &&
-               Mathf.Abs(monsterChunk.y - playerChunk.y) <= activeChunkRadius;
+        MonsterChunkCoordinate monsterChunk = GetChunk(position);
+        return Mathf.Abs(monsterChunk.X - playerChunk.X) <= activeChunkRadius &&
+               Mathf.Abs(monsterChunk.Y - playerChunk.Y) <= activeChunkRadius;
     }
 
     bool IsValidSpawnGroup(WorldMonsterSpawnGroup spawnGroup)
@@ -392,6 +424,7 @@ public class WorldMonsterSpawnSystem : NetworkSystemBase, IWorldObstacleConsumer
         public Vector3 PivotPosition { get; }
         public Vector3 Position { get; private set; }
         public int Seed { get; }
+        public int SpawnSequence => Seed - 1;
         public WorldMonster ActiveMonster { get; set; }
         public bool IsDestroyed { get; set; }
 

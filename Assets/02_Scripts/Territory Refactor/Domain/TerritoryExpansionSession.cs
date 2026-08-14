@@ -83,8 +83,14 @@ namespace ProjectIO.Territory
                 _playerPath[^1]);
         }
 
-        public bool TryExpand(global::Territory territory)
-            => territory != null && territory.TryExpand(_calculationPath);
+        public bool TryExpand(global::Territory territory, out TerritoryMeshData meshData)
+        {
+            if (territory != null)
+                return territory.TryExpand(_calculationPath, out meshData);
+
+            meshData = null;
+            return false;
+        }
 
         public void MarkIntersected()
             => IsIntersected = true;

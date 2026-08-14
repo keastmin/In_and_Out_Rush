@@ -13,6 +13,14 @@ public class TerritorySystem : NetworkSystemBase
         new("TerritorySystem.HandlePlayerPositionChanged");
     private static readonly ProfilerMarker ExpandTerritoryMarker =
         new("TerritorySystem.ExpandTerritoryFromCurrentPath");
+    private static readonly ProfilerMarker CalculateExpansionMarker =
+        new("TerritorySystem.CalculateExpansion");
+    private static readonly ProfilerMarker UpdateExpansionMeshMarker =
+        new("TerritorySystem.UpdateExpansionMesh");
+    private static readonly ProfilerMarker SyncExpansionMarker =
+        new("TerritorySystem.SyncExpansionVertices");
+    private static readonly ProfilerMarker NotifyExpansionConsumersMarker =
+        new("TerritorySystem.NotifyExpansionConsumers");
 
     const int TerritoryVertexSyncChunkSize = 10;
     const int ExpansionPathSyncBatchSize = 8;
@@ -74,7 +82,8 @@ public class TerritorySystem : NetworkSystemBase
 
     void CreateTerritory(List<Vector2> vertices)
     {
-        Territory = new() { Vertices = vertices };
+        Territory = new Territory();
+        Territory.ReplaceVertices(vertices);
     }
 
     List<Vector2> GenerateCircleTerritory()
@@ -270,18 +279,26 @@ public class TerritorySystem : NetworkSystemBase
         {
         Debug.Log($"{Runner.name} - Expanding territory with path: {expansionSession.CalculationPathCount}");
 
-        if (!expansionSession.TryExpand(Territory))
+        TerritoryMeshData meshData;
+        using (CalculateExpansionMarker.Auto())
         {
-            Debug.LogWarning($"{Runner.name} - Territory expansion rejected. Path point count: {expansionSession.CalculationPathCount}");
-            return;
+            if (!expansionSession.TryExpand(Territory, out meshData))
+            {
+                Debug.LogWarning($"{Runner.name} - Territory expansion rejected. Path point count: {expansionSession.CalculationPathCount}");
+                return;
+            }
         }
 
-        TerritoryVisible.SetVertices(Territory.Vertices);
-        SyncTerritoryVertices(Territory.Vertices);
+        using (UpdateExpansionMeshMarker.Auto())
+            TerritoryVisible.SetMeshData(meshData);
+
+        using (SyncExpansionMarker.Auto())
+            SyncTerritoryVertices(Territory.Vertices);
 
         if (Object.HasStateAuthority)
         {
-            OnTerritoryExpandedEvent?.Invoke(Territory, this); // 호스트만
+            using (NotifyExpansionConsumersMarker.Auto())
+                OnTerritoryExpandedEvent?.Invoke(Territory, this); // 호스트만
         }
         }
     }
@@ -324,8 +341,7 @@ public class TerritorySystem : NetworkSystemBase
         if (!expansionReplication.TryConsumeVertices(out List<Vector2> receivedVertices))
             return;
 
-        Territory.Vertices.Clear();
-        Territory.Vertices.AddRange(receivedVertices);
+        Territory.ReplaceVertices(receivedVertices);
         TerritoryVisible.SetVertices(Territory.Vertices);
     }
 

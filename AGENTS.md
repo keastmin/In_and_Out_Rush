@@ -8,10 +8,11 @@
 - 사용자는 기능 목표를 자연어로 요청하면 된다. 에이전트가 동기화 확인, Active 충돌 검사, 예약 문서 작성과 원격 예약 검증을 수행한다.
 - 원격에 새 commit이 있으면 에이전트는 Pull이 필요하다고 알리고 멈춘다. 사용자가 Pull 완료를 알린 뒤 다시 확인한다.
 - 기존 Active 예약과 요청 범위가 겹치면 겹치는 문서와 코드·Asset·공용 연결부를 알리고 구현하지 않는다.
-- 충돌이 없으면 에이전트가 Active 문서를 먼저 작성하고 대기한다. 작업자가 문서를 확인했다고 알리면 에이전트가 해당 문서만 정확히 stage하여 Commit·Push하고, 원격 존재를 검증한 뒤 구현한다.
-- Active 문서에 대한 작업자의 확인 알림은 필요하지만 기능 범위나 구현 내용의 별도 승인은 요구하지 않는다. Pull이 필요한 경우의 Pull은 사용자에게 알리고, 예약·구현 결과의 Commit·Push와 완료 알림은 에이전트가 담당한다.
+- 충돌이 없으면 에이전트가 Active 문서를 먼저 작성하고 작업자의 진행 요청을 대기한다. 작업자가 진행을 요청하면 `CheckReservation`을 실행하고 통과한 경우 해당 문서만 정확히 stage하여 Commit·Push하고, 원격 존재를 검증한 뒤 구현한다.
+- Active 문서 작성 후의 진행 요청과 구현 완료 후의 최종 Commit·Push 요청은 작업자의 명시적 handoff로 사용한다. 기능 범위나 구현 내용의 별도 승인은 요구하지 않는다. Pull이 필요한 경우의 Pull은 사용자에게 알리고, 예약·구현 결과의 Commit·Push와 완료 알림은 해당 요청 후 에이전트가 담당한다.
+- 에이전트가 작성하는 Commit 제목은 `<prefix>: 한국어 커밋 내용` 형식을 사용한다. 허용 prefix는 `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `chore`, `build`, `ci`다.
 - 에이전트는 현재 Active 예약에 기록된 자신의 변경만 명시적인 파일 경로로 stage·Commit·Push할 수 있다. 기존 사용자 변경은 포함하지 않으며, 자동 Pull, stash, reset, merge, rebase 또는 강제 Push로 Git 상태를 바꾸지 않는다. `git add .`와 `git add -A` 같은 broad staging도 사용하지 않는다.
-- 구현 중 예약하지 않은 공용 파일이나 Asset이 필요하면 해당 변경 전에 Active 범위를 갱신하고 작업자 확인을 기다린 뒤, 갱신된 예약 문서의 `CheckReservation`·Commit·Push·`VerifyReservation`을 완료한 후 계속한다.
+- 구현 중 예약하지 않은 공용 파일이나 Asset이 필요하면 해당 변경 전에 Active 범위를 갱신하고 작업자의 진행 요청을 기다린 뒤, 갱신된 예약 문서의 `CheckReservation`·Commit·Push·`VerifyReservation`을 완료한 후 계속한다.
 - 설명, 읽기 전용 조사와 리뷰처럼 저장소 구현을 변경하지 않는 요청에는 이 파이프라인을 적용하지 않는다.
 
 ## 작업 전 읽기 순서
@@ -31,8 +32,8 @@
 - `manage-feature-work` 절차에 따라 구현 전에 `Docs/Work/Active/`에 작업별 파일을 만든다.
 - 기능, 목표, 예상 수정 파일, 공용 계약, Scene·Prefab, 충돌 가능성을 기록한다.
 - 같은 파일이나 공용 연결부가 이미 예약되어 있으면 구현 전에 협업자와 범위를 조정한다.
-- Active 문서가 공용 upstream에 Push된 것을 확인하기 전에는 구현하지 않는다.
-- 작업이 끝나면 검증 결과를 기록하고 `Docs/Work/Completed/`로 이동한다.
+- 작업자의 진행 요청 후 Active 문서가 공용 upstream에 Push된 것을 확인하기 전에는 구현하지 않는다.
+- 구현과 검증이 끝나면 결과를 기록하고 작업자의 최종 진행 요청을 대기한다. 최종 요청 후에만 `Docs/Work/Completed/`로 이동한다.
 - 장기 작업만 별도 `HANDOFF.md`를 사용한다. 짧은 작업은 완료된 작업 파일로 충분하다.
 
 ## 인코딩과 파일 보존

@@ -75,13 +75,23 @@ ProjectIO의 Active 예약 및 구현 완료 Git 작업 흐름
 
 ## 실제 변경
 
-작업자 진행 요청 후 예약 검증과 예약 Commit·Push를 완료한 뒤 구현한다.
+- `AGENTS.md`에 예약 진행 요청과 구현 완료 후 최종 Commit·Push 요청을 분리한 규칙을 반영했다.
+- `Docs/Work/README.md`, `Docs/AI_COLLABORATION_QUICKSTART.md`, `Docs/Work/Active/README.md`에 두 단계 대기 흐름을 반영했다.
+- `.agents/skills/manage-feature-work/SKILL.md`와 `agents/openai.yaml`에 예약 대기, 구현 결과 테스트 대기, 정확한 stage 범위, 커밋 제목 형식을 반영했다.
+- `ADR-0003`을 보완하고 `ADR-0004-작업자-테스트-후-Commit-Push-대기.md`를 추가했다.
+- 모든 에이전트 Commit 제목 규칙을 `<prefix>: 한국어 커밋 내용`으로 통일했다.
 
 ## 검증 결과
 
 - `CheckStart` 통과: `rebuild-development-environment`와 `origin/rebuild-development-environment`가 `380b85181f7420a6b7f4c02548fd9007dc095933`에서 동기화됨.
 - 기존 Active 예약과 의미상 충돌 없음.
-- 새 대기 절차에 따라 `CheckReservation`과 예약 Commit·Push는 작업자 진행 요청 후 수행 예정.
+- 작업자 진행 요청 후 `CheckReservation` 통과.
+- 예약 문서만 `docs: 작업자 테스트 후 Commit·Push 대기 절차 예약` 커밋으로 Commit·Push 완료.
+- `VerifyReservation` 통과: 구현 기준 `2ad0ce706a3de92499651a223ca1503bf695f3a8`.
+- `python -X utf8 C:\Users\User\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents/skills/manage-feature-work` 통과.
+- `git diff --check` 통과.
+- 구현 규칙 문서에서 기존 즉시 Commit·Push 지침을 검색하고 새 대기 절차로 통일된 것을 확인했다.
+- 구현 결과 문서 변경은 작업자 최종 진행 요청 전까지 로컬에 유지 중이다.
 
 ## 남은 위험
 

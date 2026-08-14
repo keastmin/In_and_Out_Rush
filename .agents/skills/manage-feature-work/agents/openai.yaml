@@ -1,4 +1,4 @@
 interface:
   display_name: "Manage Feature Work"
   short_description: "Check conflicts and verify shared reservations"
-  default_prompt: "Use $manage-feature-work to check synchronization, reserve this task, and verify the pushed reservation before implementation."
+  default_prompt: "Use $manage-feature-work to check synchronization, wait for the worker's reservation go-ahead, verify the pushed reservation before implementation, and wait for the worker's final Commit·Push go-ahead after testing."

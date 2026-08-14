@@ -1,13 +1,15 @@
 ---
 name: manage-feature-work
-description: Check synchronization, detect overlap with existing ProjectIO Active reservations, wait for worker confirmation, and verify the agent pushed the reservation before implementation begins. Use before every request that may modify code, scenes, prefabs, ScriptableObjects, project settings, packages, tests, or implementation documentation, including migration, replacement, Territory, Fusion, and ordinary feature work.
+description: Check synchronization, detect overlap with existing ProjectIO Active reservations, wait for the worker's explicit reservation go-ahead, verify the pushed reservation before implementation, and wait for a second explicit go-ahead before pushing implementation results. Use before every request that may modify code, scenes, prefabs, ScriptableObjects, project settings, packages, tests, or implementation documentation, including migration, replacement, Territory, Fusion, and ordinary feature work.
 ---
 
 # Manage Feature Work
 
 Run this gate before every implementation Skill. Read root `AGENTS.md` and `Docs/Work/README.md`. Use `scripts/FeatureWork.ps1` for concise Git checks.
 
-The agent performs scoped Commit and Push only after the worker confirms the Active reservation. Pull remains user-controlled when the gate reports `PULL_REQUIRED`. Do not require feature or implementation approval. Never include pre-existing user changes, use automatic stash, reset, merge, rebase, force push, `git add .`, or `git add -A`.
+The agent performs scoped Commit and Push only after an explicit worker request at each Git handoff: once for the Active reservation and once after implementation testing. Pull remains user-controlled when the gate reports `PULL_REQUIRED`. Do not require feature or implementation approval beyond these handoffs. Never include pre-existing user changes, use automatic stash, reset, merge, rebase, force push, `git add .`, or `git add -A`.
+
+Use the commit subject format `<prefix>: 한국어 커밋 내용`. Allowed prefixes are `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `chore`, `build`, and `ci`.
 
 ## 1. Check synchronization and conflicts
 
@@ -21,7 +23,7 @@ If the result is `PULL_REQUIRED`, tell the user to Pull and stop. Resume only af
 
 If the result is blocked for local changes, unpublished commits, divergence, missing upstream, or fetch failure, report it and stop.
 
-When synchronized, inspect the target row in `Docs/PROJECT_MAP.md`, the target feature document, and the reservation fields of every reported `ACTIVE_FILE`. Compare:
+When synchronized, inspect the target row in `Docs/PROJECT_MAP.md` when the request changes feature routing, the target feature document when a feature contract changes, and the reservation fields of every reported `ACTIVE_FILE`. Compare:
 
 - exact code and Asset paths;
 - Scene, Prefab, and ScriptableObject ownership;
@@ -36,13 +38,15 @@ When no overlap exists, create `Docs/Work/Active/W-YYYYMMDD-NNN-short-name.md` f
 
 Set `Status: Reserved`, record the `BASE_COMMIT` and `UPSTREAM` reported by `CheckStart`, and list exact expected code, Asset, shared-contract, scope, and completion fields.
 
-Run:
+After writing the Active document, report its path and scope and wait for the worker's explicit reservation go-ahead. Do not run `CheckReservation`, stage, Commit, or Push before that request.
+
+After the worker requests reservation progress, run:
 
 ```powershell
 & .agents/skills/manage-feature-work/scripts/FeatureWork.ps1 -Action CheckReservation -WorkFile <active-document>
 ```
 
-If another Pull became necessary, tell the user and stop. Otherwise wait for the worker to confirm the Active document. After confirmation, stage only the exact Active document path with `git add -- <active-document>`, Commit, and Push it. Do not use broad staging and do not implement yet.
+If another Pull became necessary, tell the user and stop. If the check fails for any other synchronization, scope, or conflict reason, report it and stop. When ready, stage only the exact Active document path with `git add -- <active-document>`, Commit, and Push it using the required commit subject format. Do not use broad staging and do not implement yet.
 
 ## 3. Verify the pushed reservation
 
@@ -56,7 +60,7 @@ The command verifies a clean synchronized branch and the `Reserved` document on 
 
 ## 4. Implement and update documents
 
-Implement only the published reservation. If an unreserved shared file or Asset becomes necessary, stop before changing it, update the Active reservation, wait for worker confirmation, then run `CheckReservation`, stage only that reservation document, Commit and Push it, and verify it again.
+Implement only the published reservation. If an unreserved shared file or Asset becomes necessary, stop before changing it, update the Active reservation, wait for the worker's explicit reservation go-ahead, then run `CheckReservation`, stage only that reservation document, Commit and Push it, and verify it again.
 
 After verification:
 
@@ -64,7 +68,9 @@ After verification:
 2. update the feature document when entry points, contracts, Assets, setup, or verification changed;
 3. update `Docs/PROJECT_MAP.md` only when routing or responsibility changed;
 4. update a Skill or `AGENTS.md` only when a reusable workflow or repository-wide rule changed;
-5. move the work document from `Active` to `Completed`;
-6. stage only the exact files recorded in the reservation and the agent's resulting documentation changes, then Commit and Push.
+5. run the focused tests and `git diff --check`, then report the implementation as ready for worker testing;
+6. keep the implementation changes and work document in the local worktree, leave the work document in `Active`, and wait for the worker's explicit final Commit·Push request. Do not stage, Commit, or Push during this wait;
+7. after the final request, recheck the exact diff, move the work document from `Active` to `Completed`, stage only the exact files recorded in the reservation and the agent's resulting documentation changes, then Commit and Push using the required commit subject format;
+8. if the worker requests changes instead of final Commit·Push, implement and verify them, report the new result, and wait for the final request again.
 
-If Commit or Push fails, report the exact Git state and stop; do not recover with broad or destructive Git commands. Do not require workers to approve implementation or routine documentation updates; the Active reservation confirmation is the required handoff. Ask only when a product decision, overlapping reservation, unsafe Git state, or meaningful scope expansion needs coordination.
+If Commit or Push fails, report the exact Git state and stop; do not recover with broad or destructive Git commands. Do not require workers to approve implementation or routine documentation updates; the reservation and final Commit·Push requests are explicit Git handoffs, not feature approvals. Ask only when a product decision, overlapping reservation, unsafe Git state, or meaningful scope expansion needs coordination.

@@ -2,36 +2,22 @@
 
 이 문서는 모든 협업자와 AI에게 동일하게 적용되는 저장소 공통 규칙이다. 개인별 namespace, 담당자 이름, 임시 작업 상태는 이 문서에 기록하지 않는다.
 
-## 기능 작업 자동 예약 게이트
-
-- 코드, Scene, Prefab, ScriptableObject, ProjectSettings, Package, 테스트 또는 구현 문서를 바꿀 수 있는 요청은 다른 Skill보다 먼저 `manage-feature-work` Skill을 적용한다.
-- 사용자는 자연어로 목표를 요청하면 된다. Pull, Active 예약 작성, 예약 전용 Commit·Push와 구현 직전 재확인은 에이전트가 공통 Skill과 스크립트로 수행한다.
-- 두 협업자는 Active 문서가 보이는 동일한 공용 upstream 브랜치를 사용해야 한다. 서로 다른 브랜치에만 예약을 Push하면 충돌 방지가 보장되지 않는다.
-- 에이전트는 첫 동기화 후 Active 문서만 작성하고, 예약 범위와 예약 문서 Push를 사용자에게 한 번 승인받는다.
-- 사용자 승인은 Active 문서만 Commit·Push하고 최종 동기화가 통과하면 구현을 계속하는 것까지 허용한다. 구현 결과의 최종 Commit·Push 권한은 별도다.
-- 자동화가 `BLOCKED`를 반환하면 구현하지 않는다. 자동 stash, reset, merge commit, 강제 Push 또는 광범위한 staging으로 우회하지 않는다.
-- 예약 Push 후 원격에 자신의 Active 문서가 존재하고 최신 원격 변경과 의미상 충돌이 없을 때만 기능별 Skill과 구현으로 진행한다.
-- 구현 중 예약하지 않은 공용 파일이나 Asset이 필요해지면 범위를 먼저 갱신하고 예약 승인·Push·검증 절차를 반복한다.
-- 설명, 읽기 전용 조사와 리뷰처럼 저장소 구현을 변경하지 않는 요청에는 이 게이트를 적용하지 않는다.
-
 ## 작업 전 읽기 순서
 
 1. 이 `AGENTS.md`를 읽는다.
-2. 구현 요청이면 `manage-feature-work` Skill의 Preflight를 실행한다.
-3. `Docs/PROJECT_MAP.md`에서 대상 기능과 공용 연결부를 찾는다.
-4. `Docs/Work/Active/`에서 겹치는 작업과 Scene·Prefab 예약을 확인한다.
-5. 대상 `Docs/Features/<Feature>.md`만 읽는다.
-6. 작업 성격에 맞는 기능별 Skill을 읽는다.
-7. 기능 문서가 가리키는 실제 코드, 호출자, Scene, Prefab을 확인한다.
+2. `Docs/PROJECT_MAP.md`에서 대상 기능과 공용 연결부를 찾는다.
+3. `Docs/Work/Active/`에서 겹치는 작업과 Scene·Prefab 예약을 확인한다.
+4. 대상 `Docs/Features/<Feature>.md`만 읽는다.
+5. 작업 성격에 맞는 `.agents/skills/<skill>/SKILL.md`를 읽는다.
+6. 기능 문서가 가리키는 실제 코드, 호출자, Scene, Prefab을 확인한다.
 
 문서와 코드가 다르면 실제 코드와 직렬화 참조를 기준으로 판단하고, 작업 범위 안에서 문서를 갱신한다. 예상하지 못한 공용 의존성이 발견될 때만 조사 범위를 넓힌다.
 
 ## 활성 작업 예약
 
-- `manage-feature-work` 절차에 따라 구현 전에 `Docs/Work/Active/`에 작업별 파일을 만든다.
+- 구현 전에 `Docs/Work/Active/`에 작업별 파일을 만든다.
 - 기능, 목표, 예상 수정 파일, 공용 계약, Scene·Prefab, 충돌 가능성을 기록한다.
 - 같은 파일이나 공용 연결부가 이미 예약되어 있으면 구현 전에 협업자와 범위를 조정한다.
-- 사용자 승인 후 Active 문서만 별도 Commit·Push하고, 원격 예약 존재가 확인되기 전에는 구현하지 않는다.
 - 작업이 끝나면 검증 결과를 기록하고 `Docs/Work/Completed/`로 이동한다.
 - 장기 작업만 별도 `HANDOFF.md`를 사용한다. 짧은 작업은 완료된 작업 파일로 충분하다.
 

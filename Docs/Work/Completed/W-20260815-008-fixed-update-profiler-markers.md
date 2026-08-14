@@ -92,6 +92,14 @@ No conflict found. `Docs/Work/Active/` contains only its README.
   projectile simulation paths.
 - No authority check, control flow, networked state, spawn/despawn behavior,
   Scene, or Prefab reference changed.
+- Added nested territory markers: `PlayerRunner.TerritoryPositionChanged`
+  around the Render-time position event, plus
+  `TerritorySystem.HandlePlayerPositionChanged` and
+  `TerritorySystem.ExpandTerritoryFromCurrentPath` on its authoritative
+  expansion path.
+- The additional Render candidates remain reserved for a separate capture-led
+  pass; this completed slice instruments only the confirmed PlayerRunner to
+  TerritorySystem path.
 
 ## Verification results
 
@@ -100,6 +108,11 @@ No conflict found. `Docs/Work/Active/` contains only its README.
 - `git diff --check` passed.
 - Manual Player Profiler capture remains pending: confirm the new marker names
   in CPU Usage on the Host Player while reproducing the long-running hitch.
+- The territory marker addition also compiled with the same 0 errors and
+  existing 16 warnings; `git diff --check` passed.
+- Manual Host Player Profiler verification confirmed the PlayerRunner territory
+  markers and distinguished the Render-time event dispatch from the territory
+  handler and terminal expansion cost.
 
 ## Remaining risks
 

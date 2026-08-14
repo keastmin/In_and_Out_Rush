@@ -1,6 +1,7 @@
 using Dev.Network;
 using Fusion;
 using System;
+using Unity.Profiling;
 using UnityEngine;
 using KIM.Dev;
 
@@ -12,6 +13,9 @@ using KIM.Dev;
 [RequireComponent(typeof(PlayerRunnerTeleporter))]
 public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLaboratoryUpgradeReceiver
 {
+    private static readonly ProfilerMarker TerritoryPositionChangedMarker =
+        new("PlayerRunner.TerritoryPositionChanged");
+
     private const float DefaultMaxHealth = 100f;
     private const float DefaultMaxStamina = 100f;
     private const float DefaultSlideStaminaCost = 10f;
@@ -265,7 +269,10 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
                 _outOfBodyController.ClearRecovering();
         }
 
-        OnPositionChanged?.Invoke(sharedPosition, this, this);
+        using (TerritoryPositionChangedMarker.Auto())
+        {
+            OnPositionChanged?.Invoke(sharedPosition, this, this);
+        }
 
         TerritorySystem territorySystem = StageBootstrapper.Instance != null
             ? StageBootstrapper.Instance.TerritorySystem

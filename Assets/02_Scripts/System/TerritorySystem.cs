@@ -4,10 +4,16 @@ using Dev.Local;
 using Dev.Network;
 using Fusion;
 using ProjectIO.Territory;
+using Unity.Profiling;
 using UnityEngine;
 
 public class TerritorySystem : NetworkSystemBase
 {
+    private static readonly ProfilerMarker HandlePlayerPositionChangedMarker =
+        new("TerritorySystem.HandlePlayerPositionChanged");
+    private static readonly ProfilerMarker ExpandTerritoryMarker =
+        new("TerritorySystem.ExpandTerritoryFromCurrentPath");
+
     const int TerritoryVertexSyncChunkSize = 10;
     const int ExpansionPathSyncBatchSize = 8;
     const float ExpansionPathSyncInterval = 0.05f;
@@ -158,6 +164,8 @@ public class TerritorySystem : NetworkSystemBase
 
     public void HandlePlayerPositionChanged(Vector3 position, PlayerRunner playerRunner, object sender) // 러너만
     {
+        using (HandlePlayerPositionChangedMarker.Auto())
+        {
         var currentPosition = new Vector2(position.x, position.z);
 
         if (!Object.HasStateAuthority)
@@ -225,6 +233,7 @@ public class TerritorySystem : NetworkSystemBase
                 expansionSession.SetPreviousPosition(currentPosition);
             }
         }
+        }
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.Proxies, Channel = RpcChannel.Reliable)]
@@ -257,6 +266,8 @@ public class TerritorySystem : NetworkSystemBase
 
     private void ExpandTerritoryFromCurrentPath()
     {
+        using (ExpandTerritoryMarker.Auto())
+        {
         Debug.Log($"{Runner.name} - Expanding territory with path: {expansionSession.CalculationPathCount}");
 
         if (!expansionSession.TryExpand(Territory))
@@ -271,6 +282,7 @@ public class TerritorySystem : NetworkSystemBase
         if (Object.HasStateAuthority)
         {
             OnTerritoryExpandedEvent?.Invoke(Territory, this); // 호스트만
+        }
         }
     }
 

@@ -170,7 +170,8 @@ public class WorldMonsterSpawnSystem : NetworkSystemBase, IWorldObstacleConsumer
             Vector3 currentPosition = activeMonster != null
                 ? activeMonster.transform.position
                 : record.Position;
-            if (territory.IsPointInPolygon(new Vector2(currentPosition.x, currentPosition.z)))
+            if (activeMonster == null &&
+                territory.IsPointInPolygon(new Vector2(currentPosition.x, currentPosition.z)))
             {
                 record.ActiveMonster = null;
                 record.IsDestroyed = true;

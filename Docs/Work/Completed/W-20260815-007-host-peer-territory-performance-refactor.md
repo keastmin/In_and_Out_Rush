@@ -1,6 +1,6 @@
 # W-20260815-007 Host Peer Territory Performance Refactor
 
-Status: Reserved
+Status: Completed
 
 ## Synchronization baseline
 
@@ -129,15 +129,33 @@ slice.
 
 ## Actual changes
 
-Pending implementation after this reservation is reviewed, committed, pushed,
-and verified on the upstream branch.
+- Batched reliable trail-point replication in `TerritorySystem`: points are
+  sent in batches of up to eight or after 50 ms, while expansion start and
+  completion flush immediately to preserve visual ordering.
+- Reused chunk trail `LineRenderer` objects between expansion sessions instead
+  of destroying and recreating them on every stop/start cycle.
+- Removed the duplicate per-network-tick WorldMonster territory containment
+  query. Territory expansion events still immediately cull enclosed monsters;
+  WorldMonster patrol already rejects movement into the runner safe zone.
+- Avoided a duplicate territory containment query for active WorldMonster
+  records during chunk-stream refresh. Dormant records retain their validation
+  before they can respawn.
 
 ## Verification results
 
 - `CheckStart` passed: branch and `origin/rebuild-development-environment`
   were synchronized at `1049966e9bfe3129b758a1a9f9c9296f965be321`.
 - Active-reservation scan found no existing feature reservation to overlap.
-- Runtime profiling and Host/client verification are pending implementation.
+- `dotnet build Assembly-CSharp.csproj --no-restore` passed with 0 errors.
+  The 13 warnings are existing Unity/Fusion analyzer or legacy-code warnings;
+  none are introduced by the changed files.
+- `git diff --check` passed.
+- Manual Host/Client test result: client-owned Runner trail delay improved and
+  territory expansion, monster removal, and trail presentation showed no new
+  visible regression.
+- Manual Host/Client test result: the sustained Host hitching remained. This
+  slice reduced the trail replication/presentation cost but did not identify or
+  eliminate the dominant Host-side bottleneck.
 
 ## Remaining risks
 
@@ -147,3 +165,9 @@ and verified on the upstream branch.
 - Current expansion vertex delivery uses RPCs. Improving it could affect Late
   Join behavior and needs an explicit contract update before any replication
   change.
+- The new trail batching must be verified with a client-owned Runner under
+  normal latency and a deliberately overloaded Host. The 50 ms interval is a
+  conservative starting point and can be tuned only from that evidence.
+- The remaining Host hitch requires a separately reserved profiling-led slice
+  that captures Host frame, Fusion simulation, territory geometry, spawning,
+  and monster-update timing under the reported long-running scenario.

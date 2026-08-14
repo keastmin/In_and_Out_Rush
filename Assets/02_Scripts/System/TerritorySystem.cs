@@ -9,6 +9,8 @@ using UnityEngine;
 public class TerritorySystem : NetworkSystemBase
 {
     const int TerritoryVertexSyncChunkSize = 10;
+    const int ExpansionPathSyncBatchSize = 8;
+    const float ExpansionPathSyncInterval = 0.05f;
     const float MinExpansionMoveDistanceSqr = 0.01f;
 
     [Header("Initial Territory")]
@@ -19,7 +21,9 @@ public class TerritorySystem : NetworkSystemBase
     [SerializeField] LineRenderer lineRenderer;
     readonly TerritoryExpansionSession expansionSession = new();
     readonly TerritoryExpansionReplication expansionReplication = new();
+    readonly List<Vector2> pendingExpansionPathPoints = new(ExpansionPathSyncBatchSize);
     TerritoryTrailChunkRenderer trailChunkRenderer;
+    TickTimer expansionPathSyncTimer;
 
     public Territory Territory;
     public TerritoryVisible TerritoryVisible;
@@ -95,6 +99,8 @@ public class TerritorySystem : NetworkSystemBase
     private void StopExpanding()
     {
         expansionSession.Stop();
+        pendingExpansionPathPoints.Clear();
+        expansionPathSyncTimer = default;
         if (lineRenderer != null)
             lineRenderer.positionCount = 0;
         trailChunkRenderer?.Clear();
@@ -116,6 +122,30 @@ public class TerritorySystem : NetworkSystemBase
     {
         expansionSession.AppendPathPoint(point, forceCalculationPoint);
         trailChunkRenderer?.Append(point);
+    }
+
+    private void QueueExpansionPathPointForReplication(Vector2 point)
+    {
+        pendingExpansionPathPoints.Add(point);
+    }
+
+    private void FlushExpansionPathPointsIfDue()
+    {
+        if (pendingExpansionPathPoints.Count >= ExpansionPathSyncBatchSize ||
+            expansionPathSyncTimer.ExpiredOrNotRunning(Runner))
+        {
+            FlushExpansionPathPoints();
+        }
+    }
+
+    private void FlushExpansionPathPoints()
+    {
+        if (pendingExpansionPathPoints.Count == 0)
+            return;
+
+        RPC_AddExpandingPathPoints(pendingExpansionPathPoints.ToArray());
+        pendingExpansionPathPoints.Clear();
+        expansionPathSyncTimer = TickTimer.CreateFromSeconds(Runner, ExpansionPathSyncInterval);
     }
 
     public bool TryGetCurrentExpansionPath(List<Vector3> results)
@@ -148,7 +178,8 @@ public class TerritorySystem : NetworkSystemBase
                 if (expansionSession.PlayerPathCount > 1)
                 {
                     AddExpandingPathPoint(currentPosition, true);
-                    RPC_AddExpandingPathPoint(currentPosition);
+                    QueueExpansionPathPointForReplication(currentPosition);
+                    FlushExpansionPathPoints();
                     if (Object.HasStateAuthority)
                     {
                         ExpandTerritoryFromCurrentPath();
@@ -168,9 +199,10 @@ public class TerritorySystem : NetworkSystemBase
                 StartExpanding();
                 RPC_StartExpanding();
                 AddExpandingPathPoint(expansionSession.PreviousPosition, true);
-                RPC_AddExpandingPathPoint(expansionSession.PreviousPosition);
+                QueueExpansionPathPointForReplication(expansionSession.PreviousPosition);
                 AddExpandingPathPoint(currentPosition, true);
-                RPC_AddExpandingPathPoint(currentPosition);
+                QueueExpansionPathPointForReplication(currentPosition);
+                FlushExpansionPathPoints();
                 expansionSession.SetPreviousPosition(currentPosition);
                 return;
             }
@@ -186,7 +218,8 @@ public class TerritorySystem : NetworkSystemBase
                 if (shouldAddTurnPoint)
                 {
                     AddExpandingPathPoint(currentPosition);
-                    RPC_AddExpandingPathPoint(currentPosition);
+                    QueueExpansionPathPointForReplication(currentPosition);
+                    FlushExpansionPathPointsIfDue();
                 }
 
                 expansionSession.SetPreviousPosition(currentPosition);
@@ -213,9 +246,13 @@ public class TerritorySystem : NetworkSystemBase
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.Proxies, Channel = RpcChannel.Reliable)]
-    public void RPC_AddExpandingPathPoint(Vector2 point)
+    public void RPC_AddExpandingPathPoints(Vector2[] points)
     {
-        AddExpandingPathPoint(point);
+        if (points == null)
+            return;
+
+        for (int i = 0; i < points.Length; i++)
+            AddExpandingPathPoint(points[i]);
     }
 
     private void ExpandTerritoryFromCurrentPath()

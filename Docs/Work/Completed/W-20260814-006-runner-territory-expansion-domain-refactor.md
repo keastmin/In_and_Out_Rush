@@ -1,6 +1,6 @@
 # W-20260814-006 Runner Territory Expansion Domain Refactor
 
-Status: Reserved
+Status: Completed
 
 ## Synchronization baseline
 
@@ -38,7 +38,6 @@ Territory cutover.
 
 - `Assets/02_Scripts/System/TerritorySystem.cs`
 - `Assets/02_Scripts/Territory Refactor/Domain/TerritoryExpansionSession.cs`
-- `Assets/02_Scripts/Territory Refactor/Domain/TerritoryExpansionStep.cs`
 - `Assets/02_Scripts/Territory Refactor/Adapters/Fusion/TerritoryExpansionReplication.cs`
 - `Assets/02_Scripts/Player/Player Runner/Network/PlayerRunner.cs` only if
   the existing position-observation boundary needs a minimal, compatible
@@ -116,11 +115,30 @@ implementation without scene or prefab migration.
 
 ## Actual changes
 
-Pending reservation publication and implementation.
+- Added `TerritoryExpansionSession` under the Territory domain. It owns the
+  expansion path, calculation-path reduction, self-crossing query, previous
+  position, and lifeline-recovery state without Fusion or Unity presentation
+  dependencies.
+- Added `TerritoryExpansionReplication` as the Fusion adapter-side receive
+  buffer for territory-vertex RPC chunks.
+- Refactored `TerritorySystem` into the existing serialized Fusion/Unity facade:
+  it owns RPC dispatch, mesh and trail rendering, and existing consumer events
+  while delegating expansion state and vertex receive buffering.
+- No PlayerRunner, Scene, Prefab, ScriptableObject, or StageBootstrapper change
+  was required.
 
 ## Verification results
 
-Pending.
+- Unity regenerated `Assembly-CSharp.csproj` with the new scripts after Asset
+  import. A temporary namespace/type collision for `Territory` was corrected by
+  using `global::Territory` in the domain session.
+- `dotnet build Assembly-CSharp.csproj` passed with 0 errors. The 16 reported
+  warnings are pre-existing Unity/Fusion analyzer and legacy-code warnings; no
+  warning is from the refactored territory files.
+- Static review confirms State Authority remains the only caller that changes
+  expansion state, expands polygons, invokes consumer side effects, or sends
+  RPCs. Proxies execute only the existing State-Authority-to-proxy RPC handlers.
+- `git diff --check` passed.
 
 ## Remaining risks
 
@@ -130,3 +148,5 @@ Pending.
 - The shared StageBootstrapper seam is intentionally out of scope. If the
   existing Runner position callback is insufficient during refactoring, this
   reservation must be amended before changing it.
+- A real Host/client run remains required. It was not run in this environment;
+  validate both Host-as-Runner and client-owned Runner expansion before release.

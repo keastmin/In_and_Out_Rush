@@ -2,6 +2,12 @@
 
 Status: Reserved
 
+## 현재 단계
+
+- Active 예약 문서 작성 완료
+- 작업자 확인 대기
+- 이 문서를 로컬 Commit한 뒤 작업자 확인 알림 전까지 Push와 구현을 진행하지 않는다.
+
 ## 동기화 기준
 
 - Base Commit: 70dc406fe56ba2ec904cd3b3930149a79fd414fc
@@ -57,7 +63,7 @@ Codex
 
 ## 완료 조건
 
-- Active 예약 문서를 먼저 별도 Commit·Push하고 원격 존재를 검증한다.
+- Active 예약 문서를 작성한 뒤 작업자 확인을 위해 대기하고, 확인 알림 후에만 별도 Push와 원격 검증을 진행한다.
 - 에이전트가 예약 범위 내 자신의 변경만 명시적으로 stage·Commit·Push하도록 `AGENTS.md`, 작업 문서, Quickstart, Skill을 일관되게 갱신한다.
 - 기존 ADR을 수정하지 않고 새 ADR로 제한적 Git 쓰기 권한과 안전 경계를 기록한다.
 - 예약 및 구현 완료 Commit·Push 후 원격 동기화와 문서 모순 여부를 확인한다.
@@ -65,6 +71,7 @@ Codex
 
 ## 실제 변경
 
+- 작업자 확인 대기 절차를 Active 예약 문서에 기록했다.
 
 ## 검증 결과
 

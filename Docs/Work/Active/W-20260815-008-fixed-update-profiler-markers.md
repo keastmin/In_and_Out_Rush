@@ -1,4 +1,4 @@
-# W-20260815-008 FixedUpdate profiler markers
+# W-20260815-008 Network simulation and render profiler markers
 
 Status: Reserved
 
@@ -13,9 +13,10 @@ Monster and Projectile, Tower and Laboratory, Resource Spawn, Stage initializati
 
 ## Objective
 
-Add low-overhead `ProfilerMarker` scopes to the selected, host-side
-`FixedUpdateNetwork` hot-path candidates so a Player Profiler capture can
-separate sustained per-instance simulation cost from periodic global work.
+Add low-overhead `ProfilerMarker` scopes to selected network simulation and
+Fusion `Render()` hot-path candidates so a Player Profiler capture can separate
+sustained per-instance simulation cost, periodic global work, and the
+`NetworkRunnerRender -> UpdateFunction.Invoke()` contribution.
 
 ## Read documents and skills
 
@@ -37,6 +38,13 @@ separate sustained per-instance simulation cost from periodic global work.
 - `Assets/02_Scripts/Tower/Missile.cs`
 - `Assets/02_Scripts/Projectile/MonsterProjectile.cs`
 - `Assets/02_Scripts/Player/Player Runner/RunnerProjectile.cs`
+- `Assets/02_Scripts/Resource/Network/ResourceZone.cs`
+- `Assets/02_Scripts/Tower/Towers/Support Tower/CellBuffSupportTower.cs`
+- `Assets/02_Scripts/Player/Player Runner/Network/PlayerRunner.cs`
+- `Assets/02_Scripts/Player/Player Runner/Item/BarrierWave.cs`
+- `Assets/02_Scripts/Player/Player Runner/Item/IncineratorDrone.cs`
+- `Assets/02_Scripts/Player/Player Runner/Ping/PlayerRunnerPingGuide.cs`
+- `Assets/02_Scripts/System/TerritorySystem.cs`
 
 ## Reserved Scene, Prefab, and data assets
 
@@ -54,14 +62,25 @@ No conflict found. `Docs/Work/Active/` contains only its README.
 
 ## Boundaries
 
-- Instrument only the listed `FixedUpdateNetwork` methods; do not refactor
-  gameplay or add markers to third-party Photon/Fusion source.
+- Instrument only the listed `FixedUpdateNetwork` and `Render()` methods; do
+  not refactor gameplay or add markers to third-party Photon/Fusion source.
+- In `PlayerRunner.Render`, scope only the `OnPositionChanged` event dispatch
+  with `PlayerRunner.TerritoryPositionChanged`; do not conflate unrelated
+  player render work with territory expansion.
+- In `TerritorySystem`, scope `HandlePlayerPositionChanged` and
+  `ExpandTerritoryFromCurrentPath` so event-dispatch cost, per-render territory
+  handling, and terminal polygon expansion can be distinguished.
 - Do not use Deep Profile as a prerequisite for collecting these samples.
 
 ## Completion criteria
 
 - Each selected method appears as a distinct marker in CPU Usage while keeping
   its current control flow and authority checks unchanged.
+- Each selected Fusion `Render()` method appears beneath
+  `NetworkRunnerRender -> UpdateFunction.Invoke()` in CPU Usage.
+- The PlayerRunner position-event dispatch and the TerritorySystem expansion
+  handler are separately identifiable, including the terminal polygon
+  expansion path.
 - Project compilation and `git diff --check` pass.
 
 ## Actual changes

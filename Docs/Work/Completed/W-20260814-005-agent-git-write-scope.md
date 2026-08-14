@@ -1,12 +1,12 @@
 # W-20260814-005 에이전트 제한적 Git 쓰기 권한
 
-Status: Reserved
+Status: Completed
 
 ## 현재 단계
 
 - Active 예약 문서 작성 완료
-- 작업자 확인 대기
-- 이 문서를 로컬 Commit한 뒤 작업자 확인 알림 전까지 Push와 구현을 진행하지 않는다.
+- 작업자 확인 완료
+- 예약 문서 Push와 원격 검증 완료 후 구현 진행
 
 ## 동기화 기준
 
@@ -72,9 +72,19 @@ Codex
 ## 실제 변경
 
 - 작업자 확인 대기 절차를 Active 예약 문서에 기록했다.
+- `AGENTS.md`에 작업자 확인 후 제한적 Commit·Push 권한과 broad staging 금지를 기록했다.
+- `Docs/Work/README.md`와 `Docs/AI_COLLABORATION_QUICKSTART.md`에 Active 확인 대기 및 에이전트 Commit·Push 흐름을 반영했다.
+- `.agents/skills/manage-feature-work/SKILL.md`에 작업자 확인 대기, 정확한 stage, Commit·Push와 실패 중단 규칙을 반영했다.
+- `Docs/Decisions/ADR-0003-에이전트-제한적-Git-쓰기-권한.md`를 추가해 ADR-0002의 작업자 Commit·Push 정책을 대체했다.
 
 ## 검증 결과
 
+- `CheckStart`: `AHEAD=0`, `BEHIND=0`, `RESULT=READY_TO_CHECK_CONFLICTS`
+- `VerifyReservation`: `RESULT=READY_TO_IMPLEMENT`
+- `git diff --check`: 통과
+- 관련 운영 문서에서 기존 작업자 Commit·Push 위임 문구와 에이전트 Commit·Push 금지 문구를 갱신한 것을 확인했다.
+- `FeatureWork.ps1`와 Unity 런타임 코드는 변경하지 않았다.
+- Unity 컴파일·플레이 테스트: 문서·Skill 변경 작업이므로 실행하지 않았다.
 
 ## 남은 위험
 

@@ -8,10 +8,10 @@
 - 사용자는 기능 목표를 자연어로 요청하면 된다. 에이전트가 동기화 확인, Active 충돌 검사, 예약 문서 작성과 원격 예약 검증을 수행한다.
 - 원격에 새 commit이 있으면 에이전트는 Pull이 필요하다고 알리고 멈춘다. 사용자가 Pull 완료를 알린 뒤 다시 확인한다.
 - 기존 Active 예약과 요청 범위가 겹치면 겹치는 문서와 코드·Asset·공용 연결부를 알리고 구현하지 않는다.
-- 충돌이 없으면 에이전트가 Active 문서를 먼저 작성하고 멈춘다. 사용자가 그 문서를 Commit·Push했다고 알린 뒤 원격 존재를 검증하고 구현한다.
-- Active 문서를 상대 작업자가 승인하는 절차는 두지 않는다. Pull, Active 문서 Commit·Push와 완료 알림만 작업자가 담당한다.
-- 에이전트는 자동 Commit·Push, stash, reset, merge, rebase 또는 강제 Push로 Git 상태를 바꾸지 않는다.
-- 구현 중 예약하지 않은 공용 파일이나 Asset이 필요하면 Active 범위를 갱신하고 다시 Push된 것을 확인한 뒤 계속한다.
+- 충돌이 없으면 에이전트가 Active 문서를 먼저 작성하고 대기한다. 작업자가 문서를 확인했다고 알리면 에이전트가 해당 문서만 정확히 stage하여 Commit·Push하고, 원격 존재를 검증한 뒤 구현한다.
+- Active 문서에 대한 작업자의 확인 알림은 필요하지만 기능 범위나 구현 내용의 별도 승인은 요구하지 않는다. Pull이 필요한 경우의 Pull은 사용자에게 알리고, 예약·구현 결과의 Commit·Push와 완료 알림은 에이전트가 담당한다.
+- 에이전트는 현재 Active 예약에 기록된 자신의 변경만 명시적인 파일 경로로 stage·Commit·Push할 수 있다. 기존 사용자 변경은 포함하지 않으며, 자동 Pull, stash, reset, merge, rebase 또는 강제 Push로 Git 상태를 바꾸지 않는다. `git add .`와 `git add -A` 같은 broad staging도 사용하지 않는다.
+- 구현 중 예약하지 않은 공용 파일이나 Asset이 필요하면 해당 변경 전에 Active 범위를 갱신하고 작업자 확인을 기다린 뒤, 갱신된 예약 문서의 `CheckReservation`·Commit·Push·`VerifyReservation`을 완료한 후 계속한다.
 - 설명, 읽기 전용 조사와 리뷰처럼 저장소 구현을 변경하지 않는 요청에는 이 파이프라인을 적용하지 않는다.
 
 ## 작업 전 읽기 순서

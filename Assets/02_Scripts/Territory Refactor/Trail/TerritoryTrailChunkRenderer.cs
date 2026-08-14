@@ -11,6 +11,7 @@ namespace ProjectIO.Territory
 
         private LineRenderer _template;
         private LineRenderer _activeSegment;
+        private int _activeSegmentCount;
         private Vector2Int _activeChunk;
         private bool _hasActiveChunk;
         private Vector2 _lastPoint;
@@ -57,13 +58,16 @@ namespace ProjectIO.Territory
 
         public void Clear()
         {
-            for (int i = 0; i < _segments.Count; i++)
+            for (int i = 0; i < _activeSegmentCount; i++)
             {
                 if (_segments[i] != null)
-                    Destroy(_segments[i].gameObject);
+                {
+                    _segments[i].positionCount = 0;
+                    _segments[i].gameObject.SetActive(false);
+                }
             }
 
-            _segments.Clear();
+            _activeSegmentCount = 0;
             _activeSegment = null;
             _hasActiveChunk = false;
             _hasLastPoint = false;
@@ -71,12 +75,24 @@ namespace ProjectIO.Territory
 
         private void StartSegment(Vector2Int chunk)
         {
-            var segmentObject = new GameObject($"Trail Chunk {chunk.x}, {chunk.y}");
-            segmentObject.transform.SetParent(transform, false);
-            LineRenderer segment = segmentObject.AddComponent<LineRenderer>();
-            segment.positionCount = 0;
-            CopyStyle(_template, segment);
-            _segments.Add(segment);
+            LineRenderer segment;
+            if (_activeSegmentCount < _segments.Count)
+            {
+                segment = _segments[_activeSegmentCount];
+                segment.gameObject.SetActive(true);
+                segment.positionCount = 0;
+            }
+            else
+            {
+                var segmentObject = new GameObject($"Trail Chunk {chunk.x}, {chunk.y}");
+                segmentObject.transform.SetParent(transform, false);
+                segment = segmentObject.AddComponent<LineRenderer>();
+                segment.positionCount = 0;
+                CopyStyle(_template, segment);
+                _segments.Add(segment);
+            }
+
+            _activeSegmentCount++;
             _activeSegment = segment;
             _activeChunk = chunk;
             _hasActiveChunk = true;

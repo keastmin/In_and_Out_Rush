@@ -123,8 +123,6 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
     public override void FixedUpdateNetwork()
     {
         if (!CanAccessNetworkState || !Object.HasStateAuthority) { return; }
-        if (TryDestroyInsideTerritory())
-            return;
 
         if (IsStunned)
         {

@@ -10,9 +10,6 @@ namespace Dev.Local
         [Header("Time")]
         [SerializeField] private TimeSystem _timerSystem;
 
-        [Header("HexaGrid")]
-        [SerializeField] private HexaTileSnapSystem _hexaTileSnapSystem;
-
         [Header("Territory")]
         [SerializeField] private TerritorySystem _territorySystem;
         [SerializeField] private LineRenderer _territoryExpansionLineRenderer;
@@ -57,11 +54,6 @@ namespace Dev.Local
         {
             // Timer
             _timerSystem.Initialize();
-
-            // HexaGrid
-            _hexaTileSnapSystem.Initialize();
-            _hexaTileSnapSystem.CreateHexaGrid(out var hexaTileMap);
-            StageInstance.Instance.HexaTileMap = hexaTileMap;
 
             // Territory
             _territorySystem.Initialize();

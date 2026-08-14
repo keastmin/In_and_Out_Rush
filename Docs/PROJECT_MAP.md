@@ -46,7 +46,6 @@
 | `Ping System` | Ping |
 | `Lifecycle`, `Spawn`, `Obtainable` | SharedLifecycleAndSpawn 또는 소비 기능 문서 |
 | `Test Mode` | TestMode |
-| `Archive` | 활성 구현이 아닌 참고 코드. 새 호출 금지 |
 | 루트 `NetworkInputSystem.cs` | PlayerRunner |
 | 루트 `CinemachineSystem.cs` | FogOfWarAndCamera |
 | 루트 `IDamageable.cs` | MonstersAndProjectiles와 PlayerRunner의 공용 Legacy 계약 |

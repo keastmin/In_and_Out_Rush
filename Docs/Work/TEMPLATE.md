@@ -1,6 +1,14 @@
 # W-YYYYMMDD-NNN 작업 제목
 
-Status: Planned
+Status: Awaiting Approval
+
+## 자동화 상태
+
+- Base Commit:
+- 공용 Upstream:
+- User Approval: Pending
+- 예약 공개: 미확인
+- 구현 시작 Commit:
 
 ## 담당자
 

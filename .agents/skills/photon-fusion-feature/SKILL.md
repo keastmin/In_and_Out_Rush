@@ -5,6 +5,8 @@ description: Design, implement, or verify ProjectIO Photon Fusion 2 gameplay and
 
 # Photon Fusion Feature
 
+Begin only after `manage-feature-work` has published and verified the remote Active reservation.
+
 ## Load context
 
 Read root `AGENTS.md`, `Docs/PROJECT_MAP.md`, the active work file, and the target feature document. Inspect a similar existing network flow before introducing a new pattern.

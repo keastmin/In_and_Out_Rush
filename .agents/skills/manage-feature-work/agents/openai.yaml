@@ -1,0 +1,4 @@
+interface:
+  display_name: "Manage Feature Work"
+  short_description: "Safely reserve and start shared feature work"
+  default_prompt: "Use $manage-feature-work to synchronize, reserve, publish, and safely begin this feature task."

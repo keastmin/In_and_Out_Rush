@@ -5,6 +5,8 @@ description: Fully replace an existing ProjectIO Unity feature or implementation
 
 # Replace Existing Feature
 
+Begin only after `manage-feature-work` has published and verified the remote Active reservation.
+
 Replace the active implementation only after proving every caller and serialized reference has moved.
 
 ## Read first

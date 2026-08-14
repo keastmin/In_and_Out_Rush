@@ -1,6 +1,6 @@
 # W-20260814-003 Random network obstacles
 
-Status: Reserved
+Status: Completed
 
 ## Synchronization baseline
 
@@ -53,12 +53,17 @@ None.
 
 ## Actual changes
 
-Pending reservation push verification.
+- Replaced row-and-column cell iteration with direct random samples across the usable ground bounds.
+- Preserved the central exclusion-radius and minimum-spacing checks.
+- Retained State Authority-only spawning through `NetworkRunner.Spawn`; no client spawning path was added.
+- Kept the legacy cell-jitter serialized field for existing scene compatibility and marked it as unused by random placement.
 
 ## Verification results
 
-Pending reservation push verification.
+- `dotnet build Assembly-CSharp.csproj --no-restore`: passed with 0 errors and 16 warnings. The warnings are existing project warnings plus the retained legacy cell-jitter field being unused.
+- `git diff --check`: passed.
+- Host and Client runtime session: not run in this environment. The code path was inspected: `StageBootstrapper` and `InfiniteGridObstacleSpawner` gate spawning on State Authority, then Fusion replicates each spawned `NetworkObject` to clients.
 
 ## Remaining risks
 
-Pending implementation and host-client runtime validation.
+- Run a Host and Client session in Unity to visually confirm scattered placement, central exclusion, client replication, and late-join visibility with the scene's configured spawn count and spacing.

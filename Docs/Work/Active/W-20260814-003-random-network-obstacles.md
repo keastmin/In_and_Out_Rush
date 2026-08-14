@@ -1,0 +1,64 @@
+# W-20260814-003 Random network obstacles
+
+Status: Reserved
+
+## Synchronization baseline
+
+- Base Commit: 8dfcdecbb67b14402070f0ec49ec5aeeb1529ac9
+- Upstream: origin/rebuild-development-environment
+
+## Scope
+
+Grid and Obstacles
+
+## Goal
+
+Replace the visible grid-pattern obstacle placement with scattered random placement outside the configured central exclusion radius. Keep obstacle lifecycle authoritative on the host and replicated to clients through Fusion NetworkObject spawning.
+
+## Read documents and skills
+
+- Docs/PROJECT_MAP.md
+- Docs/Features/GridAndObstacles.md
+- manage-feature-work
+- photon-fusion-feature
+
+## Expected code changes
+
+- Assets/02_Scripts/Grid/InfiniteGridObstacleSpawner.cs
+
+## Reserved Scene, Prefab, and data assets
+
+None. Existing serialized distribution settings remain compatible.
+
+## Shared contracts or Bootstrapper changes
+
+None. The existing StageBootstrapper host-only call and Fusion NetworkObject Spawn flow are retained.
+
+## Overlap with other active work
+
+None.
+
+## Scope boundaries
+
+- No Scene, Prefab, or obstacle asset changes.
+- No changes to obstacle despawn behavior, Territory, Track, Resource Spawn, or StageBootstrapper.
+- Do not introduce client-side spawning or RPC-only persistence.
+
+## Completion criteria
+
+- Every obstacle position is outside the configured center exclusion radius.
+- Placement samples the usable world area randomly and enforces configured minimum spacing.
+- Only State Authority spawns obstacles with Fusion; connected clients receive the same NetworkObjects.
+- Focused checks and git diff validation are recorded.
+
+## Actual changes
+
+Pending reservation push verification.
+
+## Verification results
+
+Pending reservation push verification.
+
+## Remaining risks
+
+Pending implementation and host-client runtime validation.

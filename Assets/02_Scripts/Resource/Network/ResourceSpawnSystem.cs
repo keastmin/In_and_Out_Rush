@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Fusion;
+using ProjectIO.ResourceSpawn;
 using UnityEngine;
 using KIM.Dev;
 
@@ -289,65 +290,19 @@ namespace Dev.Network
             if (budget <= 0 || availableChunks == null || availableChunks.Count == 0)
                 return chunks;
 
-            bool[] fillableBudgets = CreateFillableBudgetTable(budget, availableChunks);
-            int remainingBudget = GetMaxFillableBudget(fillableBudgets);
-            if (remainingBudget <= 0)
-                return chunks;
+            var amounts = new int[availableChunks.Count];
+            for (int i = 0; i < availableChunks.Count; i++)
+                amounts[i] = availableChunks[i].Amount;
 
-            while (remainingBudget > 0)
-            {
-                var candidates = new List<ResourceChunkPlacementSettings>();
-                for (int i = 0; i < availableChunks.Count; i++)
-                {
-                    ResourceChunkPlacementSettings chunk = availableChunks[i];
-                    int nextBudget = remainingBudget - chunk.Amount;
-                    if (nextBudget >= 0 && fillableBudgets[nextBudget])
-                        candidates.Add(chunk);
-                }
+            IReadOnlyList<int> selectedIndexes = ResourceBudgetPlanner.CreatePlan(
+                budget,
+                amounts,
+                candidateCount => UnityEngine.Random.Range(0, candidateCount));
 
-                if (candidates.Count == 0)
-                    break;
-
-                ResourceChunkPlacementSettings selected = candidates[UnityEngine.Random.Range(0, candidates.Count)];
-                chunks.Add(selected);
-                remainingBudget -= selected.Amount;
-            }
+            for (int i = 0; i < selectedIndexes.Count; i++)
+                chunks.Add(availableChunks[selectedIndexes[i]]);
 
             return chunks;
-        }
-
-        private static bool[] CreateFillableBudgetTable(
-            int budget,
-            IReadOnlyList<ResourceChunkPlacementSettings> availableChunks)
-        {
-            var fillable = new bool[budget + 1];
-            fillable[0] = true;
-
-            for (int value = 1; value <= budget; value++)
-            {
-                for (int i = 0; i < availableChunks.Count; i++)
-                {
-                    int amount = availableChunks[i].Amount;
-                    if (value >= amount && fillable[value - amount])
-                    {
-                        fillable[value] = true;
-                        break;
-                    }
-                }
-            }
-
-            return fillable;
-        }
-
-        private static int GetMaxFillableBudget(IReadOnlyList<bool> fillableBudgets)
-        {
-            for (int budget = fillableBudgets.Count - 1; budget >= 0; budget--)
-            {
-                if (fillableBudgets[budget])
-                    return budget;
-            }
-
-            return 0;
         }
 
         private bool TryFindResourcePosition(

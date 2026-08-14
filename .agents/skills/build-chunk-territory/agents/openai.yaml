@@ -1,0 +1,4 @@
+interface:
+  display_name: "Chunk Territory 마이그레이션"
+  short_description: "Legacy Territory를 Chunk 기반 구조로 단계적 전환"
+  default_prompt: "Use $build-chunk-territory to complete one approved chunk-territory milestone with verification and rollback."

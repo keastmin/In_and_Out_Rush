@@ -2,22 +2,36 @@
 
 이 문서는 모든 협업자와 AI에게 동일하게 적용되는 저장소 공통 규칙이다. 개인별 namespace, 담당자 이름, 임시 작업 상태는 이 문서에 기록하지 않는다.
 
+## 기능 작업 사전 파이프라인
+
+- 코드, Scene, Prefab, ScriptableObject, ProjectSettings, Package, 테스트 또는 구현 문서를 바꿀 수 있는 요청은 다른 Skill보다 먼저 `manage-feature-work` Skill을 적용한다.
+- 사용자는 기능 목표를 자연어로 요청하면 된다. 에이전트가 동기화 확인, Active 충돌 검사, 예약 문서 작성과 원격 예약 검증을 수행한다.
+- 원격에 새 commit이 있으면 에이전트는 Pull이 필요하다고 알리고 멈춘다. 사용자가 Pull 완료를 알린 뒤 다시 확인한다.
+- 기존 Active 예약과 요청 범위가 겹치면 겹치는 문서와 코드·Asset·공용 연결부를 알리고 구현하지 않는다.
+- 충돌이 없으면 에이전트가 Active 문서를 먼저 작성하고 멈춘다. 사용자가 그 문서를 Commit·Push했다고 알린 뒤 원격 존재를 검증하고 구현한다.
+- Active 문서를 상대 작업자가 승인하는 절차는 두지 않는다. Pull, Active 문서 Commit·Push와 완료 알림만 작업자가 담당한다.
+- 에이전트는 자동 Commit·Push, stash, reset, merge, rebase 또는 강제 Push로 Git 상태를 바꾸지 않는다.
+- 구현 중 예약하지 않은 공용 파일이나 Asset이 필요하면 Active 범위를 갱신하고 다시 Push된 것을 확인한 뒤 계속한다.
+- 설명, 읽기 전용 조사와 리뷰처럼 저장소 구현을 변경하지 않는 요청에는 이 파이프라인을 적용하지 않는다.
+
 ## 작업 전 읽기 순서
 
 1. 이 `AGENTS.md`를 읽는다.
-2. `Docs/PROJECT_MAP.md`에서 대상 기능과 공용 연결부를 찾는다.
-3. `Docs/Work/Active/`에서 겹치는 작업과 Scene·Prefab 예약을 확인한다.
-4. 대상 `Docs/Features/<Feature>.md`만 읽는다.
-5. 작업 성격에 맞는 `.agents/skills/<skill>/SKILL.md`를 읽는다.
-6. 기능 문서가 가리키는 실제 코드, 호출자, Scene, Prefab을 확인한다.
+2. 구현 요청이면 `manage-feature-work` Skill의 `CheckStart`를 실행한다.
+3. `Docs/PROJECT_MAP.md`에서 대상 기능과 공용 연결부를 찾는다.
+4. `Docs/Work/Active/`에서 겹치는 작업과 Scene·Prefab 예약을 확인한다.
+5. 대상 `Docs/Features/<Feature>.md`만 읽는다.
+6. 작업 성격에 맞는 기능별 Skill을 읽는다.
+7. 기능 문서가 가리키는 실제 코드, 호출자, Scene, Prefab을 확인한다.
 
 문서와 코드가 다르면 실제 코드와 직렬화 참조를 기준으로 판단하고, 작업 범위 안에서 문서를 갱신한다. 예상하지 못한 공용 의존성이 발견될 때만 조사 범위를 넓힌다.
 
 ## 활성 작업 예약
 
-- 구현 전에 `Docs/Work/Active/`에 작업별 파일을 만든다.
+- `manage-feature-work` 절차에 따라 구현 전에 `Docs/Work/Active/`에 작업별 파일을 만든다.
 - 기능, 목표, 예상 수정 파일, 공용 계약, Scene·Prefab, 충돌 가능성을 기록한다.
 - 같은 파일이나 공용 연결부가 이미 예약되어 있으면 구현 전에 협업자와 범위를 조정한다.
+- Active 문서가 공용 upstream에 Push된 것을 확인하기 전에는 구현하지 않는다.
 - 작업이 끝나면 검증 결과를 기록하고 `Docs/Work/Completed/`로 이동한다.
 - 장기 작업만 별도 `HANDOFF.md`를 사용한다. 짧은 작업은 완료된 작업 파일로 충분하다.
 

@@ -1,6 +1,11 @@
 # W-YYYYMMDD-NNN 작업 제목
 
-Status: Planned
+Status: Reserved
+
+## 동기화 기준
+
+- Base Commit:
+- 공용 Upstream:
 
 ## 담당자
 

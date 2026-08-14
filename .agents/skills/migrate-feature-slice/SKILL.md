@@ -5,6 +5,8 @@ description: Incrementally move one bounded ProjectIO feature flow from legacy c
 
 # Migrate Feature Slice
 
+Begin only after `manage-feature-work` verifies the pushed Active reservation and finds no overlap.
+
 Move one observable flow per task. Keep the legacy path authoritative until the active work file explicitly authorizes cutover.
 
 ## Load minimal context

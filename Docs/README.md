@@ -2,13 +2,16 @@
 
 이 폴더는 두 협업자와 각자의 AI가 같은 프로젝트 구조와 작업 상태를 공유하기 위한 저장소 문서다.
 
+실제 기능 작업 흐름은 `AI_COLLABORATION_QUICKSTART.md`를 먼저 확인한다.
+
 ## 읽기 순서
 
-1. 저장소 루트 `AGENTS.md`
-2. `PROJECT_MAP.md`
-3. `Work/Active/`
-4. 대상 `Features/<Feature>.md`
-5. 필요한 `.agents/skills/`
+1. `AI_COLLABORATION_QUICKSTART.md`
+2. 저장소 루트 `AGENTS.md`
+3. `PROJECT_MAP.md`
+4. `Work/Active/`
+5. 대상 `Features/<Feature>.md`
+6. 필요한 `.agents/skills/`
 
 ## 문서 역할
 

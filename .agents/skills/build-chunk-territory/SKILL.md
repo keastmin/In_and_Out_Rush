@@ -5,6 +5,8 @@ description: Design, implement, verify, and incrementally cut over ProjectIO fro
 
 # Build Chunk Territory
 
+Begin only after `manage-feature-work` verifies the pushed Active reservation and finds no overlap.
+
 Complete one approved Territory milestone per task. Keep the legacy pipeline authoritative until an approved cutover milestone changes it.
 
 ## Load minimal context

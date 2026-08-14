@@ -1,12 +1,15 @@
 using Fusion;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace KIM.Dev
 {
     public class Missile : NetworkBehaviour
     {
+        private static readonly ProfilerMarker FixedUpdateMarker = new("Missile.FixedUpdateNetwork");
+
         [Header("도착 판정(미세 오차)")]
         [SerializeField] private float _arriveDistance = 0.25f;
 
@@ -75,8 +78,10 @@ namespace KIM.Dev
 
         public override void FixedUpdateNetwork()
         {
-            if (!HasStateAuthority || !_inited)
-                return;
+            using (FixedUpdateMarker.Auto())
+            {
+                if (!HasStateAuthority || !_inited)
+                    return;
 
             // 타겟이 살아있으면 마지막 위치 갱신
             if (_targetCollider != null)
@@ -115,6 +120,7 @@ namespace KIM.Dev
             UpdateVelocityAndFacing();
 
             _prevPos = currPos;
+            }
         }
 
         private void UpdateVelocityAndFacing()

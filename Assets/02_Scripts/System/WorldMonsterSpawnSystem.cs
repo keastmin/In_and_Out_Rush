@@ -2,10 +2,13 @@ using System.Collections.Generic;
 using Dev.Network;
 using Fusion;
 using KIM.Dev;
+using Unity.Profiling;
 using UnityEngine;
 
 public class WorldMonsterSpawnSystem : NetworkSystemBase, IWorldObstacleConsumer
 {
+    private static readonly ProfilerMarker FixedUpdateMarker = new("WorldMonsterSpawnSystem.FixedUpdateNetwork");
+
     const int MaxSpawnPositionAttempts = 100;
 
     [Header("Chunk Streaming")]
@@ -72,17 +75,20 @@ public class WorldMonsterSpawnSystem : NetworkSystemBase, IWorldObstacleConsumer
 
     public override void FixedUpdateNetwork()
     {
-        if (!Object.HasStateAuthority || !_hasPreparedSpawnRecords)
-            return;
+        using (FixedUpdateMarker.Auto())
+        {
+            if (!Object.HasStateAuthority || !_hasPreparedSpawnRecords)
+                return;
 
-        if (!_streamingRefreshTimer.ExpiredOrNotRunning(Runner))
-            return;
+            if (!_streamingRefreshTimer.ExpiredOrNotRunning(Runner))
+                return;
 
-        Territory territory = ResolveTerritory();
-        if (territory != null)
-            RefreshChunkStreaming(territory);
+            Territory territory = ResolveTerritory();
+            if (territory != null)
+                RefreshChunkStreaming(territory);
 
-        _streamingRefreshTimer = TickTimer.CreateFromSeconds(Runner, streamingRefreshInterval);
+            _streamingRefreshTimer = TickTimer.CreateFromSeconds(Runner, streamingRefreshInterval);
+        }
     }
 
     public override void TearDown()

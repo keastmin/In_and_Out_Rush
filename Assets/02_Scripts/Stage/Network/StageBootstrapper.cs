@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using Dev.Local;
 using Fusion;
+using Unity.Profiling;
 using UnityEngine;
 using KIM.Dev;
 
@@ -9,6 +10,8 @@ namespace Dev.Network
 {
     public partial class StageBootstrapper : Entity
     {
+        private static readonly ProfilerMarker FixedUpdateMarker = new("StageBootstrapper.FixedUpdateNetwork");
+
         [Networked] public PlayerRunner PlayerRunner { get; private set; }
         [Networked] public PlayerBuilder PlayerBuilder { get; private set; }
 
@@ -269,24 +272,27 @@ namespace Dev.Network
 
         public override void FixedUpdateNetwork()
         {
-            if (!Runner.IsServer)
-                return;
-
-            const float aoiRadius = 128f;
-
-            foreach (PlayerRef player in Runner.ActivePlayers)
+            using (FixedUpdateMarker.Auto())
             {
-                if (!Runner.TryGetPlayerObject(
-                        player,
-                        out NetworkObject playerObject))
-                {
-                    continue;
-                }
+                if (!Runner.IsServer)
+                    return;
 
-                Runner.AddPlayerAreaOfInterest(
-                    player,
-                    playerObject.transform.position,
-                    aoiRadius);
+                const float aoiRadius = 128f;
+
+                foreach (PlayerRef player in Runner.ActivePlayers)
+                {
+                    if (!Runner.TryGetPlayerObject(
+                            player,
+                            out NetworkObject playerObject))
+                    {
+                        continue;
+                    }
+
+                    Runner.AddPlayerAreaOfInterest(
+                        player,
+                        playerObject.transform.position,
+                        aoiRadius);
+                }
             }
         }
     }

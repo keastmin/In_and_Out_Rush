@@ -1,10 +1,13 @@
 using Fusion;
+using Unity.Profiling;
 using UnityEngine;
 
 [RequireComponent(typeof(NetworkObject))]
 [RequireComponent(typeof(Rigidbody))]
 public class MonsterProjectile : NetworkBehaviour, IItemDestructibleProjectile
 {
+    private static readonly ProfilerMarker FixedUpdateMarker = new("MonsterProjectile.FixedUpdateNetwork");
+
     private Rigidbody _rigidbody;
     private ShooterWorldMonster _owner;
     private Vector3 _direction;
@@ -52,16 +55,19 @@ public class MonsterProjectile : NetworkBehaviour, IItemDestructibleProjectile
 
     public override void FixedUpdateNetwork()
     {
-        if (!HasStateAuthority || !_initialized || _destroyRequested)
-            return;
-
-        if (_lifeTimer.Expired(Runner))
+        using (FixedUpdateMarker.Auto())
         {
-            Despawn();
-            return;
-        }
+            if (!HasStateAuthority || !_initialized || _destroyRequested)
+                return;
 
-        ApplyVelocity();
+            if (_lifeTimer.Expired(Runner))
+            {
+                Despawn();
+                return;
+            }
+
+            ApplyVelocity();
+        }
     }
 
     public void DestroyByItemEffect()

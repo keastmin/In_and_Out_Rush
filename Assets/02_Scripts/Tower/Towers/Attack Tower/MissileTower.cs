@@ -1,10 +1,13 @@
 using Fusion;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace KIM.Dev
 {
     public sealed class MissileTower : AttackTower
     {
+        private static readonly ProfilerMarker FixedUpdateMarker = new("MissileTower.FixedUpdateNetwork");
+
         protected override TowerUpgradeType UpgradeType => TowerUpgradeType.MisileRauncher;
 
         // 총구 위치에서 발포 이펙트 재생
@@ -17,11 +20,14 @@ namespace KIM.Dev
 
         public override void FixedUpdateNetwork()
         {
-            if (HasStateAuthority)
+            using (FixedUpdateMarker.Auto())
             {
-                _currTarget = SetTarget();
-                LookAtTarget(_currTarget);
-                Fire();
+                if (HasStateAuthority)
+                {
+                    _currTarget = SetTarget();
+                    LookAtTarget(_currTarget);
+                    Fire();
+                }
             }
         }
 

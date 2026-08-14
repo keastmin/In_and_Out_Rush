@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Fusion;
 using ProjectIO.ResourceSpawn;
+using Unity.Profiling;
 using UnityEngine;
 using KIM.Dev;
 
@@ -8,6 +9,8 @@ namespace Dev.Network
 {
     public class ResourceSpawnSystem : System, IWorldObstacleConsumer
     {
+        private static readonly ProfilerMarker FixedUpdateMarker = new("ResourceSpawnSystem.FixedUpdateNetwork");
+
         private const float DefaultResourceInterestRadius = 128f;
         private const float DefaultResourceInterestRefreshInterval = 0.25f;
 
@@ -101,13 +104,16 @@ namespace Dev.Network
 
         public override void FixedUpdateNetwork()
         {
-            if (Object == null || !Object.HasStateAuthority || !_resourceInterestRefreshTimer.ExpiredOrNotRunning(Runner))
-                return;
+            using (FixedUpdateMarker.Auto())
+            {
+                if (Object == null || !Object.HasStateAuthority || !_resourceInterestRefreshTimer.ExpiredOrNotRunning(Runner))
+                    return;
 
-            RefreshClientResourceInterest();
-            _resourceInterestRefreshTimer = TickTimer.CreateFromSeconds(
-                Runner,
-                GetResourceInterestRefreshInterval());
+                RefreshClientResourceInterest();
+                _resourceInterestRefreshTimer = TickTimer.CreateFromSeconds(
+                    Runner,
+                    GetResourceInterestRefreshInterval());
+            }
         }
 
         private void ResolveReferences()

@@ -1,11 +1,14 @@
 using System.Collections.Generic;
 using Fusion;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace KIM.Dev
 {
     public class BladeTower : AttackTower
     {
+        private static readonly ProfilerMarker FixedUpdateMarker = new("BladeTower.FixedUpdateNetwork");
+
         protected override TowerUpgradeType UpgradeType => TowerUpgradeType.Blade;
 
         // 칼날 회전 이펙트 재생
@@ -26,22 +29,25 @@ namespace KIM.Dev
 
         public override void FixedUpdateNetwork()
         {
-            if (HasStateAuthority)
+            using (FixedUpdateMarker.Auto())
             {
-                _currTarget = SetTarget();
-                LookAtTarget(_currTarget);
-                if (CheckTargetInAttackRange() && _attackTick.ExpiredOrNotRunning(Runner))
+                if (HasStateAuthority)
                 {
-                    _attackTick = TickTimer.CreateFromSeconds(Runner, EffectiveAttackInterval);
-                    AttackTarget();
+                    _currTarget = SetTarget();
+                    LookAtTarget(_currTarget);
+                    if (CheckTargetInAttackRange() && _attackTick.ExpiredOrNotRunning(Runner))
+                    {
+                        _attackTick = TickTimer.CreateFromSeconds(Runner, EffectiveAttackInterval);
+                        AttackTarget();
+                    }
+                    foreach (var col in NewlyCollidedSet)
+                    {
+                        // PlayHitEffect(col);
+                        ApplyDamageToTarget(col);
+                        ProcessedSet.Add(col);
+                    }
+                    NewlyCollidedSet.Clear();
                 }
-                foreach (var col in NewlyCollidedSet)
-                {
-                    // PlayHitEffect(col);
-                    ApplyDamageToTarget(col);
-                    ProcessedSet.Add(col);
-                }
-                NewlyCollidedSet.Clear();
             }
         }
 

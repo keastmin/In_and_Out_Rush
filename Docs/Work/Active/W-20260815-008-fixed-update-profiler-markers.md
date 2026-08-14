@@ -66,11 +66,21 @@ No conflict found. `Docs/Work/Active/` contains only its README.
 
 ## Actual changes
 
-Pending implementation after the reservation is published.
+- Added a static, class-qualified `ProfilerMarker` and `Auto()` scope around
+  the selected `FixedUpdateNetwork` methods.
+- Markers cover monster simulation, world-monster streaming, resource AOI
+  refresh, stage player AOI, attack-tower target/fire loops, and the three
+  projectile simulation paths.
+- No authority check, control flow, networked state, spawn/despawn behavior,
+  Scene, or Prefab reference changed.
 
 ## Verification results
 
-Pending implementation.
+- `dotnet build Assembly-CSharp.csproj --no-restore` passed with 0 errors.
+  The 16 warnings are existing Unity/Fusion analyzer or legacy warnings.
+- `git diff --check` passed.
+- Manual Player Profiler capture remains pending: confirm the new marker names
+  in CPU Usage on the Host Player while reproducing the long-running hitch.
 
 ## Remaining risks
 

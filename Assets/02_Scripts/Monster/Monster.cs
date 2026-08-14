@@ -1,8 +1,11 @@
 using Fusion;
+using Unity.Profiling;
 using UnityEngine;
 
 public class Monster : NetworkBehaviour, IMonster, IDamageable
 {
+    private static readonly ProfilerMarker FixedUpdateMarker = new("Monster.FixedUpdateNetwork");
+
     [SerializeField] protected Transform attackTargetTransform;
     [SerializeField] protected float health = 10;
     [SerializeField] protected float movementSpeed = 3f;
@@ -122,15 +125,18 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
 
     public override void FixedUpdateNetwork()
     {
-        if (!CanAccessNetworkState || !Object.HasStateAuthority) { return; }
-
-        if (IsStunned)
+        using (FixedUpdateMarker.Auto())
         {
-            StopByStun();
-            return;
-        }
+            if (!CanAccessNetworkState || !Object.HasStateAuthority) { return; }
 
-        UpdateMonster();
+            if (IsStunned)
+            {
+                StopByStun();
+                return;
+            }
+
+            UpdateMonster();
+        }
     }
 
     public virtual void UpdateMonster() => throw new System.NotImplementedException();

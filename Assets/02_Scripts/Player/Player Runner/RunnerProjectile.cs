@@ -1,10 +1,13 @@
 using Fusion;
+using Unity.Profiling;
 using UnityEngine;
 
 [RequireComponent(typeof(NetworkObject))]
 [RequireComponent(typeof(Rigidbody))]
 public class RunnerProjectile : NetworkBehaviour
 {
+    private static readonly ProfilerMarker FixedUpdateMarker = new("RunnerProjectile.FixedUpdateNetwork");
+
     private Rigidbody _rigidbody;
     private PlayerRunner _owner;
     private Vector3 _direction;
@@ -42,15 +45,18 @@ public class RunnerProjectile : NetworkBehaviour
 
     public override void FixedUpdateNetwork()
     {
-        if (!HasStateAuthority || !_initialized) return;
-
-        if (_lifeTimer.Expired(Runner))
+        using (FixedUpdateMarker.Auto())
         {
-            Runner.Despawn(Object);
-            return;
-        }
+            if (!HasStateAuthority || !_initialized) return;
 
-        ApplyVelocity();
+            if (_lifeTimer.Expired(Runner))
+            {
+                Runner.Despawn(Object);
+                return;
+            }
+
+            ApplyVelocity();
+        }
     }
 
     private void OnTriggerEnter(Collider other)

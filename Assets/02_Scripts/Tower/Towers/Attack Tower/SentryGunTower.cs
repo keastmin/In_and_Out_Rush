@@ -1,10 +1,13 @@
 using Fusion;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace KIM.Dev
 {
     public sealed class SentryGunTower : AttackTower
     {
+        private static readonly ProfilerMarker FixedUpdateMarker = new("SentryGunTower.FixedUpdateNetwork");
+
         protected override TowerUpgradeType UpgradeType => TowerUpgradeType.SentryGun;
 
         // 총구 위치에서 발포 이펙트 재생
@@ -38,11 +41,14 @@ namespace KIM.Dev
 
         public override void FixedUpdateNetwork()
         {
-            if (HasStateAuthority)
+            using (FixedUpdateMarker.Auto())
             {
-                _currTarget = SetTarget(); // 타겟 설정
-                LookAtTarget(_currTarget); // 타겟 바라보기
-                Fire();
+                if (HasStateAuthority)
+                {
+                    _currTarget = SetTarget(); // 타겟 설정
+                    LookAtTarget(_currTarget); // 타겟 바라보기
+                    Fire();
+                }
             }
         }
 

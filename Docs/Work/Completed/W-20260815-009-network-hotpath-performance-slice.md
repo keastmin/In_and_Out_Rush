@@ -1,6 +1,6 @@
 # W-20260815-009 Network hot-path performance slice
 
-Status: Reserved
+Status: Cancelled
 
 ## Synchronization baseline
 
@@ -103,14 +103,16 @@ Scene or Prefab migration.
 
 ## Actual changes
 
-Pending published reservation and implementation.
+No implementation changes were retained. The worker discarded the local
+performance changes before final handoff.
 
 ## Verification results
 
-Pending implementation.
+No implementation verification was retained because no implementation changes
+remain in the worktree.
 
 ## Remaining risks
 
-Profiler percentages are inclusive and may contain Fusion, physics, rendering,
-or consumer work. The implementation must retain nested markers or add only
-focused markers when needed to distinguish the direct cause.
+The profiler evidence remains useful for a future, newly reserved performance
+slice. Re-check the current call paths and capture a fresh baseline before
+choosing a replacement optimization.

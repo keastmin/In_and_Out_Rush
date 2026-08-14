@@ -58,18 +58,16 @@ public class Centipede : WorldMonster
         {
             StopMovement();
 
-            var randomTargetPosition = patrolPivotPosition + Random.insideUnitSphere * patrolRadius;
-            if (!IsPositionInRunnerSafeZone(randomTargetPosition))
-            {
-                originalPosition = RigidbodyPosition;
-                progressivePosition = RigidbodyPosition;
-                patrolTargetPosition = randomTargetPosition;
-                patrolTargetPosition.y = RigidbodyPosition.y;
-                elapsedTime = 0;
-                distance = Vector3.Distance(RigidbodyPosition, randomTargetPosition);
-                isPatrolling = true;
-                // Debug.Log("!!: " + distance);
-            }
+            if (!TrySelectPatrolTarget(out Vector3 targetPosition))
+                return;
+
+            originalPosition = RigidbodyPosition;
+            progressivePosition = RigidbodyPosition;
+            patrolTargetPosition = targetPosition;
+            elapsedTime = 0;
+            distance = Vector3.Distance(RigidbodyPosition, targetPosition);
+            isPatrolling = true;
+            // Debug.Log("!!: " + distance);
         }
         else
         {
@@ -101,12 +99,14 @@ public class Centipede : WorldMonster
             var verticalDirection = Quaternion.AngleAxis(90f, Vector3.up) * direction;
             var verticalMovement = segmentAmplitude * Mathf.Sin(elapsedTime * segmentFrequency) * verticalDirection;
             Vector3 desiredPosition = progressivePosition + verticalMovement;
+            if (IsWorldObstaclePathBlocked(RigidbodyPosition, desiredPosition))
+            {
+                isPatrolling = false;
+                StopMovement();
+                return;
+            }
+
             SetMovementVelocity((desiredPosition - RigidbodyPosition) / deltaTime);
-            // TODO: 안닿게 하려면 길찾기 알고리즘이 필요함
-            // if (territory.IsPointInPolygon(new Vector2(transform.position.x, transform.position.z)))
-            // {
-            //     isPatrolling = false;
-            // }
         }
     }
 

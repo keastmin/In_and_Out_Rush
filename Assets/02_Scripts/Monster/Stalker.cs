@@ -156,6 +156,12 @@ public class Stalker : WorldMonster
             return;
         }
 
+        if (IsWorldObstaclePathBlocked(currentPosition, nextPosition))
+        {
+            StopChasing();
+            return;
+        }
+
         SetMovementVelocity(direction * (moveDistance / deltaTime));
         FaceTarget();
     }

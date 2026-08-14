@@ -1,9 +1,10 @@
 using System.Collections.Generic;
 using Dev.Network;
 using Fusion;
+using KIM.Dev;
 using UnityEngine;
 
-public class WorldMonsterSpawnSystem : NetworkSystemBase
+public class WorldMonsterSpawnSystem : NetworkSystemBase, IWorldObstacleConsumer
 {
     const int MaxSpawnPositionAttempts = 100;
 
@@ -21,8 +22,14 @@ public class WorldMonsterSpawnSystem : NetworkSystemBase
 
     private readonly List<SandTomb> _placedSandTombs = new();
     private readonly List<WorldMonsterSpawnRecord> _spawnRecords = new();
+    private IReadOnlyList<WorldObstacle> _worldObstacles;
     private TickTimer _streamingRefreshTimer;
     private bool _hasPreparedSpawnRecords;
+
+    public void InitializeWorldObstacles(IReadOnlyList<WorldObstacle> worldObstacles)
+    {
+        _worldObstacles = worldObstacles;
+    }
 
     public override void SetUp()
     {
@@ -91,6 +98,7 @@ public class WorldMonsterSpawnSystem : NetworkSystemBase
         }
 
         _spawnRecords.Clear();
+        _worldObstacles = null;
         _hasPreparedSpawnRecords = false;
         _streamingRefreshTimer = default;
     }
@@ -208,6 +216,7 @@ public class WorldMonsterSpawnSystem : NetworkSystemBase
             spawnedMonster.SetTerritory(territory);
             spawnedMonster.SetPlayerTransform(playerTransform);
             spawnedMonster.SetPatrolPivotPosition(record.PivotPosition);
+            spawnedMonster.SetWorldObstacles(_worldObstacles);
             spawnedMonster.RegisterTerritoryExpansion(territorySystem);
         });
 

@@ -1,6 +1,6 @@
 # W-20260814-004 Monster Rock Path Avoidance
 
-Status: Reserved
+Status: Completed
 
 ## Synchronization baseline
 
@@ -67,7 +67,20 @@ CheckStart reported no active work file. The branch is synchronized with upstrea
 
 ## 실제 변경
 
+- `WorldMonsterSpawnSystem` now consumes the existing `IWorldObstacleConsumer` contract and passes the live obstacle list to each spawned `WorldMonster`.
+- `StageBootstrapper.YOU` injects the obstacle list after authoritative obstacle spawning and before world-monster records are activated.
+- `WorldMonster` now rejects patrol targets and movement segments intersecting obstacle bounds expanded by the monster collider footprint and configured padding.
+- `Centipede`, `Strider`, and `Stalker` use the same safety check for their custom patrol, slide, and chase movement paths.
+- `MonstersAndProjectiles.md` documents the Grid obstacle connection and verification points.
+
 ## 검증 결과
+
+- `dotnet build Assembly-CSharp.csproj --no-restore`: passed with 0 errors and 16 existing warnings.
+- `git diff --check`: passed without whitespace errors.
+- Scene/Prefab serialization review: no Scene, Prefab, or Data Asset changes; existing Fusion Spawn/Despawn and State Authority paths remain in place.
+- Host/Client runtime playtest: not run by the agent; reserved for the worker.
 
 ## 남은 위험
 
+- The path test uses conservative XZ `WorldObstacle.Bounds` expanded by the monster collider footprint, so narrow passages may be rejected even when the mesh could fit.
+- Host/Client replication, obstacle removal during movement, and all active spawn-table monster variants still require the worker's Unity playtest.

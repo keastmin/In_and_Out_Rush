@@ -256,6 +256,7 @@ namespace Dev.Network
 
             YOUSetUpRoundSystems(systems);
             SetUpSacredZone();
+            KIMInitializeWorldObstacleConsumer(worldMonsterSpawnSystem);
             SpawnWorldMonsters();
         }
 

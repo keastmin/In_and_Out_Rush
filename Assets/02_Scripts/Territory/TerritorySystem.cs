@@ -7,7 +7,7 @@ using ProjectIO.Territory;
 using Unity.Profiling;
 using UnityEngine;
 
-public class TerritorySystem : NetworkSystemBase
+public class TerritorySystem : Dev.Network.System
 {
     private static readonly ProfilerMarker HandlePlayerPositionChangedMarker =
         new("TerritorySystem.HandlePlayerPositionChanged");
@@ -58,7 +58,7 @@ public class TerritorySystem : NetworkSystemBase
         }
     }
 
-    public override void SetUp()
+    protected override void OnSetUp()
     {
         TerritoryVisible = Dev.Network.StageBootstrapper.Instance.TerritoryVisible;
         trailChunkRenderer = gameObject.GetComponent<TerritoryTrailChunkRenderer>();

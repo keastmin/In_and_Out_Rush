@@ -6,7 +6,7 @@ using Dev.Network;
 using Fusion;
 using UnityEngine;
 
-public class TrackSystem : NetworkSystemBase
+public class TrackSystem : Dev.Network.System
 {
     [SerializeField] float horizontalRadius;
     [SerializeField] float verticalRadius;
@@ -32,7 +32,7 @@ public class TrackSystem : NetworkSystemBase
         }
     }
 
-    public override void SetUp()
+    protected override void OnSetUp()
     {
         trackVisible = Dev.Network.StageBootstrapper.Instance.TrackVisible;
 

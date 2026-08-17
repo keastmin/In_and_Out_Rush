@@ -6,7 +6,7 @@ using ProjectIO.Monsters;
 using Unity.Profiling;
 using UnityEngine;
 
-public class WorldMonsterSpawnSystem : NetworkSystemBase, IWorldObstacleConsumer
+public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsumer
 {
     private static readonly ProfilerMarker FixedUpdateMarker = new("WorldMonsterSpawnSystem.FixedUpdateNetwork");
 
@@ -41,7 +41,7 @@ public class WorldMonsterSpawnSystem : NetworkSystemBase, IWorldObstacleConsumer
         _worldObstacleBoundsIndex.Rebuild(worldObstacles);
     }
 
-    public override void SetUp()
+    protected override void OnSetUp()
     {
         if (!Object.HasStateAuthority) { return; }
         if (StageBootstrapper.Instance != null && StageBootstrapper.Instance.PlayerRunner != null)
@@ -98,7 +98,7 @@ public class WorldMonsterSpawnSystem : NetworkSystemBase, IWorldObstacleConsumer
         }
     }
 
-    public override void TearDown()
+    protected override void OnTearDown()
     {
         if (Object != null && Object.HasStateAuthority)
         {

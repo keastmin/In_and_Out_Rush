@@ -59,7 +59,7 @@ namespace Dev.Network
             // Debug.Log("StageBootstrapper: initialize host complete");
         }
 
-        private void YOUSetUpRoundSystems(NetworkSystemBase[] systems)
+        private void YOUSetUpRoundSystems(System[] systems)
         {
             ResolveRoundSystemReferences(systems);
             BindRoundSystemEvents();
@@ -72,7 +72,7 @@ namespace Dev.Network
             UnbindSacredZoneEvents();
         }
 
-        private void ResolveRoundSystemReferences(NetworkSystemBase[] systems)
+        private void ResolveRoundSystemReferences(System[] systems)
         {
             if (roundTrackSystem == null)
                 roundTrackSystem = FindNetworkSystem<TrackSystem>(systems);
@@ -90,7 +90,7 @@ namespace Dev.Network
                 timeSystem = UnityEngine.Object.FindFirstObjectByType<TimeSystem>();
         }
 
-        private T FindNetworkSystem<T>(NetworkSystemBase[] systems) where T : NetworkSystemBase
+        private T FindNetworkSystem<T>(System[] systems) where T : System
         {
             foreach (var system in systems)
             {

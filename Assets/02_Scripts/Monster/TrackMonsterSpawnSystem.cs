@@ -5,7 +5,7 @@ using Dev.Network;
 using Fusion;
 using UnityEngine;
 
-public class TrackMonsterSpawnSystem : NetworkSystemBase
+public class TrackMonsterSpawnSystem : Dev.Network.System
 {
     const float TrackMonsterSettlementInterval = 0.2f;
 
@@ -24,7 +24,7 @@ public class TrackMonsterSpawnSystem : NetworkSystemBase
     int spawnPrioritySequence;
     int strengthenCount;
 
-    public override void SetUp()
+    protected override void OnSetUp()
     {
         if (!Object.HasStateAuthority) { return; }
         ResolveTerritorySystem();

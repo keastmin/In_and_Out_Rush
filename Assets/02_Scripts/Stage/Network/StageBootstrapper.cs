@@ -33,7 +33,7 @@ namespace Dev.Network
 
         [Header("Network Systems")]
         [SerializeField] private NetworkInputSystem networkInputSystemPrefab;
-        [SerializeField] private NetworkSystemBase[] systems;
+        [SerializeField] private System[] systems;
         [SerializeField] private PingSystem _pingSystem;
         [SerializeField] private KIM.Dev.TowerUpgradeManager _towerUpgradeManager;
         public KIM.Dev.ResourceSystem ResourceSystem;
@@ -201,6 +201,10 @@ namespace Dev.Network
             foreach (var system in systems)
             {
                 if (system == null)
+                    continue;
+                if (system is TimeSystem)
+                    continue;
+                if (system is ResourceSpawnSystem)
                     continue;
 
                 system.SetUp();

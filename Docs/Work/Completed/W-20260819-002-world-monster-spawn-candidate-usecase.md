@@ -1,6 +1,6 @@
 # W-20260819-002 World Monster Spawn 후보 선택 UseCase 분리
 
-Status: Reserved
+Status: Complete
 
 ## 동기화 기준
 
@@ -93,12 +93,48 @@ Monster and Projectiles
 
 ## 실제 변경
 
-예약 단계. 구현 전.
+- `ProjectIO.Monsters` 순수 Logic에 `WorldMonsterSpawnCandidate` 상태 값과 `WorldMonsterSpawnCandidatePolicy` 자격 판정을 추가했다.
+- 새 `ProjectIO.Monsters.UseCases` 순수 assembly와 `SelectWorldMonsterSpawnCandidatesUseCase`를 추가했다. UseCase는 기존 source 순서대로 refresh 예산 이하의 index를 반환하고 stable record ID를 `HashSet`으로 한 번만 선택한다.
+- `WorldMonsterSpawnSystem.RefreshChunkStreaming`은 주변 record를 후보 값으로 snapshot하고 선택된 index만 기존 `SpawnRecord`에 전달한다.
+- active Chunk이지만 예산에서 선택되지 않은 record는 기존처럼 dormant 이동을 건너뛰며, inactive Chunk record의 dormant 이동과 이동 후 Territory 판정은 Legacy 경로에 유지했다.
+- `record.ActiveMonster`의 기존 guard를 Spawn 직전에도 유지해 선택 결과 적용 중 중복 Spawn을 방어한다.
+- `Runner.Spawn`, prefab 초기화 callback, `Runner.Despawn`, State Authority guard, StageBootstrapper, Scene·Prefab·ScriptableObject는 변경하지 않았다.
+- `ProjectIO.Monsters.Tests`가 새 UseCases assembly를 참조하게 하고 신규 집중 테스트 5개를 추가했다.
+- `Docs/Features/MonstersAndProjectiles.md`에 새 Logic·UseCase 경계와 검증 항목을 기록했다. 기능 라우팅은 바뀌지 않아 `Docs/PROJECT_MAP.md`는 변경하지 않았다.
+
+실제 수정 파일:
+
+- `Assets/02_Scripts/Monster/WorldMonsterSpawnSystem.cs`
+- `Assets/02_Scripts/Features/Monster/Logic/WorldMonsterSpawnCandidate.cs`
+- `Assets/02_Scripts/Features/Monster/Logic/WorldMonsterSpawnCandidate.cs.meta`
+- `Assets/02_Scripts/Features/Monster/Logic/WorldMonsterSpawnCandidatePolicy.cs`
+- `Assets/02_Scripts/Features/Monster/Logic/WorldMonsterSpawnCandidatePolicy.cs.meta`
+- `Assets/02_Scripts/Features/Monster/UseCases.meta`
+- `Assets/02_Scripts/Features/Monster/UseCases/ProjectIO.Monsters.UseCases.asmdef`
+- `Assets/02_Scripts/Features/Monster/UseCases/ProjectIO.Monsters.UseCases.asmdef.meta`
+- `Assets/02_Scripts/Features/Monster/UseCases/SelectWorldMonsterSpawnCandidatesUseCase.cs`
+- `Assets/02_Scripts/Features/Monster/UseCases/SelectWorldMonsterSpawnCandidatesUseCase.cs.meta`
+- `Assets/02_Scripts/Features/Monster/Tests/ProjectIO.Monsters.Tests.asmdef`
+- `Assets/02_Scripts/Features/Monster/Tests/SelectWorldMonsterSpawnCandidatesUseCaseTests.cs`
+- `Assets/02_Scripts/Features/Monster/Tests/SelectWorldMonsterSpawnCandidatesUseCaseTests.cs.meta`
+- `Docs/Features/MonstersAndProjectiles.md`
+- `Docs/Work/Completed/W-20260819-002-world-monster-spawn-candidate-usecase.md`
 
 ## 검증 결과
 
-예약 단계. 구현 전.
+- 실제 `WorldMonsterChunkIndexTests.cs`와 `SelectWorldMonsterSpawnCandidatesUseCaseTests.cs`를 호출한 임시 .NET/NUnit 검증: 8/8 Passed(기존 3개, 신규 5개).
+- `ProjectIO.Monsters` Logic과 새 `ProjectIO.Monsters.UseCases`를 실제 source로 분리 빌드: 성공, 오류 0개.
+- 수정한 `WorldMonsterSpawnSystem.cs`를 Unity 기존 `Assembly-CSharp.dll`, Fusion·Unity 참조와 새 Logic·UseCase DLL로 독립 컴파일: 성공, 오류 0개, 기존 필드 경고 2개.
+- 세 asmdef JSON parse와 의존 방향 확인: Logic과 UseCases 모두 `noEngineReferences: true`, UseCases는 `ProjectIO.Monsters`만 참조, Tests는 두 순수 assembly만 참조.
+- 순수 Logic·UseCase에서 UnityEngine, Fusion, NetworkObject, Runner 참조 없음.
+- `WorldMonsterSpawnSystem.cs`의 `Runner.Spawn` 정적 검색 결과 기존 `SpawnRecord` 내부 한 곳뿐이며 새 UseCase에는 Spawn 호출이 없음.
+- 신규 `.cs`, asmdef, 폴더의 `.meta` pairing과 GUID 고유성 확인.
+- `git diff --check`: 성공.
+- 원본 Unity 6000.0.69f1 Editor가 프로젝트 lock을 보유해 별도 batchmode import, Unity Test Runner, Host·Client 실행은 수행하지 않음.
+- 작업자가 Unity 테스트와 제시된 Host·Client Authority, active 범위 이탈·재진입, Late Join, 중복 Spawn 확인을 완료하고 최종 Commit·Push를 요청함.
+- 테스트 과정에서 Unity가 자동 갱신한 `ProjectIO.slnx`는 예약 밖 IDE 산출물 변경으로 로컬에 보존하며 이번 Commit에서 제외함.
 
 ## 남은 위험
 
-- 후보 선택과 dormant 처리의 순서가 달라지면 refresh당 Spawn 예산 또는 Territory 진입 record 처리 결과가 바뀔 수 있으므로, index 매핑과 단일 Spawn 호출을 집중 테스트 및 정적 검사로 고정해야 한다.
+- source index mapping과 stable record ID 중복 제거는 순수 테스트와 작업자 플레이 확인으로 검증했다. 향후 Chunk index가 동일 record를 여러 Chunk에 등록하도록 바뀌면 dormant 이동도 별도 중복 방어가 필요하다.
+- refresh별 선택 결과는 지속 네트워크 상태가 아니므로 Host migration이나 reconnect 스트레스 상황은 이번 slice에서 별도로 장시간 검증하지 않았다.

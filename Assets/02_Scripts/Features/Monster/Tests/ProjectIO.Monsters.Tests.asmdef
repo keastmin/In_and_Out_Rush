@@ -2,7 +2,8 @@
   "name": "ProjectIO.Monsters.Tests",
   "rootNamespace": "ProjectIO.Monsters.Tests",
   "references": [
-    "ProjectIO.Monsters"
+    "ProjectIO.Monsters",
+    "ProjectIO.Monsters.UseCases"
   ],
   "includePlatforms": [
     "Editor"

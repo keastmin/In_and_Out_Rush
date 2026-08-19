@@ -2,7 +2,7 @@
 
 Status: Current
 
-Last reviewed: 2026-08-15
+Last reviewed: 2026-08-19
 
 ## 책임
 
@@ -15,6 +15,8 @@ Last reviewed: 2026-08-15
 - `MonsterProjectile`, `MonsterProjectileRegistry`, `Projectile`
 - World·Track monster spawn table
 - `Assets/02_Scripts/Features/Monster/Logic/WorldMonsterChunkIndex.cs`
+- `Assets/02_Scripts/Features/Monster/Logic/WorldMonsterSpawnCandidatePolicy.cs`
+- `Assets/02_Scripts/Features/Monster/UseCases/SelectWorldMonsterSpawnCandidatesUseCase.cs`
 - `Assets/02_Scripts/Features/Monster/Adapters/Unity/WorldObstacleBoundsIndex.cs`
 
 ## 주요 연결
@@ -35,6 +37,8 @@ Monster와 Projectile prefab, `GameWorld.unity`의 spawn parent와 systems, `Wor
 - Despawn 후 projectile registry와 이벤트 정리
 - World monster record는 고정 pivot Chunk로 색인하며 refresh에서는 플레이어
   주변 후보와 현재 활성 record만 처리하는지
+- World monster Spawn 후보는 source 순서와 refresh 예산을 지키고 같은 record
+  ID를 한 번만 선택하며, 실제 `Runner.Spawn`은 Legacy `SpawnRecord`만 호출하는지
 - 월드 장애물 bounds cache는 파괴된 장애물을 무시하고 기존 segment/bounds
   판정과 같은 결과를 내는지
 
@@ -44,3 +48,25 @@ Local Monster 계층과 Network Monster 계층이 병존한다. 어떤 경로가
 Network World Monster의 Chunk 후보 선택은 `ProjectIO.Monsters` 순수 assembly가,
 Unity 장애물 bounds broadphase는 Legacy assembly의 adapter가 담당한다. Monster
 AI tick cadence와 전투 규칙은 Legacy Network Monster가 계속 소유한다.
+
+## World Monster Spawn 후보 선택 slice
+
+`WorldMonsterSpawnSystem`은 주변 Chunk record의 destroyed, active monster,
+Territory 포함, active Chunk 범위 상태를 순수 `WorldMonsterSpawnCandidate`로
+변환한다. `SelectWorldMonsterSpawnCandidatesUseCase`는 기존 source 순서를
+유지하면서 refresh 예산까지 안정 record ID를 중복 없이 선택하고 source
+index만 반환한다.
+
+선택된 index의 실제 NetworkObject 생성은 기존 State Authority 경로의
+`WorldMonsterSpawnSystem.SpawnRecord`가 계속 담당한다. UseCase는 Fusion,
+Unity object, Territory, dormant 이동과 Spawn/Despawn 수명주기를 소유하지 않는다.
+
+## 검증
+
+- 실제 순수 Logic·UseCase와 NUnit source를 링크한 검증에서 기존 Chunk 3개와
+  신규 후보 선택 5개 테스트가 8/8 통과했다.
+- 순수 Logic, UseCase, 수정된 Legacy `WorldMonsterSpawnSystem` 독립 컴파일은
+  오류 0개였다. Legacy 컴파일에는 기존 미사용·직렬화 필드 경고 2개가 남았다.
+- 원본 Unity Editor가 프로젝트를 열고 있어 별도 batchmode import는 수행하지
+  않았다. 작업자는 Unity 테스트와 제시된 Host·Client Authority·중복 Spawn
+  확인을 완료했으며 별도 이상을 보고하지 않았다.

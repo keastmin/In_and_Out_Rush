@@ -1,0 +1,16 @@
+{
+  "name": "ProjectIO.Monsters.UseCases",
+  "rootNamespace": "ProjectIO.Monsters.UseCases",
+  "references": [
+    "ProjectIO.Monsters"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": true
+}

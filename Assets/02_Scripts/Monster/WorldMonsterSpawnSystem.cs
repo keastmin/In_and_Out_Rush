@@ -3,6 +3,7 @@ using Dev.Network;
 using Fusion;
 using KIM.Dev;
 using ProjectIO.Monsters;
+using ProjectIO.Monsters.UseCases;
 using Unity.Profiling;
 using UnityEngine;
 
@@ -28,7 +29,10 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
     private readonly List<WorldMonsterSpawnRecord> _spawnRecords = new();
     private readonly List<WorldMonsterSpawnRecord> _activeSpawnRecords = new();
     private readonly List<WorldMonsterSpawnRecord> _nearbySpawnRecords = new();
+    private readonly List<WorldMonsterSpawnCandidate> _spawnCandidates = new();
+    private readonly List<int> _selectedSpawnCandidateIndexes = new();
     private readonly WorldMonsterChunkIndex<WorldMonsterSpawnRecord> _spawnChunkIndex = new();
+    private readonly SelectWorldMonsterSpawnCandidatesUseCase _selectSpawnCandidatesUseCase = new();
     private IReadOnlyList<WorldObstacle> _worldObstacles;
     private WorldObstacleBoundsIndex _worldObstacleBoundsIndex;
     private TickTimer _streamingRefreshTimer;
@@ -113,6 +117,8 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
         _spawnRecords.Clear();
         _activeSpawnRecords.Clear();
         _nearbySpawnRecords.Clear();
+        _spawnCandidates.Clear();
+        _selectedSpawnCandidateIndexes.Clear();
         _spawnChunkIndex.Clear();
         _worldObstacles = null;
         _worldObstacleBoundsIndex = null;
@@ -170,7 +176,6 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
             return;
 
         MonsterChunkCoordinate playerChunk = GetChunk(playerTransform.position);
-        int remainingSpawns = maxSpawnsPerRefresh;
 
         RefreshActiveRecords(playerChunk, territory);
 
@@ -181,24 +186,33 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
             activeChunkRadius + dormantChunkPadding,
             _nearbySpawnRecords);
 
+        BuildSpawnCandidates(playerChunk, territory);
+        _selectSpawnCandidatesUseCase.Execute(
+            _spawnCandidates,
+            maxSpawnsPerRefresh,
+            _selectedSpawnCandidateIndexes);
+
+        int selectedCandidateCursor = 0;
         for (int i = 0; i < _nearbySpawnRecords.Count; i++)
         {
             WorldMonsterSpawnRecord record = _nearbySpawnRecords[i];
-            if (record.IsDestroyed || record.ActiveMonster != null)
+            WorldMonsterSpawnCandidate candidate = _spawnCandidates[i];
+            if (candidate.IsDestroyed || candidate.HasActiveMonster)
                 continue;
 
-            Vector3 currentPosition = record.Position;
-            if (territory.IsPointInPolygon(new Vector2(currentPosition.x, currentPosition.z)))
+            if (candidate.IsInsideTerritory)
             {
                 record.IsDestroyed = true;
                 continue;
             }
 
-            bool shouldBeActive = IsWithinActiveChunkRange(record.Position, playerChunk);
-            if (shouldBeActive)
+            if (candidate.IsWithinActiveChunkRange)
             {
-                if (remainingSpawns-- > 0)
+                if (IsSelectedSpawnCandidate(i, ref selectedCandidateCursor) &&
+                    record.ActiveMonster == null)
+                {
                     SpawnRecord(record, territory, record.SpawnSequence);
+                }
 
                 continue;
             }
@@ -207,6 +221,48 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
             if (territory.IsPointInPolygon(new Vector2(record.Position.x, record.Position.z)))
                 record.IsDestroyed = true;
         }
+    }
+
+    private void BuildSpawnCandidates(MonsterChunkCoordinate playerChunk, Territory territory)
+    {
+        _spawnCandidates.Clear();
+
+        for (int i = 0; i < _nearbySpawnRecords.Count; i++)
+        {
+            WorldMonsterSpawnRecord record = _nearbySpawnRecords[i];
+            bool isDestroyed = record.IsDestroyed;
+            bool hasActiveMonster = record.ActiveMonster != null;
+            bool isInsideTerritory = false;
+            bool isWithinActiveChunkRange = false;
+
+            if (!isDestroyed && !hasActiveMonster)
+            {
+                Vector3 currentPosition = record.Position;
+                isInsideTerritory = territory.IsPointInPolygon(
+                    new Vector2(currentPosition.x, currentPosition.z));
+                if (!isInsideTerritory)
+                    isWithinActiveChunkRange = IsWithinActiveChunkRange(currentPosition, playerChunk);
+            }
+
+            _spawnCandidates.Add(new WorldMonsterSpawnCandidate(
+                record.Seed,
+                isDestroyed,
+                hasActiveMonster,
+                isInsideTerritory,
+                isWithinActiveChunkRange));
+        }
+    }
+
+    private bool IsSelectedSpawnCandidate(int candidateIndex, ref int selectedCandidateCursor)
+    {
+        if (selectedCandidateCursor >= _selectedSpawnCandidateIndexes.Count ||
+            _selectedSpawnCandidateIndexes[selectedCandidateCursor] != candidateIndex)
+        {
+            return false;
+        }
+
+        selectedCandidateCursor++;
+        return true;
     }
 
     private void RefreshActiveRecords(MonsterChunkCoordinate playerChunk, Territory territory)

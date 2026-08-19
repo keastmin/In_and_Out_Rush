@@ -2,7 +2,7 @@
 
 Status: Pilot slice complete
 
-Last reviewed: 2026-08-14
+Last reviewed: 2026-08-19
 
 ## 책임
 
@@ -45,6 +45,8 @@ Last reviewed: 2026-08-14
 
 첫 slice에서 `ResourceBudgetPlanner`를 분리하고 Legacy `ResourceSpawnSystem`이 선택된 option index를 기존 `ResourceChunkPlacementSettings`로 변환하도록 연결했다. Fusion Spawn, Territory, Grid, Scene·Prefab 참조는 변경하지 않았다.
 
+두 번째 slice에서 `ResourceCandidatePlacementPolicy`를 분리했다. Legacy `ResourceSpawnSystem.TryFindResourcePosition` 한 곳이 Unity 어댑터에서 계산한 장애물 XZ 거리 제곱과 전체·현재 구역 기배치 자원 정보를 순수 정책에 전달한다. Territory 내외부 판정, Collider 최근접점 계산, 후보 샘플링, Fusion Spawn과 Scene·Prefab 참조는 기존 경로에 남겼다.
+
 ## 변경 시 확인
 
 - 같은 구역에서 예산을 초과하지 않고 가능한 최대 예산을 사용하는지
@@ -55,10 +57,13 @@ Last reviewed: 2026-08-14
 
 ## 기술 부채
 
-배치 계획, 위치 샘플링, Fusion Spawn, Territory 수집, AOI가 한 클래스에 모여 있다. 파일럿은 예산 계획부터 분리한다.
+위치 샘플링, Unity 장애물 형상 변환, Fusion Spawn, Territory 수집, AOI가 한 클래스에 남아 있다. 예산 계획과 후보 거리 판정은 순수 assembly로 분리됐다.
 
 ## 검증
 
 - Unity 6000.0.69f1 batch import와 script compile 성공
 - `ProjectIO.ResourceSpawn.Tests` EditMode 테스트 3개 통과
 - `dotnet build ProjectIO.slnx --no-restore` 오류 0개
+- 2026-08-19 후보 거리 판정 테스트 5개를 실제 NUnit 테스트 파일 기반 임시 하네스에서 통과
+- 2026-08-19 `ProjectIO.ResourceSpawn`과 `ProjectIO.ResourceSpawn.Tests` 주입 컴파일 오류 0개, Legacy `ResourceSpawnSystem` 독립 컴파일 오류 0개
+- 2026-08-19 Unity EditMode 재실행은 Licensing Client 재연결 지연으로 테스트 시작 전에 중단했으며, 전체 솔루션 재빌드는 생성 csproj의 삭제된 Legacy 소스 경로 28개 때문에 실패

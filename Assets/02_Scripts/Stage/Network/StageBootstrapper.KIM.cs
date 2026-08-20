@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Dev.Local;
 using UnityEngine;
 using KIM.Dev;
+using ProjectIO.ResourceEconomy.Adapters.Fusion;
 
 namespace Dev.Network
 {
@@ -141,7 +142,9 @@ namespace Dev.Network
             }
             else
             {
-                _towerBuildManager.Initialize(_towerUpgradeManager);
+                _towerBuildManager.Initialize(
+                    _towerUpgradeManager,
+                    new ResourcePaymentFusionAdapter(ResourceSystem));
                 PlayerBuilder?.InjectTowerBuildManager(_towerBuildManager);
             }
 

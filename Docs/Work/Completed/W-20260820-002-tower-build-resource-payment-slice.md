@@ -99,12 +99,29 @@ Resource Economy, Tower Build
 
 ## 실제 변경
 
-예약 단계.
+- Unity·Fusion 비의존 `ProjectIO.ResourceEconomy` assembly에 `ResourceAmount`와 `ResourcePaymentPolicy`를 추가했다.
+- 순수 정책은 음수 비용을 거부하고, Mineral·Gas가 모두 충분할 때만 차감 후 잔액을 계산한다. 실패 시 원래 잔액을 유지한다.
+- `ResourcePaymentFusionAdapter`가 `ResourceSystem` NetworkObject의 유효성과 State Authority를 확인하고, 순수 정책 결과를 Networked Mineral·Gas에 기록한다.
+- Host·Client 공통 사전 판정을 위해 Adapter 읽기 경로는 복제된 ResourceSystem 잔액을 모든 Peer에서 허용하고, 쓰기 경로만 NetworkObject 유효성·시뮬레이션 참여·State Authority를 요구하도록 분리했다.
+- `StageBootstrapper.KIM`이 기존 `ResourceSystem`으로 Adapter를 구성해 `TowerBuildManager`에 주입한다.
+- `TowerBuildManager.CanBuildAt`과 Host의 성공 건설 차감 한 호출자만 새 Adapter로 전환했다. Spawn·Grid·특수 Tower 검증 실패 또는 권한 불일치에는 차감하지 않는다.
+- 이동·판매·업그레이드·속성·Laboratory 비용 소비자는 Legacy 경로에 유지했다.
+- 순수 정책용 Editor 테스트 assembly와 6개 테스트 케이스를 추가하고 솔루션 프로젝트 목록을 동기화했다.
+- Resource Economy 기능 문서에 순수 정책, Fusion Adapter, 전환·잔존 Legacy 경계를 기록했다.
 
 ## 검증 결과
 
-예약 단계.
+- Unity Import/Compile: `ProjectIO.ResourceEconomy.dll`, `ProjectIO.ResourceEconomy.Tests.dll`, `Assembly-CSharp.dll` 생성과 IL post-processing 완료. 새 `error CS` 없음.
+- `ResourcePaymentPolicyTests`: Unity가 생성한 test assembly에서 충분한 비용·Mineral 부족·Gas 부족·음수 Mineral·음수 Gas·정확한 잔액 6개 케이스 통과.
+- 별도 순수 정책 실행 검증: `ResourcePaymentPolicy verification passed.`
+- `dotnet build ProjectIO.slnx`: 성공, 오류 0개. 기존 코드와 외부 Package 경고 23개.
+- `git diff --check`: 통과.
+- 정적 권위 경로 확인: RPC 요청자는 Builder Input Authority와 일치해야 하며, Adapter는 유효한 ResourceSystem State Authority에서만 Networked 잔액을 기록한다. 기존 직접 Tower Build 차감은 제거되어 한 건설 승인에 새 지불 경로만 한 번 실행된다.
+- 작업자 1차 수동 테스트: Host Builder 건설과 차감은 통과. Client Builder는 충분한 자원에서도 설치 불가로 표시되어, Client 읽기 경로의 `IsInSimulation` 가드를 원인으로 확인했다.
+- Client 읽기 가드 수정 후 `dotnet build ProjectIO.slnx`: 재통과, 오류 0개. `ResourcePaymentPolicyTests` 6개 케이스 재통과.
+- 작업자 2차 수동 테스트: Client Builder의 충분성 표시, Tower 건설, 공유 자원 사용 정상 동작 확인.
 
 ## 남은 위험
 
-- 실제 Host·Client 런타임 검증은 구현 후 환경에서 가능한 범위를 확인한다.
+- Late Join 복원 기준은 기존 Networked Mineral·Gas이며 이번 Slice에서 새 지속 상태를 추가하지 않았다.
+- 이동·판매·업그레이드·속성·Laboratory의 Legacy 비용 경로는 후속 Slice에서 소비자별로 전환해야 한다.

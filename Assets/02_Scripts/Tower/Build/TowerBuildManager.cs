@@ -1,6 +1,7 @@
 using System;
 using Dev.Network;
 using Fusion;
+using ProjectIO.ResourceEconomy.Adapters.Fusion;
 using UnityEngine;
 
 namespace KIM.Dev
@@ -12,6 +13,7 @@ namespace KIM.Dev
         public event Action<bool, bool> OnTowerBuildRequestCompleted;
 
         private TowerUpgradeManager _towerUpgradeManager;
+        private ResourcePaymentFusionAdapter _resourcePayment;
 
         public override void Spawned()
         {
@@ -26,11 +28,14 @@ namespace KIM.Dev
                 Instance = null;
         }
 
-        public void Initialize(TowerUpgradeManager towerUpgradeManager)
+        public void Initialize(
+            TowerUpgradeManager towerUpgradeManager,
+            ResourcePaymentFusionAdapter resourcePayment)
         {
             _towerUpgradeManager = towerUpgradeManager != null
                 ? towerUpgradeManager
                 : GetComponent<TowerUpgradeManager>();
+            _resourcePayment = resourcePayment;
 
             InjectTowerDependenciesToSpawnedTowers();
         }
@@ -48,10 +53,7 @@ namespace KIM.Dev
             if (tower.IsCenter && (builder == null || centerTowerCount >= builder.MaxCenterTowerCount))
                 return false;
 
-            ResourceSystem resourceSystem = ResourceSystem.Instance;
-            if (resourceSystem == null ||
-                resourceSystem.Mineral < tower.Cost.Mineral ||
-                resourceSystem.Gas < tower.Cost.Gas)
+            if (_resourcePayment == null || !_resourcePayment.CanAfford(tower.Cost))
             {
                 return false;
             }
@@ -114,8 +116,13 @@ namespace KIM.Dev
             int[] supplyArray,
             PlayerRef requester)
         {
-            if (!HasStateAuthority || Runner == null || InfiniteGrid.Instance == null || ResourceSystem.Instance == null)
+            if (!HasStateAuthority ||
+                Runner == null ||
+                InfiniteGrid.Instance == null ||
+                _resourcePayment == null)
+            {
                 return false;
+            }
 
             if (!Runner.TryFindObject(builderId, out NetworkObject builderObject) ||
                 !builderObject.TryGetComponent(out PlayerBuilder builder))
@@ -139,11 +146,10 @@ namespace KIM.Dev
 
             bool isValid = tower.TowerID == requestedTowerId &&
                            tower.HasGridOccupation &&
-                           HasSufficientResources(tower.Cost) &&
                            CanRegisterCenterTower(tower, builder) &&
                            TryInitializeSpecialTower(tower, supplyArray);
 
-            if (!isValid)
+            if (!isValid || !_resourcePayment.TryPay(tower.Cost))
             {
                 DespawnFailedTower(towerObject);
                 return false;
@@ -151,15 +157,7 @@ namespace KIM.Dev
 
             InjectTowerDependencies(tower);
             RegisterCenterTower(tower, builder);
-            ResourceSystem.Instance.Mineral -= tower.Cost.Mineral;
-            ResourceSystem.Instance.Gas -= tower.Cost.Gas;
             return true;
-        }
-
-        private static bool HasSufficientResources(Cost cost)
-        {
-            return ResourceSystem.Instance.Mineral >= cost.Mineral &&
-                   ResourceSystem.Instance.Gas >= cost.Gas;
         }
 
         private static bool CanBuildSpecialTower(string towerId, int[] supplyArray)

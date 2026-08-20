@@ -1,6 +1,6 @@
 # W-20260820-004 Construction 타워 건설 UseCase Slice
 
-Status: Reserved
+Status: Complete
 
 ## 동기화 기준
 
@@ -51,7 +51,7 @@ Construction, Tower and Laboratory
 - `Docs/PROJECT_MAP.md`
 - `Docs/Features/TowerAndLaboratory.md`
 - `ProjectIO.slnx`
-- `Docs/Work/Active/W-20260820-004-construction-tower-build-usecase.md`
+- `Docs/Work/Completed/W-20260820-004-construction-tower-build-usecase.md`
 
 ## 예약 Scene·Prefab·Data Asset
 
@@ -125,13 +125,53 @@ Construction, Tower and Laboratory
 
 ## 실제 변경
 
-예약 단계.
+- Unity·Fusion 참조가 없는 `ProjectIO.Construction` assembly에 `ITowerConstructionOperation`, `TowerConstructionResult`, `TowerConstructionUseCase`를 추가했다.
+- UseCase가 Spawn, 실제 Grid 점유 검증, 특수 Tower 초기화, authoritative Resource 지불, Commit을 순서대로 실행하고 각 실패를 하나의 Rollback으로 귀결한다.
+- `TowerBuildManager.TryBuildTower` 한 호출자만 새 UseCase를 사용한다. Manager 내부 요청별 Host operation이 기존 `Runner.Spawn`, spawned Tower의 `HasGridOccupation`, `ResourcePaymentFusionAdapter.TryPay`, 실패 Grid 해제·Despawn을 연결한다.
+- 기존 State Authority, Builder Input Authority, 특수 Tower 사전 검증, RPC signature와 결과 전달 경로를 유지했다.
+- 성공 시에만 Tower 의존성을 주입하고 Center Tower 수량을 갱신하며, 지불 뒤에는 실패 가능한 단계를 두지 않았다.
+- Construction 책임과 진입점을 `Docs/PROJECT_MAP.md`와 `Docs/Features/TowerAndLaboratory.md`에 기록했다.
+- PlayerBuilder, 이동·판매·업그레이드, Grid·Resource 구현, Scene·Prefab·UI 파일은 변경하지 않았다.
+
+실제 수정 파일:
+
+- `Assets/02_Scripts/Features/Construction.meta`
+- `Assets/02_Scripts/Features/Construction/UseCases.meta`
+- `Assets/02_Scripts/Features/Construction/UseCases/ProjectIO.Construction.asmdef`
+- `Assets/02_Scripts/Features/Construction/UseCases/ProjectIO.Construction.asmdef.meta`
+- `Assets/02_Scripts/Features/Construction/UseCases/ITowerConstructionOperation.cs`
+- `Assets/02_Scripts/Features/Construction/UseCases/ITowerConstructionOperation.cs.meta`
+- `Assets/02_Scripts/Features/Construction/UseCases/TowerConstructionResult.cs`
+- `Assets/02_Scripts/Features/Construction/UseCases/TowerConstructionResult.cs.meta`
+- `Assets/02_Scripts/Features/Construction/UseCases/TowerConstructionUseCase.cs`
+- `Assets/02_Scripts/Features/Construction/UseCases/TowerConstructionUseCase.cs.meta`
+- `Assets/02_Scripts/Features/Construction/Tests.meta`
+- `Assets/02_Scripts/Features/Construction/Tests/ProjectIO.Construction.Tests.asmdef`
+- `Assets/02_Scripts/Features/Construction/Tests/ProjectIO.Construction.Tests.asmdef.meta`
+- `Assets/02_Scripts/Features/Construction/Tests/TowerConstructionUseCaseTests.cs`
+- `Assets/02_Scripts/Features/Construction/Tests/TowerConstructionUseCaseTests.cs.meta`
+- `Assets/02_Scripts/Tower/Build/TowerBuildManager.cs`
+- `Docs/PROJECT_MAP.md`
+- `Docs/Features/TowerAndLaboratory.md`
+- `ProjectIO.slnx`
+- `Docs/Work/Active/W-20260820-004-construction-tower-build-usecase.md`
 
 ## 검증 결과
 
-예약 단계.
+- 순수 PowerShell/.NET 집중 하네스: 성공, Spawn 실패, Grid 배치 거부, 초기화 실패, 지불 실패, operation 누락 6/6 통과.
+- Unity 생성 `ProjectIO.ResourceEconomy.Tests.csproj`에 새 Construction UseCase와 NUnit 테스트 소스를 임시 주입해 컴파일: 경고 0개, 오류 0개.
+- Unity 생성 `Assembly-CSharp.csproj`에 새 Construction 소스를 임시 주입해 `TowerBuildManager` 호출자까지 컴파일: 오류 0개, 기존 코드·Package 경고 16개.
+- 임시 MSBuild targets는 검증 직후 제거했다.
+- asmdef JSON 2개 유효성과 새 Unity GUID 9개의 유일성을 확인했다.
+- 참조 검색으로 `TowerConstructionUseCase` 런타임 호출자가 `TowerBuildManager.TryBuildTower` 한 곳뿐임을 확인했다.
+- 코드 대조로 UseCase 호출 전에 `HasStateAuthority`와 요청 Builder의 `InputAuthority` 검증이 유지되고, 기존 RPC attribute·signature가 변경되지 않았음을 확인했다.
+- `git diff --check`: 성공.
+- 새 `W-20260820-006-match-progression-transition-policy.md`는 TimeSystem·MatchProgression만 예약하고 Construction 파일과 `ProjectIO.slnx`를 제외하므로 별도 사용자 변경으로 보존했다.
+- Unity Editor가 `ProjectIO.Construction.dll`과 `ProjectIO.Construction.Tests.dll`을 실제 생성해 새 asmdef와 테스트 assembly import를 확인했다.
+- `dotnet build ProjectIO.slnx`: 오류 0개, 기존 코드·Package 경고 20개로 성공했다.
+- 작업자가 요청 범위의 수동 플레이 테스트 완료를 확인했다.
 
 ## 남은 위험
 
 - `Runner.Spawn` 직후 `GridPlaceable.Spawned`가 완료되어 `HasGridOccupation`을 읽을 수 있다는 기존 동기 실행 전제는 유지된다.
-- 실제 Host·Client에서 배치 성공, Grid 충돌, 자원 부족, Supply/Center Tower 초기화 실패와 Late Join을 수동 확인한다.
+- 이번 Slice는 첫 건설 호출자 하나만 전환했으므로 이후 다른 건설 소비자를 옮길 때 동일한 Host 권위와 Rollback 계약을 유지해야 한다.

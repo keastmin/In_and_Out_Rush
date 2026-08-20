@@ -13,6 +13,7 @@
 | Track와 Round | 트랙 확장, 라운드 시간과 웨이브 연결 | `TrackSystem`, `TimeSystem` | Track monster, StageBootstrapper | [TrackAndRounds](Features/TrackAndRounds.md) |
 | Resource Spawn | 자원 배치 계획, 네트워크 Spawn, AOI와 수집 | `ResourceSpawnSystem`, `ResourcePlacementSettings` | Territory, 장애물, Laboratory, ResourceSystem | [ResourceSpawn](Features/ResourceSpawn.md) |
 | Resource Economy | 광물·가스 상태와 비용 지불 | `KIM.Dev.ResourceSystem`, `Cost` | PlayerBuilder, Tower, UI | [ResourceEconomy](Features/ResourceEconomy.md) |
+| Construction | 타워 건설의 Spawn·Grid 검증·지불·롤백 조정 | `TowerConstructionUseCase`, `TowerBuildManager` | Grid, Resource Economy, Fusion Spawn | [TowerAndLaboratory](Features/TowerAndLaboratory.md) |
 | Player Runner | 이동, 전투, 체력, 장비 사용 | `PlayerRunner`, `NetworkInputSystem` | Territory, Monster, UI, Camera | [PlayerRunner](Features/PlayerRunner.md) |
 | Runner Item·Skill | 아이템 소비 전략, 스킬 선택·실행 | `RunnerItemInventory`, `RunnerSkillCaster` | Runner, Network Spawn, Laboratory | [RunnerItemsAndSkills](Features/RunnerItemsAndSkills.md) |
 | Player Builder | 건설·이동·판매 상태와 입력 | `PlayerBuilder`, `PlayerBuilderStateMachine` | Grid, Tower, Resource, Builder UI | [PlayerBuilder](Features/PlayerBuilder.md) |
@@ -36,6 +37,7 @@
 | `Track`, `Time` | TrackAndRounds |
 | `Resource/Network` | ResourceSpawn |
 | `Resource/Local`, `System/ResourceSystem.cs` | ResourceEconomy |
+| `Features/Construction` | TowerAndLaboratory |
 | `Player/Player Runner` | PlayerRunner, RunnerItemsAndSkills |
 | `Player/Player Builder`, `Drag`, `Interactable Object` | PlayerBuilder |
 | `Tower`, `Laboratory` | TowerAndLaboratory |

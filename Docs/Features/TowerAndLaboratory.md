@@ -10,9 +10,14 @@ Last reviewed: 2026-08-20
 
 ## 주요 진입점
 
+- `ProjectIO.Construction.TowerConstructionUseCase`
 - `Tower`, `TowerBuildManager`, `TowerUpgradeManager`, `TowerManager`
 - Attack·Support·Center Tower 구현
 - `Laboratory`, `SupplyTowerManager`, `TeleportTowerPairManager`
+
+## 건설 흐름
+
+`TowerBuildManager`는 기존 RPC와 State Authority 검증, `Runner.Spawn`을 소유한다. Host 건설 시도는 순수 `TowerConstructionUseCase`가 Spawn, 실제 Grid 점유 검증, 특수 Tower 초기화, authoritative Resource 지불, Commit 순서로 조정한다. Spawn 이후 실패는 공통 Rollback에서 Grid 점유를 해제하고 Fusion Despawn한다.
 
 ## 주요 연결
 

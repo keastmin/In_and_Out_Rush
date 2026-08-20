@@ -10,10 +10,12 @@
   <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Assembly-CSharp-firstpass.csproj" />
   <Project Path="ProjectIO.GridPlacement.csproj" />
+  <Project Path="ProjectIO.Construction.csproj" />
   <Project Path="Fusion.Unity.csproj" />
   <Project Path="ProjectIO.ResourceEconomy.csproj" />
   <Project Path="Fusion.Addons.Physics.Editor.csproj" />
   <Project Path="ProjectIO.Monsters.Tests.csproj" />
+  <Project Path="ProjectIO.Construction.Tests.csproj" />
   <Project Path="Fusion.Addons.FSM.csproj" />
   <Project Path="ProjectIO.Monsters.UseCases.csproj" />
   <Project Path="ProjectIO.ResourceEconomy.Tests.csproj" />

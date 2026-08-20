@@ -4,8 +4,8 @@ Status: Reserved
 
 ## 동기화 기준
 
-- Base Commit: `22618452cd61c6f4663d47a6cca3706c93b12d59`
-- 공용 Upstream: `origin/rebuild-development-environment`
+- Base Commit: 22618452cd61c6f4663d47a6cca3706c93b12d59
+- 공용 Upstream: origin/rebuild-development-environment
 
 ## 담당자
 

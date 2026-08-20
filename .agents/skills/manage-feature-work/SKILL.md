@@ -38,6 +38,17 @@ When no overlap exists, create `Docs/Work/Active/W-YYYYMMDD-NNN-short-name.md` f
 
 Set `Status: Reserved`, record the `BASE_COMMIT` and `UPSTREAM` reported by `CheckStart`, and list exact expected code, Asset, shared-contract, scope, and completion fields.
 
+For work that affects Fusion state, Spawn, RPC, Authority, or networked interaction, fill the template's `네트워크·Peer 동등성` section with:
+
+- the input origin and Input Authority;
+- the State Authority validation and mutation owner;
+- the replicated state or explicit result path back to the requesting Peer;
+- Host-local and Client-peer input, read-only preview or HUD, success, rejection, and failure behavior;
+- duplicate-execution, readiness, Late Join, and cleanup checks relevant to the slice;
+- planned runtime evidence or the exact manual Host·Client procedure when the environment cannot run multiple Peers.
+
+For Player Builder or Player Runner network behavior, this section is required even when the worker did not explicitly request Host·Client parity. Do not accept an authority-only design that leaves a valid Client request, preview, HUD, or result feedback without a return path.
+
 After writing the Active document, report its path and scope and wait for the worker's explicit reservation go-ahead. Do not run `CheckReservation`, stage, Commit, or Push before that request.
 
 After the worker requests reservation progress, run:
@@ -69,6 +80,7 @@ After verification:
 3. update `Docs/PROJECT_MAP.md` only when routing or responsibility changed;
 4. update a Skill or `AGENTS.md` only when a reusable workflow or repository-wide rule changed;
 5. run the focused tests and `git diff --check`, then report the implementation as ready for worker testing;
+   for Player Builder or Player Runner network behavior, distinguish Host-local and Client-peer runtime evidence and do not claim Peer parity from compilation or static inspection alone;
 6. keep the implementation changes and work document in the local worktree, leave the work document in `Active`, and wait for the worker's explicit final Commit·Push request. Do not stage, Commit, or Push during this wait;
 7. after the final request, recheck the exact diff, move the work document from `Active` to `Completed`, stage only the exact files recorded in the reservation and the agent's resulting documentation changes, then Commit and Push using the required commit subject format;
 8. if the worker requests changes instead of final Commit·Push, implement and verify them, report the new result, and wait for the final request again.

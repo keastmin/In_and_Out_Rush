@@ -66,11 +66,15 @@
 ## 네트워크 기능
 
 - Fusion 상태, Spawn, RPC, Authority, Host·Client 동작에 영향을 주면 `photon-fusion-feature` Skill을 적용한다.
+- Spawn·Despawn, 자원·점유·피해와 같이 게임 결과에 영향을 주는 공유 상태는 Host·State Authority가 결정한다. 권위 소유와 플레이 체감은 별도 요구사항이며, 권위가 Host에 있다는 이유로 Client 플레이어의 입력이나 표현을 생략하지 않는다.
+- Player Builder와 Player Runner의 네트워크 기능은 별도 요청이 없어도 Host 로컬 플레이어와 Client Input Authority 플레이어가 입력 가능 여부, 읽기 전용 사전 판정과 미리보기, 성공 결과, 거부·실패 피드백에서 동등한 플레이 체감을 갖는 것을 기본 완료 조건으로 한다. 네트워크 지연에 따른 표시 시점 차이는 허용하지만 기능 가능 여부와 최종 결과가 Peer 종류에 따라 달라지면 안 된다.
+- 플레이어 의도는 Input Authority에서 수집하고 State Authority로 전달하며, State Authority가 검증·상태 변경·Spawn을 수행한 뒤 복제 상태 또는 명시적 결과 응답으로 요청 Peer에 결과를 돌려준다. Host 로컬 플레이어도 같은 요청·결과 계약을 사용하거나 동등성이 입증된 경로를 사용하고, Host가 서버와 로컬 Client 역할을 함께 수행해 중복 실행하지 않게 한다.
+- `HasStateAuthority`, `IsInSimulation` 같은 권위·시뮬레이션 검사는 authoritative mutation을 보호하는 데 사용한다. 복제 상태 읽기, 로컬 입력 수집, 미리보기·HUD와 결과 피드백까지 막아야 한다면 Fusion 수명상 이유를 확인하고 Host·Client 양쪽의 준비 상태를 따로 검증한다.
 - 지속 상태를 RPC만으로 관리하지 않는다.
 - 네트워크 상태와 로컬 표현을 분리한다.
 - 권한이 없는 객체가 authoritative 상태를 직접 변경하지 않게 한다.
 - 순수 로컬 UI, 카메라, VFX에는 불필요한 네트워크 동기화를 추가하지 않는다.
-- Host, Client, 권한 없는 호출, Late Join, Despawn 정리를 관련 범위만큼 검증한다.
+- Host, Client, 권한 없는 호출, 성공과 거부·실패, Late Join, Despawn 정리를 관련 범위만큼 검증한다. Builder·Runner의 Peer 동등성은 컴파일이나 정적 검토만으로 완료 처리하지 않으며, 실제 Host·Client 실행을 못 했다면 미검증 항목과 작업자가 수행할 절차를 기록한다.
 
 ## 기존 기능 교체와 마이그레이션
 

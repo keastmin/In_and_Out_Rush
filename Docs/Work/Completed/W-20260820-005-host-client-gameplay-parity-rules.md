@@ -1,6 +1,6 @@
 # W-20260820-005 Host·Client 플레이 체감 동등성 규칙
 
-Status: Reserved
+Status: Complete
 
 ## 동기화 기준
 
@@ -72,13 +72,25 @@ Codex
 
 ## 실제 변경
 
-예약 단계.
+- `AGENTS.md`의 네트워크 공통 규칙에 공유 게임 결과의 Host·State Authority 소유와 Player Builder·Runner의 Host 로컬·Client Input Authority 플레이 체감 동등성을 별도 불변식으로 추가했다.
+- 플레이어 의도를 Input Authority에서 수집해 State Authority가 검증·상태 변경·Spawn하고, 복제 상태 또는 명시적 결과 응답으로 요청 Peer에 돌려주는 기본 흐름을 기록했다.
+- `HasStateAuthority`와 `IsInSimulation` 검사를 authoritative mutation 보호와 구분해 복제 상태 읽기, 로컬 입력, 미리보기·HUD와 실패 피드백을 불필요하게 차단하지 않도록 했다.
+- `photon-fusion-feature` Skill에 Host·Client 요청의 end-to-end 추적, 실패 결과 반환, Host 직접 경로의 계약 통합, Peer별 준비 상태와 Builder·Runner 런타임 검증 기준을 추가했다.
+- `manage-feature-work` Skill이 네트워크 작업 예약 시 입력 원점, 권위 처리, 결과 반환, Host·Client 성공·실패 체감과 런타임 검증 절차를 기록하도록 했다.
+- `Docs/Work/TEMPLATE.md`에 `네트워크·Peer 동등성` 항목을 추가하고 Builder·Runner 네트워크 작업에서는 별도 요청이 없어도 생략하지 못하게 했다.
+- 코드, Scene, Prefab, ScriptableObject, Network schema와 현재 활성 기능 구현은 변경하지 않았다.
 
 ## 검증 결과
 
-예약 단계.
+- `skill-creator/scripts/quick_validate.py .agents/skills/photon-fusion-feature`: `Skill is valid!`
+- `skill-creator/scripts/quick_validate.py .agents/skills/manage-feature-work`: `Skill is valid!`
+- 번들 Python에 누락된 PyYAML은 `Temp/CodexSkillValidationPyYaml`에만 임시 설치해 검증했고 검증 직후 경로 삭제를 확인했다.
+- `rg`로 공통 규칙, 두 Skill과 템플릿의 Peer 동등성·State Authority·런타임 검증 문구가 모두 존재함을 확인했다.
+- `git diff --check`: 통과. 기존 Git 줄바꿈 설정에 따른 LF→CRLF 경고만 있고 공백 오류는 없다.
+- 이번 변경은 AI 작업 규칙과 문서 템플릿만 수정하므로 Unity 컴파일과 Host·Client 런타임 게임 검증 대상은 아니다.
 
 ## 남은 위험
 
 - 규칙 강화는 이후 구현의 판단과 검증을 개선하지만 기존 네트워크 기능의 잠재적 Client 전용 결함을 자동으로 수정하지는 않는다.
 - 실제 Peer 동등성은 각 기능 Slice에서 Host·Client 런타임 테스트로 계속 확인해야 한다.
+- 이미 작성된 기존 Active 문서는 새 템플릿 항목을 소급해서 갖지 않을 수 있으므로, 해당 작업의 기존 네트워크 완료 조건을 기준으로 검증한다.

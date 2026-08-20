@@ -2,7 +2,7 @@
 
 Status: Current
 
-Last reviewed: 2026-08-14
+Last reviewed: 2026-08-20
 
 ## 책임
 
@@ -19,6 +19,7 @@ Last reviewed: 2026-08-14
 
 - PlayerBuilder와 Tower가 셀 점유를 사용한다.
 - Territory와 Track 변경이 Grid 표시와 차단 셀을 갱신한다.
+- 활성 Sanctuary는 Territory 밖의 셀을 임시 Tower 건설 가능 영역으로 등록한다.
 - Resource Spawn과 Stage가 장애물 목록을 소비한다.
 
 ## 관련 Asset
@@ -32,6 +33,7 @@ Last reviewed: 2026-08-14
 - 월드 좌표와 셀 좌표 변환
 - 변경 Chunk만 갱신되는지
 - Tower 점유와 Track 차단이 일치하는지
+- 활성 Sanctuary 셀의 건설 판정과 소멸 시 Tower 점유 해제가 일치하는지
 - Host에서 장애물 Spawn·Despawn 결과가 Client에 반영되는지
 
 ## 기술 부채

@@ -34,6 +34,7 @@ namespace KIM.Dev
         private readonly HashSet<Vector2Int> _previewValidCellIndices = new();
         private readonly HashSet<Vector2Int> _previewBlockedCellIndices = new();
         private readonly HashSet<Vector2Int> _trackBlockedCellIndices = new();
+        private readonly HashSet<SanctuaryView> _activeSanctuaryBuildAreas = new();
         private readonly Dictionary<int, BuffSourceState> _buffSources = new();
         private readonly Dictionary<int, BuffSourceState> _buffPreviewSources = new();
         private readonly Dictionary<Vector2Int, int> _buffCellRefCount = new();
@@ -128,6 +129,7 @@ namespace KIM.Dev
 
             _visualController?.Release();
             _visualController = null;
+            _activeSanctuaryBuildAreas.Clear();
         }
 
         public void SetCellStateOverlayEnabled(bool enabled)
@@ -254,6 +256,47 @@ namespace KIM.Dev
             return _territorySystem.Territory.IsPointInPolygon(centerXZ);
         }
 
+        public bool IsCellInBuildArea(Vector2Int index)
+        {
+            if (IsCellInTerritory(index))
+            {
+                return true;
+            }
+
+            Vector3 center = GetCellCenterPositionFromCellIndex(index);
+            foreach (SanctuaryView sanctuary in _activeSanctuaryBuildAreas)
+            {
+                if (sanctuary != null &&
+                    sanctuary.IsActive &&
+                    sanctuary.IsPointInSanctuary(center))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public void RegisterActiveSanctuaryBuildArea(SanctuaryView sanctuary)
+        {
+            if (sanctuary == null || !sanctuary.IsActive)
+            {
+                return;
+            }
+
+            _activeSanctuaryBuildAreas.Add(sanctuary);
+        }
+
+        public void UnregisterActiveSanctuaryBuildArea(SanctuaryView sanctuary)
+        {
+            if (sanctuary == null)
+            {
+                return;
+            }
+
+            _activeSanctuaryBuildAreas.Remove(sanctuary);
+        }
+
         public bool IsCellBlockedByTrack(Vector2Int index)
         {
             return _trackBlockedCellIndices.Contains(index);
@@ -261,7 +304,7 @@ namespace KIM.Dev
 
         public bool IsCellBuildBlocked(Vector2Int index, ISet<Vector2Int> ignoreIndices = null, bool requireTerritory = true)
         {
-            if (requireTerritory && !IsCellInTerritory(index))
+            if (requireTerritory && !IsCellInBuildArea(index))
             {
                 return true;
             }
@@ -314,7 +357,7 @@ namespace KIM.Dev
                     return false;
                 }
 
-                if (!requireEmpty && requireTerritory && !IsCellInTerritory(targetIndex))
+                if (!requireEmpty && requireTerritory && !IsCellInBuildArea(targetIndex))
                 {
                     return false;
                 }
@@ -765,6 +808,32 @@ namespace KIM.Dev
             RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.Occupancy);
         }
 
+        public void DestroyTowersOverlappingSanctuary(SanctuaryView sanctuary)
+        {
+            UnregisterActiveSanctuaryBuildArea(sanctuary);
+
+            if (!HasStateAuthority || Runner == null || sanctuary == null)
+            {
+                return;
+            }
+
+            List<Tower> towersToDestroy = new();
+            foreach (Tower tower in HostOnlyReadTowers)
+            {
+                if (IsTowerOverlappingSanctuary(tower, sanctuary))
+                {
+                    towersToDestroy.Add(tower);
+                }
+            }
+
+            for (int i = 0; i < towersToDestroy.Count; i++)
+            {
+                DespawnTower(towersToDestroy[i]);
+            }
+
+            RefreshVisualsWithDirtyFlags(InfiniteGridVisualDirtyFlags.Occupancy);
+        }
+
         public bool IsTowerPendingTrackDestruction(Tower tower)
         {
             return _trackDestructionSchedule.IsPendingDestruction(tower);
@@ -811,21 +880,7 @@ namespace KIM.Dev
 
             for (int i = 0; i < towersToDestroy.Count; i++)
             {
-                Tower tower = towersToDestroy[i];
-                if (tower == null || tower.Object == null)
-                {
-                    continue;
-                }
-
-                if (tower.IsCenter && StageBootstrapper.Instance != null && StageBootstrapper.Instance.PlayerBuilder != null)
-                {
-                    int nextCenterCount = Mathf.Max(0, StageBootstrapper.Instance.PlayerBuilder.CenterTowerCount - 1);
-                    StageBootstrapper.Instance.PlayerBuilder.SetCenterTowerCount(nextCenterCount);
-                }
-
-                tower.ReleaseGridOccupation();
-                _trackDestructionSchedule.Remove(tower);
-                Runner.Despawn(tower.Object);
+                DespawnTower(towersToDestroy[i]);
             }
 
             _trackDestructionSchedule.Clear();
@@ -852,6 +907,48 @@ namespace KIM.Dev
             }
 
             return false;
+        }
+
+        private bool IsTowerOverlappingSanctuary(Tower tower, SanctuaryView sanctuary)
+        {
+            if (tower == null || !tower.HasGridOccupation || sanctuary == null)
+            {
+                return false;
+            }
+
+            IReadOnlyList<Vector2Int> occupiedIndices = tower.OccupiedIndices;
+            for (int i = 0; i < occupiedIndices.Count; i++)
+            {
+                Vector3 center = GetCellCenterPositionFromCellIndex(occupiedIndices[i]);
+                if (sanctuary.IsPointInSanctuary(center))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void DespawnTower(Tower tower)
+        {
+            if (tower == null || tower.Object == null)
+            {
+                return;
+            }
+
+            if (tower.IsCenter &&
+                StageBootstrapper.Instance != null &&
+                StageBootstrapper.Instance.PlayerBuilder != null)
+            {
+                int nextCenterCount = Mathf.Max(
+                    0,
+                    StageBootstrapper.Instance.PlayerBuilder.CenterTowerCount - 1);
+                StageBootstrapper.Instance.PlayerBuilder.SetCenterTowerCount(nextCenterCount);
+            }
+
+            tower.ReleaseGridOccupation();
+            _trackDestructionSchedule.Remove(tower);
+            Runner.Despawn(tower.Object);
         }
 
         private void AddBuffCells(IEnumerable<Vector2Int> indices, Color color)

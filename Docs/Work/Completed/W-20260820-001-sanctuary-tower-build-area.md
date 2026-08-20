@@ -70,12 +70,21 @@ Runner가 활성화한 Sanctuary의 셀을 Territory 밖에서도 Builder가 타
 
 ## 실제 변경
 
-예약 단계.
+- `InfiniteGrid`에 활성 Sanctuary 건설 영역 등록·해제와 `Territory 또는 활성 Sanctuary` 셀 판정을 추가했다.
+- Builder 미리보기와 로컬 사전 판정, Host의 Tower Spawn 점유 검증이 공통 `InfiniteGrid.IsCellBuildBlocked` 경로를 통해 Sanctuary를 허용한다.
+- Sanctuary 소멸 시 State Authority가 겹치는 Tower footprint를 수집하고 Grid 점유, Track 파괴 예약, Center Tower 수량을 정리한 뒤 Fusion `Runner.Despawn`을 호출한다.
+- `StageBootstrapper.YOU`가 모든 Peer의 Sanctuary 활성·소멸 이벤트를 Grid 등록 상태에 연결하고, 실제 Tower 제거는 Grid의 State Authority 검사로 제한했다.
+- Sacred Zone·Sanctuary·Gate, Grid, Tower 기능 문서에 새 연결과 검증 항목을 기록했다.
 
 ## 검증 결과
 
-예약 단계.
+- `dotnet build ProjectIO.slnx`: 성공, 오류 0개. 기존 코드와 외부 Package 경고 23개.
+- `dotnet test ProjectIO.slnx --no-build`: 종료 코드 0. 이 변경을 직접 실행하는 독립 테스트 출력은 없었다.
+- Unity Editor assembly reload 로그: 새 `error CS` 없음. 기존 미사용 필드 경고만 확인했다.
+- `git diff --check`: 통과.
+- 정적 경로 확인: Client 미리보기와 Host RPC 재검증이 동일한 Grid 건설 판정을 사용하며, 권한 없는 Peer는 Sanctuary 등록만 해제하고 NetworkObject를 Despawn하지 않는다.
+- 작업자 수동 런타임 테스트: 2026-08-20 완료 확인.
 
 ## 남은 위험
 
-- 실제 Host·Client 런타임 검증은 구현 후 환경에서 가능한 범위를 확인한다.
+- Late Join 시 Sanctuary 자체의 로컬 수명주기 복원은 기존 구현 계약을 따르며 이번 범위에서 네트워크 상태로 전환하지 않았다. Host의 authoritative 건설 검증과 Despawn은 유지된다.

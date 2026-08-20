@@ -2,7 +2,7 @@
 
 Status: Current
 
-Last reviewed: 2026-08-14
+Last reviewed: 2026-08-20
 
 ## 책임
 
@@ -16,7 +16,7 @@ Last reviewed: 2026-08-14
 
 ## 주요 연결
 
-PlayerBuilder, PlayerRunner, Grid, Track, Resource Economy, Monster, Builder UI.
+PlayerBuilder, PlayerRunner, Grid, Track, Sanctuary, Resource Economy, Monster, Builder UI.
 
 ## 관련 Asset
 
@@ -30,6 +30,7 @@ PlayerBuilder, PlayerRunner, Grid, Track, Resource Economy, Monster, Builder UI.
 - Grid 점유 등록·해제
 - 비용 차감과 환불
 - Track 확장으로 파괴되는 타워와 buff registry 정리
+- Sanctuary 소멸로 파괴되는 타워의 Grid 점유와 Center Tower 수량 정리
 - prefab의 NetworkObject와 직렬화 참조
 
 ## 기술 부채

@@ -525,7 +525,12 @@ namespace Dev.Network
 
         private void HandleSanctuaryActivated(SanctuaryView sanctuary)
         {
-            if (!HasStateAuthority || sanctuary == null)
+            if (sanctuary == null)
+                return;
+
+            Grid?.RegisterActiveSanctuaryBuildArea(sanctuary);
+
+            if (!HasStateAuthority)
                 return;
 
             int internalizedCount = InternalizeWorldMonstersInSanctuary(sanctuary);
@@ -549,6 +554,7 @@ namespace Dev.Network
             if (sanctuary == null)
                 return;
 
+            Grid?.DestroyTowersOverlappingSanctuary(sanctuary);
             sanctuary.Activated -= HandleSanctuaryActivated;
             sanctuary.Expired -= HandleSanctuaryExpired;
             sanctuaries.Remove(sanctuary);

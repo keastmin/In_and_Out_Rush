@@ -11,6 +11,7 @@ Last reviewed: 2026-08-20
 ## 주요 진입점
 
 - `Assets/02_Scripts/Grid/InfiniteGrid.cs`
+- `Assets/02_Scripts/Features/Grid/Logic/TowerPlacementPolicy.cs`
 - `InfiniteGridObstacleSpawner`
 - `InfiniteGridOccupancyIndex`, `InfiniteGridVisualController`
 - `IWorldObstacleConsumer`
@@ -21,6 +22,7 @@ Last reviewed: 2026-08-20
 - Territory와 Track 변경이 Grid 표시와 차단 셀을 갱신한다.
 - 활성 Sanctuary는 Territory 밖의 셀을 임시 Tower 건설 가능 영역으로 등록한다.
 - Resource Spawn과 Stage가 장애물 목록을 소비한다.
+- `PlayerBuilderTowerBuild.EvaluateBuildFootprint` 미리보기는 Grid 조회 결과를 `TowerPlacementCellState`로 변환해 순수 `TowerPlacementPolicy`로 판정한다. 실제 건설과 Host 검증은 계속 `InfiniteGrid.CanPlaceAt`을 사용한다.
 
 ## 관련 Asset
 

@@ -5,9 +5,11 @@
   <Project Path="ProjectIO.Monsters.csproj" />
   <Project Path="Fusion.Addons.Physics.csproj" />
   <Project Path="Fusion.Addons.FSM.Editor.csproj" />
+  <Project Path="ProjectIO.GridPlacement.Tests.csproj" />
   <Project Path="ProjectIO.ResourceSpawn.Tests.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Assembly-CSharp-firstpass.csproj" />
+  <Project Path="ProjectIO.GridPlacement.csproj" />
   <Project Path="Fusion.Unity.csproj" />
   <Project Path="ProjectIO.ResourceEconomy.csproj" />
   <Project Path="Fusion.Addons.Physics.Editor.csproj" />

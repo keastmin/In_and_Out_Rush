@@ -1,4 +1,5 @@
 using Fusion;
+using ProjectIO.GridPlacement;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -84,14 +85,19 @@ namespace KIM.Dev
             validIndices?.Clear();
             blockedIndices?.Clear();
 
-            if (_tower == null || InfiniteGrid.Instance == null)
+            InfiniteGrid grid = InfiniteGrid.Instance;
+            if (_tower == null || grid == null)
                 return;
 
-            var indices = InfiniteGrid.Instance.GetCellIndicesInRange(centerIndex, BuildRange, includeCenter: true);
+            var indices = grid.GetCellIndicesInRange(centerIndex, BuildRange, includeCenter: true);
             for (int i = 0; i < indices.Count; i++)
             {
                 Vector2Int targetIndex = indices[i];
-                bool canPlaceCell = !InfiniteGrid.Instance.IsCellBuildBlocked(targetIndex);
+                var cellState = new TowerPlacementCellState(
+                    grid.IsCellInBuildArea(targetIndex),
+                    grid.IsCellBlockedByTrack(targetIndex),
+                    grid.IsCellOccupied(targetIndex));
+                bool canPlaceCell = TowerPlacementPolicy.CanPlace(cellState);
 
                 if (canPlaceCell)
                 {

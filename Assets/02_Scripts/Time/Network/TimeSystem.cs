@@ -1,5 +1,6 @@
 using System;
 using Fusion;
+using ProjectIO.MatchProgression;
 using UnityEngine;
 
 namespace Dev.Network
@@ -75,10 +76,42 @@ namespace Dev.Network
             ElapsedTime += deltaTime;
             PhaseElapsedTime += deltaTime;
 
-            if (Phase == RoundPhase.Maintenance && PhaseElapsedTime >= _maintenanceDuration)
-                StartRound();
-            else if (Phase == RoundPhase.Combat && PhaseElapsedTime >= _roundDuration)
-                EndRound();
+            if (!TryMapProgressionPhase(Phase, out RoundProgressionPhase progressionPhase))
+                return;
+
+            RoundProgressionTransition transition = RoundProgressionTransitionPolicy.Evaluate(
+                progressionPhase,
+                PhaseElapsedTime,
+                _maintenanceDuration,
+                _roundDuration);
+
+            switch (transition)
+            {
+                case RoundProgressionTransition.StartRound:
+                    StartRound();
+                    break;
+                case RoundProgressionTransition.EndRound:
+                    EndRound();
+                    break;
+            }
+        }
+
+        private static bool TryMapProgressionPhase(
+            RoundPhase phase,
+            out RoundProgressionPhase progressionPhase)
+        {
+            switch (phase)
+            {
+                case RoundPhase.Maintenance:
+                    progressionPhase = RoundProgressionPhase.Maintenance;
+                    return true;
+                case RoundPhase.Combat:
+                    progressionPhase = RoundProgressionPhase.Combat;
+                    return true;
+                default:
+                    progressionPhase = default;
+                    return false;
+            }
         }
 
         private void ResetRoundState()

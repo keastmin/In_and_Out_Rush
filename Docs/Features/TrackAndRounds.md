@@ -2,7 +2,7 @@
 
 Status: Current
 
-Last reviewed: 2026-08-14
+Last reviewed: 2026-08-20
 
 ## 책임
 
@@ -12,8 +12,11 @@ Last reviewed: 2026-08-14
 
 - `Assets/02_Scripts/System/TrackSystem.cs`
 - `Assets/02_Scripts/Time/Network/TimeSystem.cs`
+- `Assets/02_Scripts/Features/MatchProgression/Logic/RoundProgressionTransitionPolicy.cs`
 - `Track`, `TrackVisible`, `RangeIndexMapper`
 - `StageBootstrapper.YOU`의 라운드 이벤트 연결
+
+`RoundProgressionTransitionPolicy`는 현재 Phase와 Phase 경과 시간이 duration 경계를 넘었는지만 순수하게 판정한다. Host 권위 검사, Networked 상태 변경, Round·Berserk 갱신과 기존 이벤트 발생은 `TimeSystem`이 계속 소유한다.
 
 ## 주요 소비자
 

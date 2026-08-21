@@ -1,0 +1,21 @@
+{
+  "name": "ProjectIO.MatchProgression.Tests",
+  "rootNamespace": "ProjectIO.MatchProgression.Tests",
+  "references": [
+    "ProjectIO.MatchProgression"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

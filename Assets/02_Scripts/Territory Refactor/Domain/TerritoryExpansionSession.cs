@@ -113,6 +113,19 @@ namespace ProjectIO.Territory
             return true;
         }
 
+        public bool TryCopyPathTo(List<Vector2> results)
+        {
+            if (results == null)
+                return false;
+
+            results.Clear();
+            if (!IsExpanding || _playerPath.Count < 2)
+                return false;
+
+            results.AddRange(_playerPath);
+            return true;
+        }
+
         private void ClearPath()
         {
             _playerPath.Clear();

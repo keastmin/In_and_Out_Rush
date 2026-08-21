@@ -21,11 +21,15 @@ Last reviewed: 2026-08-21
 - `TerritoryBoundsIndex`, `TerritoryMeshData`
 - 신규 순수 기반: `ProjectIO.Territory.ChunkDomain` assembly의
   `FixedTerritoryPoint`, `TerritoryChunkCoordinate`,
-  `TerritorySegmentChunkTraversal`, `TerritoryTrailSession`
+  `TerritorySegmentChunkTraversal`, `TerritoryTrailSession`,
+  `TerritoryTrailShadowComparer`
+- State Authority 진단 adapter: `TerritoryTrailShadowRecorder`
 - `.agents/skills/build-chunk-territory/`
 
-신규 Chunk domain은 아직 런타임에 연결되지 않았다. 현재 확장 결과와 모든
-consumer에는 계속 Legacy polygon만 authoritative하다.
+신규 Chunk domain은 Editor/Development Build의 State Authority에서 Legacy path와
+순서를 비교하는 shadow 진단에만 연결됐다. 현재 확장 결과와 모든 consumer에는
+계속 Legacy polygon만 authoritative하며 shadow mismatch도 게임 결과를 변경하지
+않는다.
 
 ## 주요 소비자
 

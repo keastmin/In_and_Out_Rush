@@ -4,32 +4,36 @@ Status: Complete
 
 ## Objective
 
-Chunk Territory의 첫 기반으로 프레임, UnityEngine, Fusion에 의존하지 않는
-고정소수점 좌표와 순서 보존 Trail session/fragment 도메인을 구현한다. Runner
-선분은 여러 Chunk를 한 번에 지나거나 같은 Chunk를 재방문해도 결정론적으로
-분할되고 원래 이동 순서를 잃지 않아야 한다.
+State Authority가 현재 Legacy 확장 경로와 함께 Chunk Trail session을 shadow로
+기록한다. 성공 재진입에서는 fixed sample 순서를 비교하고, 자기 교차·Lifeline과
+외부 강제 이동 중단/재개에서는 Commit/Abort 수명을 확인한다. Shadow 결과는
+진단 전용이며 Territory, RPC, 표시와 consumer 결과를 변경하지 않는다.
 
 ## Prerequisites
 
-- Active reservation `W-20260821-010-chunk-territory-domain-foundation`
-- implementation base `e03777125b34266d8e36e522feb7a15b6c200858`
+- Active reservation `W-20260821-011-chunk-territory-shadow-trail`
+- implementation base `44578520a600abc16b767e1718da3fcbb05577cb`
 - `CONTRACTS.md`의 C001-C004가 Approved일 것
+- 첫 도메인 마일스톤 commit `3ee8d2a`
 
 ## Read first
 
 - `AGENTS.md`
 - `Docs/Features/Territory.md`
-- `Docs/Work/Active/W-20260821-010-chunk-territory-domain-foundation.md`
+- `Docs/Work/Completed/W-20260821-011-chunk-territory-shadow-trail.md`
 - `Docs/LongRunning/Territory/CONTRACTS.md`
 - `.agents/skills/build-chunk-territory/SKILL.md`
 
 ## Allowed files
 
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain/`
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain.Tests/`
+- `Assets/02_Scripts/Territory/TerritorySystem.cs`
+- `Assets/02_Scripts/Territory Refactor/Domain/TerritoryExpansionSession.cs`
+- `Assets/02_Scripts/Territory Refactor/Adapters/Fusion/TerritoryTrailShadowRecorder.cs`
+- `Assets/02_Scripts/Territory Refactor/ChunkDomain/`의 shadow comparer 파일
+- `Assets/02_Scripts/Territory Refactor/ChunkDomain.Tests/`의 shadow comparer 테스트
 - `Docs/LongRunning/Territory/`
 - `Docs/Features/Territory.md`
-- `Docs/Work/Active/W-20260821-010-chunk-territory-domain-foundation.md`
+- `Docs/Work/Completed/W-20260821-011-chunk-territory-shadow-trail.md`
 
 ## Reserved Scene·Prefab·Data Asset
 
@@ -37,50 +41,47 @@ Chunk Territory의 첫 기반으로 프레임, UnityEngine, Fusion에 의존하�
 
 ## Prohibited changes
 
-- Legacy `Territory`, `TerritorySystem`, `TerritoryVisible`와 현재 Trail 코드
-- Fusion RPC, Networked state와 NetworkObject
+- Legacy polygon, 계산용 path 단순화, 교차 판정과 consumer 결과 변경
+- 신규 Fusion RPC, Networked state와 NetworkObject
 - Scene, Prefab, Material, Shader, Compute Shader와 ScriptableObject
-- Territory consumer와 Bootstrapper
+- LineRenderer/Trail presentation, Territory consumer와 Bootstrapper
 
 ## Required behavior
 
-- 월드 1 unit당 256 fixed unit과 8 world-unit Chunk를 사용한다.
-- Chunk는 각 축의 `[minimum, maximum)` half-open 영역을 소유한다.
-- 음수 좌표도 mathematical floor로 Chunk를 계산한다.
-- 선분을 Chunk 경계에서 나눌 때 원래 순서와 연속성을 유지한다.
-- 모서리를 정확히 통과하면 두 축을 같은 step에서 이동해 옆 Chunk를 허위 방문하지
-  않는다.
-- 같은 Chunk 재방문은 별도 fragment이며 fragment 정렬은 좌표가 아니라 sequence다.
-- Abort된 session은 payload를 소각하고 같은 session의 후속 sample/fragment를
-  거부한다.
+- Editor/Development Build의 State Authority만 Legacy point와 같은 순서의 shadow
+  sample을 기록한다.
+- Proxy의 기존 path RPC는 shadow recorder를 실행하지 않는다.
+- 성공 재진입은 shadow를 Commit하고 양자화된 Legacy 순서와 비교한다.
+- 비교는 point 수와 첫 mismatch index를 결정론적으로 제공한다.
+- 자기 교차, Lifeline, Stop과 teardown은 active shadow session을 Abort한다.
+- 외부 강제 이동 pause 중에는 sample을 추가하지 않고 resume 강제점을 이어 기록한다.
+- shadow 실패와 mismatch는 진단만 남기며 Legacy 결과를 바꾸지 않는다.
 
 ## Acceptance criteria
 
-- `ProjectIO.Territory.ChunkDomain.Tests` EditMode 테스트 통과
-- 프로젝트 script compile 통과
-- 새 runtime assembly가 Assembly-CSharp, UnityEngine, Fusion을 참조하지 않음
-- `.meta` pairing과 asmdef JSON parse 통과
-- Legacy runtime과 직렬화 Asset diff 없음
+- comparer와 기존 ChunkDomain EditMode 테스트 통과
+- recorder, Legacy session과 `TerritorySystem` 통합 컴파일 통과
+- Host 로컬/Client Input Authority 정상 재진입과 실패·중단 경로 절차 기록
+- 신규 RPC/Networked/Spawn과 Scene·Prefab·직렬화 Asset diff 없음
+- `.meta` pairing 통과
 - `git diff --check` 통과
 
-## Completion evidence
+## Current evidence
 
-- Unity 6000.0.69f1 별도 최소 프로젝트에서
-  `ProjectIO.Territory.ChunkDomain.Tests` EditMode 15/15 통과
-- 주 프로젝트 `Assembly-CSharp.csproj` 빌드 0 error 통과
-  (기존 analyzer warning 16건 유지)
-- runtime asmdef 참조 없음과 `noEngineReferences: true` 확인
-- 신규 Asset 11개와 폴더 2개의 `.meta` pairing, GUID 중복 없음,
-  asmdef JSON parse 통과
-- Legacy runtime, Scene, Prefab, Material, Shader, Fusion 직렬화 Asset diff 없음
+- Unity 6000.0.69f1 격리 프로젝트 EditMode 21/21 통과
+- 실제 수정된 recorder, Legacy session과 `TerritorySystem` 통합 컴파일 0 error
+- 신규 Asset/meta pairing, GUID와 신규 RPC/Networked diff 검사 통과
+- `git diff --check` 통과
+- 작업자가 안내된 Host·Client 정상 재진입, 자기 교차/Lifeline과 SandTomb
+  pause/resume 런타임 절차 완료를 보고
 
 ## Rollback
 
-신규 `ChunkDomain`, `ChunkDomain.Tests`, 장기 문서와 Territory 문서의 이번
-마일스톤 기록만 제거한다. 런타임 연결이 없으므로 Legacy 동작에는 rollback
-절차가 필요하지 않다.
+`TerritorySystem`의 shadow hook과 read-only Legacy path seam, 신규 recorder,
+comparer/test와 이번 문서 기록만 제거한다. 기존 Legacy path, RPC와 Territory
+결과는 변경 전 경로 그대로 남는다.
 
 ## Out of scope
 
-Fusion 전송, 예측 Trail 표시, Territory Chunk 저장/fill/revision, GPU 렌더링,
-consumer migration과 Legacy cutover.
+owner-predicted/confirmed Trail 전송·표시, Territory Chunk 저장/fill/revision,
+GPU 렌더링, consumer migration과 Legacy cutover.

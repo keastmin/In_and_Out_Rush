@@ -35,6 +35,8 @@ public class TerritorySystem : Dev.Network.System
     [SerializeField] LineRenderer lineRenderer;
     readonly TerritoryExpansionSession expansionSession = new();
     readonly TerritoryExpansionReplication expansionReplication = new();
+    readonly TerritoryTrailShadowRecorder shadowTrailRecorder = new();
+    readonly List<Vector2> shadowLegacyPath = new();
     readonly List<Vector2> pendingExpansionPathPoints = new(ExpansionPathSyncBatchSize);
     TerritoryTrailChunkRenderer trailChunkRenderer;
     TickTimer expansionPathSyncTimer;
@@ -44,6 +46,7 @@ public class TerritorySystem : Dev.Network.System
     public TerritoryVisible TerritoryVisible;
     public bool IsExpanding => expansionSession.IsExpanding;
     public float ExpansionLineWidth => lineRenderer != null ? lineRenderer.widthMultiplier : 0f;
+    private string ShadowLogOwnerName => Runner != null ? Runner.name : name;
 
     public event Action<Territory, TerritorySystem> OnTerritoryExpandedEvent;
 
@@ -70,6 +73,19 @@ public class TerritorySystem : Dev.Network.System
         GenerateInitialTerritory();
 
         Dev.Network.StageBootstrapper.Instance.PlayerRunner.OnPositionChanged += HandlePlayerPositionChanged;
+    }
+
+    protected override void OnTearDown()
+    {
+        AbortShadowTrail("Territory system teardown");
+
+        if (Dev.Network.StageBootstrapper.Instance != null &&
+            Dev.Network.StageBootstrapper.Instance.PlayerRunner != null)
+        {
+            Dev.Network.StageBootstrapper.Instance.PlayerRunner.OnPositionChanged -= HandlePlayerPositionChanged;
+        }
+
+        base.OnTearDown();
     }
 
     void GenerateInitialTerritory()
@@ -109,11 +125,13 @@ public class TerritorySystem : Dev.Network.System
     private void StartExpanding()
     {
         expansionSession.Begin();
+        BeginShadowTrail();
         trailChunkRenderer?.Begin();
     }
 
     private void StopExpanding()
     {
+        AbortShadowTrail("Legacy expansion stopped before shadow commit");
         expansionPathSuspended = false;
         expansionSession.Stop();
         pendingExpansionPathPoints.Clear();
@@ -138,7 +156,76 @@ public class TerritorySystem : Dev.Network.System
     private void AddExpandingPathPoint(Vector2 point, bool forceCalculationPoint = false)
     {
         expansionSession.AppendPathPoint(point, forceCalculationPoint);
+        AppendShadowTrailPoint(point);
         trailChunkRenderer?.Append(point);
+    }
+
+    private void BeginShadowTrail()
+    {
+        if (Object == null || !Object.HasStateAuthority || !Debug.isDebugBuild)
+            return;
+
+        if (!shadowTrailRecorder.TryBegin(out string reason))
+            Debug.LogWarning($"{ShadowLogOwnerName} - Shadow Trail begin failed: {reason}");
+    }
+
+    private void AppendShadowTrailPoint(Vector2 point)
+    {
+        if (Object == null || !Object.HasStateAuthority || !shadowTrailRecorder.IsRecording)
+            return;
+
+        int simulationTick = Runner != null ? Runner.Tick.Raw : 0;
+        if (!shadowTrailRecorder.TryAppend(point, simulationTick, out string reason))
+            Debug.LogWarning($"{ShadowLogOwnerName} - Shadow Trail sample rejected: {reason}");
+    }
+
+    private void CommitAndCompareShadowTrail()
+    {
+        if (Object == null || !Object.HasStateAuthority || !shadowTrailRecorder.IsRecording)
+            return;
+
+        if (!expansionSession.TryCopyPathTo(shadowLegacyPath))
+        {
+            AbortShadowTrail("Legacy path unavailable at shadow commit");
+            return;
+        }
+
+        if (!shadowTrailRecorder.TryCommit(
+                shadowLegacyPath,
+                out TerritoryTrailShadowComparison comparison,
+                out string reason))
+        {
+            Debug.LogWarning($"{ShadowLogOwnerName} - Shadow Trail commit failed: {reason}");
+            return;
+        }
+
+        if (!comparison.IsMatch)
+        {
+            Debug.LogWarning(
+                $"{ShadowLogOwnerName} - Shadow Trail mismatch. Session: {shadowTrailRecorder.LastSessionId}, " +
+                $"Legacy: {comparison.LegacyPointCount}, Shadow: {comparison.ShadowSampleCount}, " +
+                $"First mismatch: {comparison.FirstMismatchIndex}");
+            return;
+        }
+
+        Debug.Log(
+            $"{ShadowLogOwnerName} - Shadow Trail matched. Session: {shadowTrailRecorder.LastSessionId}, " +
+            $"Samples: {comparison.ShadowSampleCount}, Fragments: {shadowTrailRecorder.LastFragmentCount}");
+    }
+
+    private void AbortShadowTrail(string cause)
+    {
+        if (Object == null || !Object.HasStateAuthority || !shadowTrailRecorder.IsRecording)
+            return;
+
+        ulong sessionId = shadowTrailRecorder.LastSessionId;
+        if (shadowTrailRecorder.TryAbort(out string reason))
+        {
+            Debug.Log($"{ShadowLogOwnerName} - Shadow Trail aborted. Session: {sessionId}, Cause: {cause}");
+            return;
+        }
+
+        Debug.LogWarning($"{ShadowLogOwnerName} - Shadow Trail abort failed: {reason}");
     }
 
     private void QueueExpansionPathPointForReplication(Vector2 point)
@@ -346,6 +433,7 @@ public class TerritorySystem : Dev.Network.System
     {
         using (ExpandTerritoryMarker.Auto())
         {
+        CommitAndCompareShadowTrail();
         Debug.Log($"{Runner.name} - Expanding territory with path: {expansionSession.CalculationPathCount}");
 
         TerritoryMeshData meshData;
@@ -422,6 +510,8 @@ public class TerritorySystem : Dev.Network.System
         {
             if (!Object.HasStateAuthority)
                 return false;
+
+            AbortShadowTrail("Player crossed own path");
 
             if (playerRunner != null && playerRunner.TryActivateLifeline(out Vector3 returnPosition))
             {

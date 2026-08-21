@@ -1,6 +1,6 @@
 # W-20260821-011 Chunk Territory Shadow Trail 통합
 
-Status: Reserved
+Status: Completed
 
 ## 동기화 기준
 
@@ -132,11 +132,35 @@ ScriptableObject와 Fusion 설정은 수정하지 않는다.
 
 ## 실제 변경
 
-예약 단계. 구현 전.
+- fixed Legacy point와 shadow sample의 point 수·첫 mismatch를 비교하는 순수
+  `TerritoryTrailShadowComparer`와 result를 추가했다.
+- Editor/Development Build의 State Authority 전용 `TerritoryTrailShadowRecorder`가
+  단조 SessionId, sample sequence, Commit/Abort와 마지막 진단 결과를 관리하도록
+  구현했다. 비개발 빌드에서는 shadow session을 시작하지 않는다.
+- `TerritoryExpansionSession`에 현재 Legacy player path의 읽기 전용 Vector2 copy
+  seam을 추가했다. path 저장·단순화·교차·확장 로직은 변경하지 않았다.
+- `TerritorySystem`이 Legacy point 추가 뒤 같은 점을 shadow에 기록하고, 정상
+  재진입의 확장 직전에 Commit/compare한다. Stop, 자기 교차, Lifeline reset과
+  teardown은 active shadow를 Abort한다.
+- 기존 RPC가 실행되는 Proxy에서는 `HasStateAuthority` 검사로 shadow를 시작하거나
+  중복 기록하지 않는다.
+- Scene·Prefab·Networked state·RPC·Spawn·LineRenderer와 consumer를 변경하지
+  않았다.
 
 ## 검증 결과
 
-예약 단계. 구현 전.
+- Unity 6000.0.69f1 격리 프로젝트 EditMode 21/21 통과. 기존 15개와 신규
+  comparer 3개, recorder Commit/Abort/실패 격리 3개를 포함한다.
+- 실제 수정된 `TerritoryTrailShadowRecorder`, `TerritoryExpansionSession`,
+  `TerritorySystem`을 프로젝트 assembly와 함께 통합 컴파일해 0 error를 확인했다.
+- 신규 comparer 좌표 mismatch와 count mismatch가 각각 첫 다른 index와 shared
+  prefix 길이를 보고함을 확인했다.
+- recorder 정상 Commit이 fragment를 남기고, Abort 후 payload/비교 결과를
+  소각하며 다음 session이 더 큰 SessionId를 사용함을 확인했다.
+- 작업자가 주 Unity Editor compile과 안내된 Host 로컬/Client Input Authority
+  정상 재진입, 자기 교차·Lifeline·SandTomb pause/resume 절차 완료를 보고했다.
+- 신규 `.meta` pairing과 GUID, 예약 범위, 신규 RPC/Networked/Spawn diff와
+  `git diff --check` 통과. Scene·Prefab·직렬화 Asset diff 없음.
 
 ## 남은 위험
 
@@ -146,3 +170,6 @@ ScriptableObject와 Fusion 설정은 수정하지 않는다.
   이는 C001 계약상 정상이며 그보다 큰 순서·좌표 차이만 mismatch로 취급한다.
 - 실제 Client Runner 위치 이벤트가 Host State Authority에 도달하는 타이밍은
   런타임 Host·Client 테스트에서 별도로 확인해야 한다.
+- 현재 성공 비교는 Legacy path와 같은 입력점을 shadow에 병행 기록하는 일치
+  검증이다. 네트워크 transport, 화면 예측과 Chunk Territory commit의 정확성을
+  증명하지 않는다.

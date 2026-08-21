@@ -1,6 +1,6 @@
 # W-20260822-002 Chunk Territory 복제와 복구
 
-Status: Reserved
+Status: Complete
 
 ## 동기화 기준
 
@@ -158,16 +158,46 @@ snapshot이 원본이고 Networked revision은 지속적인 수렴 신호다. �
 
 ## 실제 변경
 
-예약 단계. 구현 후 기록한다.
+- C007을 Approved로 고정하고 최대 48-word packet, tick당 최대 2 data packet,
+  Networked revision과 targeted recovery 계약을 Current Milestone에 반영했다.
+- `TerritoryChunkTransferPacketizer`가 Full/Empty 행 run과 Boundary fixed segment를
+  결정적 word stream으로 만들고 bounded packet으로 분할하도록 구현했다.
+- `TerritoryChunkReplica`가 delta base, packet/record 순서, run/Boundary payload와
+  terminal을 검증하고 성공 시에만 immutable snapshot을 교체하도록 구현했다.
+  malformed/gap/stale/downgrade는 기존 replica를 보존한다.
+- `TerritoryChunkReplicationStream`에 순차 outbound transaction, Peer별 snapshot
+  요청 중복 억제, 30-tick mismatch 지연과 300-tick retry, teardown reset을 추가했다.
+- `TerritorySystem`은 State Authority Commit마다 authoritative Networked revision과
+  delta를 한 번 공개한다. Proxy mismatch는 `RpcInfo.Source`를 검증한 targeted 전체
+  snapshot을 요청하며 모든 data RPC를 tick budget으로 나눠 전송한다.
+- Legacy polygon, vertex RPC, mesh, Trail과 consumer callback은 변경하지 않았고
+  Scene·Prefab·Inspector·asmdef·Fusion 설정 변경은 없다.
 
 ## 검증 결과
 
-예약 단계. 구현 후 기록한다.
+- 신규 packetizer/replica 7개 assertion과 기존 ChunkDomain 테스트를 포함한 독립
+  validation 35/35 통과.
+- adapter validation에서 30-segment Boundary delta 4 packet이 tick당 최대 2개,
+  총 2 tick으로 전송되고 recovery request 지연/중복 억제가 통과했다.
+- 1000×1000 사각형: 15,876 Chunk, 118 packet, 5,641 word, packetize 7.384ms.
+- 256점·반경 500: 12,532 Chunk, 144 packet, 6,881 word, packetize 3.282ms.
+- 신규 source 직접 domain/adapter compile 0 errors. 임시 MSBuild target으로 생성
+  csproj를 수정하지 않고 신규 source를 포함한 `Assembly-CSharp` 통합 compile
+  0 errors, 기존 warning 13개.
+- `.meta` 7쌍과 GUID 중복 없음. 실제 Unity import/Fusion Weaver와 Host·Client·Late
+  Join runtime은 작업자 검증 대기 중.
 
 ## 남은 위험
 
 - 대형 snapshot의 실제 bandwidth와 수렴 시간은 Fusion 시뮬레이션과 Unity Profiler로
-  확인해야 한다. 이번 작업은 크기와 tick 예산을 제한하지만 AOI별 선택 복제는 하지
-  않는다.
+  확인해야 한다. 60Hz 기준 위 synthetic snapshot data packet은 약 0.98~1.2초에
+  걸쳐 발송되지만 RPC framing/traffic과 복수 Territory 합산 수치는 미측정이다.
+- snapshot/delta packetize는 아직 동기식이며 synthetic 입력에서 3.282~7.384ms였다.
+  Unity Profiler 결과에 따라 incremental packetization이나 cache가 필요할 수 있다.
 - Chunk replica는 계속 shadow이므로 복구 실패가 현재 Legacy 게임 결과를 바꾸지는
   않지만 GPU 및 consumer 전환 전 반드시 수렴 신뢰성을 검증해야 한다.
+- 작업자는 현재 게임이 고정 2인이고 한 Peer 이탈 시 스테이지가 종료되어 Late
+  Join·재접속이 비요구사항임을 확인했다. 실제 Host·Client/Late Join runtime을
+  수행하지 않은 상태로 이번 자동 검증 결과를 Commit·Push하며, 다음 작업에서 해당
+  recovery·retry·보안 복잡성을 제거하고 실제 Runner 체감 동등성과 frame 안정성에
+  집중한다.

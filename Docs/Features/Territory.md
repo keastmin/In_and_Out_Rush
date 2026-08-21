@@ -13,6 +13,10 @@ Last reviewed: 2026-08-22
 - 현재 authoritative 경로: `Assets/02_Scripts/Territory/TerritorySystem.cs`와 Legacy `Territory`
 - 목표 경로: `Assets/02_Scripts/Territory Refactor/` 아래 Chunk·Trail 기반 구현
 - 승인된 cutover 전에는 Legacy가 기준이며 새 경로가 같은 부작용을 중복 실행하면 안 된다.
+- 현재 제품 세션은 최대 2인이 스테이지 시작부터 함께하고 한 Peer가 이탈하면
+  스테이지가 종료된다. Late Join·재접속 복구·다수 Peer 보안 경계는 요구사항이
+  아니며, 후속 네트워크 작업은 Host/Client Runner 체감 동등성과 frame 안정성에
+  필요한 최소 계약만 유지한다.
 
 ## 주요 진입점
 
@@ -26,8 +30,10 @@ Last reviewed: 2026-08-22
   `TerritoryTrailReceiver`, `TerritoryTrailShadowComparer`
 - Chunk state 기반: `TerritoryChunkFill`, `TerritoryChunkCoverage`,
   `TerritoryChunkSnapshot`, `TerritoryChunkStateBuilder`, `TerritoryChunkStore`
+- Chunk 복제 기반: `TerritoryChunkTransferPacket`,
+  `TerritoryChunkTransferPacketizer`, `TerritoryChunkReplica`
 - State Authority adapter: `TerritoryTrailShadowRecorder`,
-  `TerritoryTrailReplicationStream`
+  `TerritoryTrailReplicationStream`, `TerritoryChunkReplicationStream`
 - `.agents/skills/build-chunk-territory/`
 
 Input Authority owner는 local fixed Trail을 즉시 표시한다. State Authority는
@@ -39,8 +45,14 @@ Legacy polygon만 authoritative하며 prediction이나 transport mismatch가 게
 State Authority는 초기 Territory와 Legacy 정상 확장 결과를 revisioned sparse
 Chunk shadow snapshot으로도 Commit한다. snapshot은 전역 polygon을 보관하지 않고
 미저장 `Empty`, payload 없는 `Full`, fixed local 경계 선분을 가진 `Boundary`로
-나뉜다. 이 shadow 상태는 아직 RPC, Late Join, 표시와 consumer에 연결되지 않으며
-실패해도 Legacy 성공 결과를 되돌리지 않는다.
+나뉜다.
+
+State Authority는 `[Networked]` revision을 수렴 신호로 복제하고 정상 Commit의
+changed-Chunk를 최대 48-word Reliable packet, simulation tick당 최대 2 data packet
+예산으로 보낸다. Proxy는 transaction 전체를 검증한 뒤에만 shadow replica를
+원자적으로 교체한다. revision gap, malformed transaction과 Late Join은 요청
+`PlayerRef`에만 보내는 전체 sparse snapshot으로 복구한다. 이 replica는 아직 표시와
+consumer에 연결되지 않으며 전송 실패도 Legacy 성공 결과를 되돌리지 않는다.
 
 ## 주요 소비자
 

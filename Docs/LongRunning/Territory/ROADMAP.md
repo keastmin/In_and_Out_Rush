@@ -7,7 +7,10 @@
 3. **Complete** — owner-predicted/confirmed Trail presentation and Fusion fragment
    transport
 4. **Complete** — revisioned Empty/Full/Boundary Chunk Territory state and expansion commit
-5. **Planned** — changed-Chunk replication, recovery and Late Join snapshot
+5. **Complete, runtime unverified** — changed-Chunk replication, recovery and Late Join
+   snapshot. 현재 제품에는 Late Join이 없어 다음 slice에서 관련 복잡성을 축소한다.
+5.1. **Planned** — fixed two-peer replication simplification and runtime frame parity;
+   reconnect/Late Join/security expansion 제거, Host·Client Trail/expansion 실측
 6. **Planned** — GPU Chunk mask/SDF presentation with CPU fallback
 7. **Planned** — one consumer migration per milestone: containment, Grid, Fog, Resource,
    Monster and remaining consumers

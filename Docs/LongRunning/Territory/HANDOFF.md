@@ -2,97 +2,124 @@
 
 ## Completed outcome
 
-State Authority에 revisioned sparse Chunk Territory shadow store를 연결했다. snapshot은
-전역 polygon을 보관하지 않고 미저장 `Empty`, payload 없는 `Full`, fixed Chunk-local
-방향성 경계 선분을 가진 `Boundary` coverage로 구성된다.
+State Authority의 C006 sparse Chunk Territory shadow snapshot을 Proxy에 복제하는
+마일스톤 5 코드를 구현했다. 정상 Commit은 ordered changed-Chunk delta이며,
+`[Networked]` authoritative revision과 Proxy replica가 수렴하지 않으면 요청
+`PlayerRef`에만 전체 immutable snapshot을 전송한다.
 
-초기 Territory와 Legacy 정상 확장 결과만 candidate로 빌드하며, 전체 성공 뒤에만
-revision과 changed-Chunk를 원자적으로 공개한다. Legacy polygon, mesh, vertex RPC,
-consumer callback과 W-012 Trail은 계속 유일한 게임 경로다.
+Full/Empty 행 run과 Boundary fixed local segment는 최대 48-word Reliable packet으로
+분할되고 한 TerritorySystem은 simulation tick마다 data packet을 최대 2개만 보낸다.
+수신자는 transaction 전체를 검증한 뒤에만 replica를 원자적으로 교체한다. Legacy
+polygon, mesh, vertex RPC, consumer callback과 W-012 Trail은 계속 유일한 게임
+경로다.
+
+자동 검증은 통과했다. 실제 Unity import/Fusion Weaver와 Host·Client·Late Join
+runtime은 작업자가 수행하지 않은 상태로 Commit하며, 현재 제품에 Late Join이 없다는
+결정에 따라 다음 slice에서 관련 복잡성을 축소한다.
 
 ## Changed files
 
 - `Assets/02_Scripts/Territory/TerritorySystem.cs`
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkFill.cs`
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkLocalPoint.cs`
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkBoundarySegment.cs`
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkCoverage.cs`
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkSnapshot.cs`
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkCommitResult.cs`
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkStateBuilder.cs`
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkStore.cs`
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain.Tests/TerritoryChunkStateBuilderTests.cs`
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain.Tests/TerritoryChunkStoreTests.cs`
+- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkTransferKind.cs`
+- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkTransferPacket.cs`
+- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkTransferPacketizer.cs`
+- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkReplica.cs`
+- `Assets/02_Scripts/Territory Refactor/Adapters/Fusion/TerritoryChunkReplicationStream.cs`
+- `Assets/02_Scripts/Territory Refactor/ChunkDomain.Tests/TerritoryChunkTransferPacketizerTests.cs`
+- `Assets/02_Scripts/Territory Refactor/ChunkDomain.Tests/TerritoryChunkReplicaTests.cs`
+- 위 신규 Unity script의 `.meta` 7개
 - `Docs/Features/Territory.md`
-- `Docs/LongRunning/Territory/`의 milestone/contract/handoff/test 문서
-- `Docs/Work/Completed/W-20260822-001-chunk-territory-state-commit.md`
+- `Docs/LongRunning/Territory/`의 milestone/contract/handoff/roadmap/test 문서
+- `Docs/Work/Active/W-20260822-002-chunk-territory-replication-recovery.md`
 
 ## Decisions used
 
-- `CONTRACTS.md` C001-C006
-- State Authority shadow only; Legacy gameplay authority 유지
-- revision은 initial 1부터 단조 증가 `ulong`
-- changed coverage와 `Empty` tombstone은 `(Y, X)` 오름차순
-- changed-Chunk Fusion replication과 Late Join은 다음 milestone
+- `CONTRACTS.md` C001-C007
+- State Authority snapshot 원본 + Networked revision 수렴 신호
+- delta는 `BaseRevision -> Revision`, recovery snapshot은 `0 -> Revision`
+- data packet 최대 48 signed int word, simulation tick당 최대 2 packet
+- Full/Empty same-row run, Boundary 좌표·방향성 segment 무손실 전송
+- Peer별 outstanding recovery 하나, `RpcInfo.Source` 기반 targeted response
+- Proxy replica는 shadow only; Legacy gameplay authority 유지
 
 ## Verification evidence
 
-- 예약된 신규 builder/store NUnit assertion 9개를 실제 신규 source로 직접 실행해 통과
-- 음수/half-open 분류, fixed local 경계 재구성, invalid/self-intersection 거부 통과
-- initial/repeated revision, 동일 coverage 빈 delta, ordered tombstone 통과
-- stale base, invalid candidate와 `ulong` overflow가 기존 snapshot을 보존함을 확인
-- 실제 신규 source domain compile 0 errors
-- 신규 domain DLL을 사용한 `Assembly-CSharp` 통합 compile 0 errors, 기존 warning 13개
-- 1000×1000 사각형: 15,875 Chunk, 6~11ms
-- 256점·반경 500 world-unit 원형: 12,532 Chunk, 17~20ms
-- 위 시간은 로컬 .NET Debug/Release validation이며 Unity Profiler 측정이 아님
-- 작업자가 Unity import/compile과 `ProjectIO.Territory.Tests` 전체 실행 완료를 보고
-- 작업자가 Host 로컬/Client Input Authority 정상·연속 확장, 실패·Abort와
-  revision 단일 증가 runtime 절차 완료를 보고
+- 신규 packetizer/replica assertion 7개와 기존 ChunkDomain 회귀를 포함한 독립
+  validation 35/35 통과
+- 빈 delta revision 전진, Full/Empty run, packet 경계 Boundary round-trip 통과
+- stale base, packet gap, malformed terminal, snapshot revision 역행이 이전 replica를
+  보존함을 확인
+- adapter validation에서 30-segment Boundary delta 4 packet, tick당 최대 2 packet,
+  총 2 tick 종료와 recovery request 지연/중복 억제 확인
+- 신규 source 직접 ChunkDomain/adapter compile 0 errors
+- 생성 csproj를 변경하지 않고 신규 source를 임시 target으로 주입한
+  `Assembly-CSharp` 통합 compile 0 errors, 기존 warning 13개
+- 1000×1000 사각형: 15,876 Chunk, 118 packet, 5,641 word, packetize 7.384ms
+- 256점·반경 500 원형: 12,532 Chunk, 144 packet, 6,881 word, packetize 3.282ms
+- 위 시간과 packet 수는 로컬 .NET validation이며 Unity Profiler/Fusion traffic
+  측정이 아님
 
 ## Serialized or manual setup
 
-Scene·Prefab·Inspector 연결 변경은 없다. 열린 Unity Editor가 신규 script/meta를
-import하고 compile을 끝낸 뒤 다음 절차를 수행한다.
+Scene·Prefab·Inspector 연결 변경은 없다. Unity가 신규 script/meta를 import한 뒤
+다음 절차를 수행한다.
 
-1. Console error가 없고 EditMode `ProjectIO.Territory.Tests` 전체가 통과하는지 확인한다.
-2. Host Runner 세션 시작 시 `Chunk Territory shadow committed` revision 1 로그가
-   State Authority에서 한 번만 나오는지 확인한다.
-3. Host Runner로 정상 확장 두 번을 수행한다. 성공마다 revision 2, 3이 한 번씩
-   증가하고 Legacy 영역 모양·consumer 결과·Trail 정리가 기존과 같은지 확인한다.
-4. Client Input Authority Runner로 정상 확장한다. Host State Authority에만 다음
-   revision Commit 로그가 한 번 나오고 양쪽의 Legacy 영역 결과가 같은지 확인한다.
-5. 자기 교차, Lifeline/Abort와 확장 거부를 실행한다. 성공하지 않은 시도에는
-   revision Commit 로그가 없어야 하며 다음 정상 확장은 정확히 1만 증가해야 한다.
-6. 가능하면 Unity Profiler에서 `TerritorySystem.ExpandTerritoryFromCurrentPath`를
-   확인해 shadow rebuild가 실제 장거리 확장 frame에 더하는 시간을 기록한다.
-
-새 Chunk snapshot이 Client/Late Join에 복원되지 않는 것은 이번 shadow 범위의
-의도된 제한이며 현재 게임 결과는 기존 Legacy vertex RPC로 복원된다.
+1. Console compile error가 없고 EditMode `ProjectIO.Territory.Tests` 전체가
+   통과하는지 확인한다.
+2. Host와 기존 Client를 시작한다. State Authority가 initial revision 1을 한 번
+   Commit하고 Client에 `Chunk Territory replica applied. Revision: 1` 로그가 한 번
+   나타나는지 확인한다.
+3. Host Runner가 정상 확장한다. revision이 정확히 1 증가하고 Client replica가 같은
+   revision으로 수렴하며 양쪽 Legacy 영역 모양·Trail·consumer 결과가 기존과 같은지
+   확인한다.
+4. Client Input Authority Runner도 정상 확장한다. State Authority Commit과 delta가
+   한 번만 발생하고 Host/Client 플레이 결과와 replica revision이 같은지 확인한다.
+5. 최소 revision 2 이후 세 번째 Peer를 Late Join시킨다. 약간의 전송 시간 뒤 Late
+   Join Peer에 현재 revision의 `replica applied` 로그가 나타나고 begin/terminal reject
+   경고가 반복되지 않는지 확인한다.
+6. 가능하면 Late Join snapshot 전송 중 한 번 더 정상 확장한다. Late Join Peer가
+   partial/stale 상태를 공개하지 않고 최종 최신 revision까지 수렴하는지 확인한다.
+7. 자기 교차, Lifeline/Abort와 확장 거부에는 Chunk revision/delta가 생기지 않으며
+   다음 정상 확장만 정확히 1 증가하는지 확인한다.
+8. Client disconnect/reconnect 또는 Scene 종료 시 stale transfer 경고가 반복되지
+   않고 재참가 Peer가 현재 snapshot으로 다시 수렴하는지 확인한다.
+9. Unity Profiler와 Fusion traffic에서 `TerritorySystem.FixedUpdateNetwork`의 data RPC가
+   한 tick에 2개를 넘지 않는지, 대형 snapshot의 Host packetize hitch와 총 수렴 시간을
+   기록한다.
 
 ## Known risks and failures
 
-- Legacy 256 vertex 보정과 단일 polygon 확장 hitch는 아직 제거되지 않았다.
-- shadow snapshot rebuild는 동기식이다. synthetic 1000×1000·256점 입력에서
-  17~20ms였으므로 Unity Profiler 결과에 따라 incremental/time-slice가 필요할 수 있다.
-- changed-Chunk replication과 Late Join snapshot은 milestone 5 대상이다.
+- 실제 Unity import/Fusion Weaver와 Host·Client·Late Join runtime은 아직 미검증이다.
+- snapshot/delta packetize는 동기식이다. synthetic snapshot에서 3.282~7.384ms가
+  측정되어 실제 Host frame에서는 Profiler 결과에 따라 incremental packetization이나
+  cache가 필요할 수 있다.
+- 60Hz 가정에서 synthetic 전체 snapshot data는 약 0.98~1.2초에 걸쳐 발송된다.
+  RPC framing, 복수 Territory 합산 bandwidth와 AOI 비용은 측정하지 않았다.
+- Legacy 256 vertex 보정, 단일 polygon union과 synchronous shadow rebuild hitch는
+  아직 제거되지 않았다.
 
 ## Remaining legacy consumers
 
-모든 Territory consumer, authoritative expansion, mesh와 vertex replication. Chunk
-snapshot은 아직 shadow 진단 상태이며 게임 판정이나 표시를 생산하지 않는다.
+모든 Territory containment, authoritative expansion, mesh, Grid, Fog, Resource,
+Monster와 vertex replication. Chunk replica는 아직 표시나 게임 판정에 사용되지 않는
+shadow 상태다.
 
 ## Next bounded milestone
 
-W-013이 Complete됐으므로 State Authority changed-Chunk를 bounded Reliable payload로
-복제하고 recovery/Late Join snapshot을 제공한다. GPU와 consumer migration은
-포함하지 않는다.
+별도 Active reservation에서 고정 2인 세션에 필요 없는 Late Join·재접속 recovery,
+반복 retry와 다수 요청자 방어를 제거한다. 두 Peer가 시작부터 존재한다는 조건 아래
+최소 readiness와 bounded Reliable delta만 유지하고, Host Runner와 Client Input
+Authority Runner의 사선 표시·걷기/달리기·정상 확장 frame time과 체감 동등성을
+우선 검증한다. GPU presentation과 consumer 권위 전환은 이 단순화 뒤 별도
+milestone으로 유지한다.
 
 ## Exact starting files
 
+- `Assets/02_Scripts/Territory Refactor/Adapters/Fusion/TerritoryChunkReplicationStream.cs`
+- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkReplica.cs`
 - `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkSnapshot.cs`
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkCommitResult.cs`
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkCoverage.cs`
-- 신규 `Assets/02_Scripts/Territory Refactor/Adapters/Fusion/` Chunk replication 파일
+- `Assets/02_Scripts/Territory Refactor/Adapters/Fusion/TerritoryTrailReplicationStream.cs`
+- `Assets/02_Scripts/Territory/TerritoryVisible.cs`
 - `Assets/02_Scripts/Territory/TerritorySystem.cs`
-- `Docs/LongRunning/Territory/CONTRACTS.md`
+- `Assets/02_Scripts/Territory Refactor/Trail/TerritoryTrailChunkRenderer.cs`
+- `Docs/LongRunning/Territory/CONTRACTS.md`의 C005/C007

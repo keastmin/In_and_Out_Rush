@@ -5,17 +5,26 @@ namespace ProjectIO.Territory
 {
     public sealed class TerritoryTrailChunkRenderer : MonoBehaviour
     {
-        private const float ChunkSize = 8f;
+        private const int MaximumPointsPerSegment = 256;
 
         private readonly List<LineRenderer> _segments = new();
+        private readonly List<TerritorySegmentChunkTraversal.SegmentPart> _segmentParts = new();
 
         private LineRenderer _template;
         private LineRenderer _activeSegment;
+        private LineRenderer _liveHeadRenderer;
         private int _activeSegmentCount;
-        private Vector2Int _activeChunk;
+        private TerritoryChunkCoordinate _activeChunk;
+        private FixedTerritoryPoint _lastPoint;
+        private FixedTerritoryPoint _lastSegmentPoint;
+        private FixedTerritoryPoint _liveHeadPoint;
         private bool _hasActiveChunk;
-        private Vector2 _lastPoint;
         private bool _hasLastPoint;
+        private bool _hasLastSegmentPoint;
+        private bool _hasLiveHead;
+
+        public bool HasPoint => _hasLastPoint;
+        public FixedTerritoryPoint LastPoint => _lastPoint;
 
         public void Initialize(LineRenderer template)
         {
@@ -34,36 +43,81 @@ namespace ProjectIO.Territory
 
         public void Append(Vector2 point)
         {
-            if (_template == null)
+            Append(FixedTerritoryPoint.FromWorld(point.x, point.y));
+        }
+
+        public void Append(FixedTerritoryPoint point)
+        {
+            if (_template == null || (_hasLastPoint && point == _lastPoint))
                 return;
 
-            Vector2Int chunk = ToChunk(point);
-            if (!_hasActiveChunk || chunk != _activeChunk)
+            if (!_hasLastPoint)
             {
-                Vector2 boundaryPoint = _hasLastPoint
-                    ? GetChunkBoundaryPoint(_lastPoint, point, _activeChunk)
-                    : point;
-                if (_hasLastPoint)
-                    AppendToActiveSegment(boundaryPoint);
-
-                StartSegment(chunk);
-                if (_hasLastPoint)
-                    AppendToActiveSegment(boundaryPoint);
+                StartSegment(TerritoryChunkCoordinate.FromPoint(point));
+                AppendToActiveSegment(point);
+                _lastPoint = point;
+                _hasLastPoint = true;
+                RefreshLiveHead();
+                return;
             }
 
-            AppendToActiveSegment(point);
+            TerritorySegmentChunkTraversal.Split(_lastPoint, point, _segmentParts);
+            for (int index = 0; index < _segmentParts.Count; index++)
+            {
+                TerritorySegmentChunkTraversal.SegmentPart part = _segmentParts[index];
+                if (!_hasActiveChunk || part.Chunk != _activeChunk)
+                {
+                    StartSegment(part.Chunk);
+                    AppendToActiveSegment(part.Start);
+                }
+                else
+                {
+                    AppendToActiveSegment(part.Start);
+                }
+
+                AppendToActiveSegment(part.End);
+            }
+
             _lastPoint = point;
             _hasLastPoint = true;
+            RefreshLiveHead();
+        }
+
+        public void Rebuild(IReadOnlyList<FixedTerritoryPoint> points)
+        {
+            Clear();
+            if (points == null)
+                return;
+
+            for (int index = 0; index < points.Count; index++)
+                Append(points[index]);
+        }
+
+        public void SetLiveHead(FixedTerritoryPoint point)
+        {
+            _liveHeadPoint = point;
+            _hasLiveHead = true;
+            RefreshLiveHead();
+        }
+
+        public void ClearLiveHead()
+        {
+            _hasLiveHead = false;
+            if (_liveHeadRenderer != null)
+            {
+                _liveHeadRenderer.positionCount = 0;
+                _liveHeadRenderer.gameObject.SetActive(false);
+            }
         }
 
         public void Clear()
         {
-            for (int i = 0; i < _activeSegmentCount; i++)
+            for (int index = 0; index < _activeSegmentCount; index++)
             {
-                if (_segments[i] != null)
+                if (_segments[index] != null)
                 {
-                    _segments[i].positionCount = 0;
-                    _segments[i].gameObject.SetActive(false);
+                    _segments[index].positionCount = 0;
+                    _segments[index].gameObject.SetActive(false);
                 }
             }
 
@@ -71,9 +125,11 @@ namespace ProjectIO.Territory
             _activeSegment = null;
             _hasActiveChunk = false;
             _hasLastPoint = false;
+            _hasLastSegmentPoint = false;
+            ClearLiveHead();
         }
 
-        private void StartSegment(Vector2Int chunk)
+        private void StartSegment(TerritoryChunkCoordinate chunk)
         {
             LineRenderer segment;
             if (_activeSegmentCount < _segments.Count)
@@ -84,7 +140,7 @@ namespace ProjectIO.Territory
             }
             else
             {
-                var segmentObject = new GameObject($"Trail Chunk {chunk.x}, {chunk.y}");
+                var segmentObject = new GameObject($"Trail Chunk {chunk.X}, {chunk.Y}");
                 segmentObject.transform.SetParent(transform, false);
                 segment = segmentObject.AddComponent<LineRenderer>();
                 segment.positionCount = 0;
@@ -96,52 +152,62 @@ namespace ProjectIO.Territory
             _activeSegment = segment;
             _activeChunk = chunk;
             _hasActiveChunk = true;
+            _hasLastSegmentPoint = false;
         }
 
-        private void AppendToActiveSegment(Vector2 point)
+        private void AppendToActiveSegment(FixedTerritoryPoint point)
         {
+            if (_activeSegment == null || (_hasLastSegmentPoint && point == _lastSegmentPoint))
+                return;
+
+            if (_activeSegment.positionCount >= MaximumPointsPerSegment && _hasLastSegmentPoint)
+            {
+                FixedTerritoryPoint continuationPoint = _lastSegmentPoint;
+                TerritoryChunkCoordinate continuationChunk = _activeChunk;
+                StartSegment(continuationChunk);
+                AppendToActiveSegment(continuationPoint);
+            }
+
             int index = _activeSegment.positionCount;
             _activeSegment.positionCount = index + 1;
-            _activeSegment.SetPosition(index, new Vector3(point.x, 0f, point.y));
+            _activeSegment.SetPosition(index, ToWorld(point));
+            _lastSegmentPoint = point;
+            _hasLastSegmentPoint = true;
         }
 
-        private static Vector2Int ToChunk(Vector2 point)
+        private void RefreshLiveHead()
         {
-            return new Vector2Int(
-                Mathf.FloorToInt(point.x / ChunkSize),
-                Mathf.FloorToInt(point.y / ChunkSize));
-        }
-
-        private static Vector2 GetChunkBoundaryPoint(
-            Vector2 start,
-            Vector2 end,
-            Vector2Int chunk)
-        {
-            Vector2 direction = end - start;
-            float boundaryT = 1f;
-
-            if (Mathf.Abs(direction.x) > Mathf.Epsilon)
+            if (!_hasLiveHead || !_hasLastPoint || _liveHeadPoint == _lastPoint || _template == null)
             {
-                float boundaryX = direction.x > 0f
-                    ? (chunk.x + 1) * ChunkSize
-                    : chunk.x * ChunkSize;
-                float t = (boundaryX - start.x) / direction.x;
-                if (t > 0f && t < boundaryT)
-                    boundaryT = t;
+                if (_liveHeadRenderer != null)
+                {
+                    _liveHeadRenderer.positionCount = 0;
+                    _liveHeadRenderer.gameObject.SetActive(false);
+                }
+                return;
             }
 
-            if (Mathf.Abs(direction.y) > Mathf.Epsilon)
-            {
-                float boundaryY = direction.y > 0f
-                    ? (chunk.y + 1) * ChunkSize
-                    : chunk.y * ChunkSize;
-                float t = (boundaryY - start.y) / direction.y;
-                if (t > 0f && t < boundaryT)
-                    boundaryT = t;
-            }
-
-            return Vector2.Lerp(start, end, boundaryT);
+            EnsureLiveHeadRenderer();
+            _liveHeadRenderer.gameObject.SetActive(true);
+            _liveHeadRenderer.positionCount = 2;
+            _liveHeadRenderer.SetPosition(0, ToWorld(_lastPoint));
+            _liveHeadRenderer.SetPosition(1, ToWorld(_liveHeadPoint));
         }
+
+        private void EnsureLiveHeadRenderer()
+        {
+            if (_liveHeadRenderer != null)
+                return;
+
+            var liveHeadObject = new GameObject("Trail Live Head");
+            liveHeadObject.transform.SetParent(transform, false);
+            _liveHeadRenderer = liveHeadObject.AddComponent<LineRenderer>();
+            CopyStyle(_template, _liveHeadRenderer);
+            _liveHeadRenderer.positionCount = 0;
+        }
+
+        private static Vector3 ToWorld(FixedTerritoryPoint point)
+            => new((float)point.WorldX, 0f, (float)point.WorldY);
 
         private static void CopyStyle(LineRenderer source, LineRenderer target)
         {

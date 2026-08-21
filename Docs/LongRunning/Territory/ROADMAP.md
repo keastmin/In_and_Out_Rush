@@ -4,7 +4,8 @@
 
 1. **Complete** — fixed coordinate, Chunk traversal and ordered Trail session domain
 2. **Complete** — State Authority shadow Trail integration and deterministic comparison
-3. **Planned** — owner-predicted/confirmed Trail presentation and Fusion fragment transport
+3. **Complete** — owner-predicted/confirmed Trail presentation and Fusion fragment
+   transport
 4. **Planned** — revisioned Empty/Full/Boundary Chunk Territory state and expansion commit
 5. **Planned** — changed-Chunk replication, recovery and Late Join snapshot
 6. **Planned** — GPU Chunk mask/SDF presentation with CPU fallback

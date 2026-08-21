@@ -1,6 +1,6 @@
 # W-20260821-012 Chunk Territory 예측·확정 Trail 동기화
 
-Status: Reserved
+Status: Complete
 
 ## 동기화 기준
 
@@ -163,3 +163,40 @@ ScriptableObject와 Fusion 설정은 수정하지 않는다. 기존 `TerritorySy
 `TerritorySystem`의 예측/확정 presentation hook과 신규 transport/receiver,
 renderer 변경 및 C005 문서만 제거한다. 기존 Legacy path RPC와 Territory 확장
 경로는 authoritative fallback으로 유지해 이전 표시 방식으로 되돌릴 수 있다.
+
+## 실제 변경
+
+- 최대 24개의 ordered sample을 담는 `TerritoryTrailPacket`, packetizer와 receiver를
+  순수 ChunkDomain에 추가했다. tick/fixed X/fixed Y codec, packet/sample gap,
+  stale session, Commit/Abort와 fragment 재구성을 검증한다.
+- State Authority shadow recorder를 모든 build의 confirmed sample 원본으로
+  승격하되 Legacy path 비교 로그는 Development에서만 유지했다.
+- Reliable Start/packet/suspend/Commit/Abort와 30Hz 이하 Unreliable live head를
+  `TerritorySystem`에 연결했다. 기존 float path RPC 호출은 중지했지만 메서드는
+  rollback fallback으로 남겼다.
+- Input Authority owner는 기존 `OnPositionChanged`에서 fixed Trail을 즉시 예측한다.
+  Host가 State/Input Authority를 함께 가지면 confirmed renderer를 중복 실행하지
+  않고, remote observer만 confirmed path와 live head를 표시한다.
+- owner 예측의 추가 거리 판정은 직전 render frame이 아니라 마지막으로 표시한
+  Trail point를 기준으로 한다. 따라서 걷기의 작은 frame 이동도 누적되어 임계
+  거리에 도달하며, 달리기와 마찬가지로 연속된 선을 만든다.
+- SandTomb pause/resume은 confirmed point reconcile과 suspension lifecycle을 사용한다.
+- Chunk renderer는 C003 traversal로 다중 Chunk 선분을 정확히 나누고 한
+  LineRenderer를 최대 256 point page로 제한해 continuation segment를 pool한다.
+- Scene·Prefab·Inspector·Material·Shader·Compute·Fusion 설정과 Legacy Territory
+  판정/확장/consumer 결과는 변경하지 않았다.
+
+## 현재 검증 결과
+
+- ChunkDomain runtime/test project compile 0 errors.
+- Unity 6000.0.69f1 EditMode 25/25 통과. 신규 packetizer/receiver/codec 7개와 기존
+  fixed/traversal/session/shadow comparer 회귀를 포함한다.
+- 최종 Unity 6000.0.69f1 compile과 Fusion IL post-process 0 errors.
+- Client 달리기와 정상 영역 확장은 작업자가 확인했다. Client 걷기 중 Trail이
+  끊기던 누적 거리 판정 회귀를 수정했으며 걷기와 걷기/달리기 전환 재확인도
+  통과했다.
+- 수정 후 `dotnet build ProjectIO.slnx` 0 errors, 기존 warning 25개를 확인했다.
+- 작업자가 안내된 Host 로컬/Client Input Authority 정상·장거리 Trail,
+  자기 교차/Lifeline, SandTomb pause/resume 런타임 절차 완료를 보고했다.
+- 신규 script 6개의 `.meta` pairing, 전체 GUID 중복 0, 예약 범위와
+  `git diff --check`를 확인했다. Scene·Prefab·Data Asset diff는 없다.

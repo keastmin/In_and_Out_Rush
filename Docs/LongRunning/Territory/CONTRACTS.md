@@ -46,9 +46,28 @@ Status: Approved
 - Abort는 보관 sample, fragment와 열린 fragment를 즉시 소각한다.
 - Commit은 열린 fragment를 확정하고 결과를 읽기 전용으로 유지한다.
 
+## C005 Fusion Trail presentation transport
+
+Status: Approved
+
+- Input Authority owner prediction은 local presentation 전용이며 Territory 판정,
+  자기 교차, Kill, Lifeline과 확장 결과를 변경하지 않는다.
+- State Authority가 생성한 session lifecycle과 confirmed sample packet만 확정
+  stream이다.
+- Start, confirmed packet, pause/resume, Commit과 Abort는 Reliable이며 latest live
+  head는 Unreliable latest-wins다.
+- confirmed packet은 `SessionId + packet sequence + first sample sequence`를 가지며
+  packet당 sample 수는 최대 24개다.
+- wire sample은 `simulation tick + fixed X + fixed Y` 정수 3개로 전송한다.
+- 수신자는 packet/sample gap, 중복, 다른 SessionId, stale terminal과 종료 뒤
+  payload를 거부하며 accepted sample만 C003으로 fragment화한다.
+- fixed 양자화 뒤 모양 단순화는 없다. renderer page 제한은 같은 끝점을 공유하는
+  표시 segment만 나누며 path 좌표를 제거하거나 이동하지 않는다.
+- Abort는 outbound pending, inbound confirmed, prediction과 live head를 소각한다.
+- 진행 중 Trail Late Join 복원은 C005에 포함하지 않는다.
+
 ## Future contracts not approved here
 
-- Fusion live-head/confirmed-fragment transport
 - Territory revision and changed-Chunk replication
 - Chunk interior/boundary storage and fill
 - GPU buffer and mask format

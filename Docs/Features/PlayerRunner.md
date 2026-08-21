@@ -2,7 +2,7 @@
 
 Status: Current
 
-Last reviewed: 2026-08-14
+Last reviewed: 2026-08-22
 
 ## 책임
 
@@ -22,6 +22,11 @@ Networked 플레이어 상태는 Fusion Authority 규칙을 따른다. 로컬 Ca
 
 Territory 보호 판정, Monster·Projectile 피해, Laboratory 상호작용, Runner UI, Cinemachine, Ping.
 
+`PlayerRunner.Render`의 기존 `OnPositionChanged`는 Territory Trail의 입력 seam이다.
+Input Authority peer는 이 이벤트로 local fixed Trail을 즉시 예측 표시하고,
+State Authority는 같은 이동을 검증해 confirmed stream을 만든다. PlayerRunner가
+Territory 결과나 Trail network state를 직접 소유하지는 않는다.
+
 ## 관련 Asset
 
 - Player Runner prefab
@@ -33,6 +38,8 @@ Territory 보호 판정, Monster·Projectile 피해, Laboratory 상호작용, Ru
 - Host·Client 이동과 피해 결과
 - Spawn 시 StageBootstrapper 준비 상태
 - 사망·Despawn 후 이벤트와 registry 정리
+- Host/Client Input Authority에서 owner Trail의 즉시 표시와 State Authority
+  terminal 뒤 정리 동등성
 
 ## 기술 부채
 

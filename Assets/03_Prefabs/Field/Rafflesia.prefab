@@ -41,8 +41,12 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2894567192362922144, guid: 3f204e3d39da8664e820553faf1f691e, type: 3}
       propertyPath: m_Name
-      value: Shooter
+      value: Rafflesia
       objectReference: {fileID: 0}
+    - target: {fileID: 5851169694264762905, guid: 3f204e3d39da8664e820553faf1f691e, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: b98942e7111ec4a4991d9f4b0d847377, type: 2}
     - target: {fileID: 6102025025699949262, guid: 3f204e3d39da8664e820553faf1f691e, type: 3}
       propertyPath: SortKey
       value: 1653085136
@@ -155,6 +159,7 @@ MonoBehaviour:
   playerTransform: {fileID: 0}
   patrolMinimumRadius: 5
   patrolMaximumRadius: 10
+  obstaclePathPadding: 0.25
   detectionRadius: 10
   fireInterval: 2
   projectileSpeed: 8

@@ -4,6 +4,7 @@ using Dev.Network;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
 namespace KIM.Dev
@@ -22,6 +23,7 @@ namespace KIM.Dev
         public static void RebuildAdditiveGameScenes()
         {
             Scene sourceScene = EditorSceneManager.OpenScene(SourceScenePath, OpenSceneMode.Single);
+            SceneRenderSettings sourceRenderSettings = SceneRenderSettings.Capture();
             Scene worldScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
             Scene presentationScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
             Scene rootScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
@@ -33,6 +35,7 @@ namespace KIM.Dev
             MoveWorldObjects(sourceScene, worldScene);
             MovePresentationObjects(sourceScene, presentationScene);
             CreateRootObjects(rootScene);
+            sourceRenderSettings.ApplyTo(worldScene);
 
             EditorSceneManager.SaveScene(worldScene, WorldScenePath);
             EditorSceneManager.SaveScene(presentationScene, PresentationScenePath);
@@ -151,6 +154,100 @@ namespace KIM.Dev
             }
 
             scenes.Add(new EditorBuildSettingsScene(scenePath, true));
+        }
+
+        private sealed class SceneRenderSettings
+        {
+            private readonly bool _fog;
+            private readonly Color _fogColor;
+            private readonly FogMode _fogMode;
+            private readonly float _fogDensity;
+            private readonly float _fogStartDistance;
+            private readonly float _fogEndDistance;
+            private readonly AmbientMode _ambientMode;
+            private readonly Color _ambientSkyColor;
+            private readonly Color _ambientEquatorColor;
+            private readonly Color _ambientGroundColor;
+            private readonly Color _ambientLight;
+            private readonly float _ambientIntensity;
+            private readonly Color _subtractiveShadowColor;
+            private readonly Material _skybox;
+            private readonly DefaultReflectionMode _defaultReflectionMode;
+            private readonly int _defaultReflectionResolution;
+            private readonly int _reflectionBounces;
+            private readonly float _reflectionIntensity;
+            private readonly Cubemap _customReflection;
+            private readonly float _haloStrength;
+            private readonly float _flareStrength;
+            private readonly float _flareFadeSpeed;
+            private readonly Light _sun;
+
+            private SceneRenderSettings()
+            {
+                _fog = RenderSettings.fog;
+                _fogColor = RenderSettings.fogColor;
+                _fogMode = RenderSettings.fogMode;
+                _fogDensity = RenderSettings.fogDensity;
+                _fogStartDistance = RenderSettings.fogStartDistance;
+                _fogEndDistance = RenderSettings.fogEndDistance;
+                _ambientMode = RenderSettings.ambientMode;
+                _ambientSkyColor = RenderSettings.ambientSkyColor;
+                _ambientEquatorColor = RenderSettings.ambientEquatorColor;
+                _ambientGroundColor = RenderSettings.ambientGroundColor;
+                _ambientLight = RenderSettings.ambientLight;
+                _ambientIntensity = RenderSettings.ambientIntensity;
+                _subtractiveShadowColor = RenderSettings.subtractiveShadowColor;
+                _skybox = RenderSettings.skybox;
+                _defaultReflectionMode = RenderSettings.defaultReflectionMode;
+                _defaultReflectionResolution = RenderSettings.defaultReflectionResolution;
+                _reflectionBounces = RenderSettings.reflectionBounces;
+                _reflectionIntensity = RenderSettings.reflectionIntensity;
+                _customReflection = RenderSettings.customReflection;
+                _haloStrength = RenderSettings.haloStrength;
+                _flareStrength = RenderSettings.flareStrength;
+                _flareFadeSpeed = RenderSettings.flareFadeSpeed;
+                _sun = RenderSettings.sun;
+            }
+
+            public static SceneRenderSettings Capture()
+            {
+                return new SceneRenderSettings();
+            }
+
+            public void ApplyTo(Scene scene)
+            {
+                Scene previousActiveScene = SceneManager.GetActiveScene();
+                if (!SceneManager.SetActiveScene(scene))
+                    throw new System.InvalidOperationException($"Could not activate scene '{scene.name}' to copy render settings.");
+
+                RenderSettings.fog = _fog;
+                RenderSettings.fogColor = _fogColor;
+                RenderSettings.fogMode = _fogMode;
+                RenderSettings.fogDensity = _fogDensity;
+                RenderSettings.fogStartDistance = _fogStartDistance;
+                RenderSettings.fogEndDistance = _fogEndDistance;
+                RenderSettings.ambientMode = _ambientMode;
+                RenderSettings.ambientSkyColor = _ambientSkyColor;
+                RenderSettings.ambientEquatorColor = _ambientEquatorColor;
+                RenderSettings.ambientGroundColor = _ambientGroundColor;
+                RenderSettings.ambientLight = _ambientLight;
+                RenderSettings.ambientIntensity = _ambientIntensity;
+                RenderSettings.subtractiveShadowColor = _subtractiveShadowColor;
+                RenderSettings.skybox = _skybox;
+                RenderSettings.defaultReflectionMode = _defaultReflectionMode;
+                RenderSettings.defaultReflectionResolution = _defaultReflectionResolution;
+                RenderSettings.reflectionBounces = _reflectionBounces;
+                RenderSettings.reflectionIntensity = _reflectionIntensity;
+                RenderSettings.customReflection = _customReflection;
+                RenderSettings.haloStrength = _haloStrength;
+                RenderSettings.flareStrength = _flareStrength;
+                RenderSettings.flareFadeSpeed = _flareFadeSpeed;
+                RenderSettings.sun = _sun;
+
+                EditorSceneManager.MarkSceneDirty(scene);
+                if (previousActiveScene.IsValid() && previousActiveScene.isLoaded)
+                    SceneManager.SetActiveScene(previousActiveScene);
+            }
         }
     }
 }

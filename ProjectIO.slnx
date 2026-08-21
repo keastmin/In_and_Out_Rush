@@ -11,11 +11,11 @@
   <Project Path="Assembly-CSharp-firstpass.csproj" />
   <Project Path="ProjectIO.GridPlacement.csproj" />
   <Project Path="ProjectIO.Construction.csproj" />
+  <Project Path="ProjectIO.Territory.ChunkDomain.Tests.csproj" />
   <Project Path="Fusion.Unity.csproj" />
   <Project Path="ProjectIO.Territory.ChunkDomain.csproj" />
   <Project Path="ProjectIO.ResourceEconomy.csproj" />
   <Project Path="ProjectIO.MatchProgression.csproj" />
-  <Project Path="ProjectIO.Territory.ChunkDomain.Tests.csproj" />
   <Project Path="Fusion.Addons.Physics.Editor.csproj" />
   <Project Path="ProjectIO.Monsters.Tests.csproj" />
   <Project Path="ProjectIO.Construction.Tests.csproj" />

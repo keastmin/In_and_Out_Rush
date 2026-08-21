@@ -33,6 +33,7 @@ Monster와 Projectile, Territory, Resource Spawn
 - `Assets/02_Scripts/Monster/Centipede.cs`
 - `Assets/02_Scripts/Monster/Strider.cs`
 - `Assets/02_Scripts/Monster/Stalker.cs`
+- `Assets/02_Scripts/Monster/Monster.cs`
 - `Docs/Features/MonstersAndProjectiles.md`
 - `Docs/Work/Active/W-20260821-007-world-monster-movement-safety.md`
 
@@ -42,7 +43,7 @@ Monster와 Projectile, Territory, Resource Spawn
 
 ## 공용 계약 또는 Bootstrapper 변경
 
-없음. `WorldMonsterSpawnSystem`의 Spawn·의존성 주입과 `ResourceSpawnSystem`의 자원 생성 계약을 바꾸지 않는다.
+외부 계약 변경은 없다. `Monster`에 Territory와 활성 Sanctuary를 구분해 파생 월드 몬스터가 읽을 수 있는 보호 판정을 추가한다. `WorldMonsterSpawnSystem`의 Spawn·의존성 주입과 `ResourceSpawnSystem`의 자원 생성 계약은 바꾸지 않는다.
 
 ## 네트워크·Peer 동등성
 
@@ -83,4 +84,4 @@ Monster와 Projectile, Territory, Resource Spawn
 ## 남은 위험
 
 - Runtime 자원 수와 Collider 크기에 따라 목적지 탐색 재시도 비용이 늘 수 있으므로, 기존 횟수 제한 안에서만 검사하고 실패 시 다음 tick에 다시 시도한다.
-- Gigantia의 Territory 이탈은 내부에서 외부로 나가는 구간만 예외로 허용한다. 외부에서 Territory 안으로 들어가는 목적지나 구간은 허용하지 않는다.
+- Gigantia의 Territory 이탈은 내부에서 외부로 나가는 구간만 예외로 허용한다. 외부에서 Territory 안으로 들어가는 목적지나 구간은 허용하지 않으며, 활성 Sanctuary는 이탈 중에도 통과하지 않는다.

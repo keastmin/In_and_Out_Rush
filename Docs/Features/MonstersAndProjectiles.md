@@ -2,7 +2,7 @@
 
 Status: Current
 
-Last reviewed: 2026-08-19
+Last reviewed: 2026-08-21
 
 ## 책임
 
@@ -57,6 +57,12 @@ Unity 장애물 bounds broadphase는 Legacy assembly의 adapter가 담당한다.
 AI tick cadence와 전투 규칙은 Legacy Network Monster가 계속 소유한다.
 
 World Monster의 이동 안전성 판정은 Legacy `WorldMonster`가 State Authority에서 수행한다. 바위는 `WorldObstacleBoundsIndex`, 자원은 Physics query로 생성된 `ResourceVisible` Collider를 확인하며, Territory·Sanctuary는 일정 간격의 경로 표본으로 통과를 막는다. Client는 기존 NetworkObject Transform 복제만 관찰한다.
+
+## Stalker projectile attack
+
+`Stalker` keeps its serialized sensing and attack-entry ranges, chase state, and three-attacks-per-second timer. It enters attack at `Attack Range` and remains in attack until the target exceeds the larger `Chase Resume Range`; the Stalker prefab uses 5m and 5.5m respectively to avoid range-boundary state chatter. On each attack tick, its State Authority spawns the shared `MonsterProjectile` from the optional `Stalker.prefab` `Muzzle` child, or the equivalent local `(0, 1, 0.5)` fallback position when that reference is absent, with 1 damage, 8m/s speed, and a 5-second lifetime; it no longer calls `IDamageable.TakeDamage` directly.
+
+`MonsterProjectile.Initialize` accepts a `Monster` owner, so both Stalker and `ShooterWorldMonster` use the same network projectile. State Authority ignores only the firing monster's colliders, resolves Runner damage and despawn, while other peers observe the replicated NetworkObject and NetworkTransform. Host/Client runtime and Late Join evidence remain a required manual check.
 
 ## World Monster Spawn 후보 선택 slice
 

@@ -9,7 +9,7 @@ public class MonsterProjectile : NetworkBehaviour, IItemDestructibleProjectile
     private static readonly ProfilerMarker FixedUpdateMarker = new("MonsterProjectile.FixedUpdateNetwork");
 
     private Rigidbody _rigidbody;
-    private ShooterWorldMonster _owner;
+    private Monster _owner;
     private Vector3 _direction;
     private float _speed;
     private float _damage;
@@ -34,7 +34,7 @@ public class MonsterProjectile : NetworkBehaviour, IItemDestructibleProjectile
     }
 
     public void Initialize(
-        ShooterWorldMonster owner,
+        Monster owner,
         Vector3 direction,
         float speed,
         float damage,
@@ -91,7 +91,7 @@ public class MonsterProjectile : NetworkBehaviour, IItemDestructibleProjectile
         if (!HasStateAuthority || !_initialized || _destroyRequested || other == null)
             return;
 
-        if (_owner != null && other.GetComponentInParent<ShooterWorldMonster>() == _owner)
+        if (_owner != null && other.GetComponentInParent<Monster>() == _owner)
             return;
 
         PlayerRunner playerRunner = other.GetComponentInParent<PlayerRunner>();

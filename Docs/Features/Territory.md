@@ -47,12 +47,13 @@ Chunk shadow snapshot으로도 Commit한다. snapshot은 전역 polygon을 보�
 미저장 `Empty`, payload 없는 `Full`, fixed local 경계 선분을 가진 `Boundary`로
 나뉜다.
 
-State Authority는 `[Networked]` revision을 수렴 신호로 복제하고 정상 Commit의
-changed-Chunk를 최대 48-word Reliable packet, simulation tick당 최대 2 data packet
-예산으로 보낸다. Proxy는 transaction 전체를 검증한 뒤에만 shadow replica를
-원자적으로 교체한다. revision gap, malformed transaction과 Late Join은 요청
-`PlayerRef`에만 보내는 전체 sparse snapshot으로 복구한다. 이 replica는 아직 표시와
-consumer에 연결되지 않으며 전송 실패도 Legacy 성공 결과를 되돌리지 않는다.
+고정 2인 세션의 State Authority는 정상 Commit의 changed-Chunk를 최대 48-word
+Reliable packet, simulation tick당 최대 2 data packet 예산으로 기존 Client Proxy에
+보낸다. 최초 `0 -> 1`과 이후 연속 revision delta만 사용하고 Proxy는 transaction
+전체를 검증한 뒤에만 shadow replica를 원자적으로 교체한다. 제품에 없는 Late Join,
+재접속 snapshot, recovery retry와 targeted PlayerRef 전송은 지원하지 않는다. 이
+replica는 아직 표시와 consumer에 연결되지 않으며 전송 실패도 Legacy 성공 결과를
+되돌리지 않는다.
 
 ## 주요 소비자
 
@@ -66,7 +67,7 @@ Grid 표시, Fog of War, Resource 수집·Spawn, Track·World Monster, Sacred Zo
 
 ## 변경 시 확인
 
-- State Authority와 Late Join 복원
+- State Authority와 시작부터 함께한 Client Proxy의 연속 delta
 - 좌표·revision·변경 Chunk 계약
 - Legacy와 새 경로의 중복 이벤트·표현
 - 모든 소비자 전환 여부와 롤백

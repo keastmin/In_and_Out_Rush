@@ -21,6 +21,10 @@ public class TerritorySystem : Dev.Network.System
         new("TerritorySystem.SyncExpansionVertices");
     private static readonly ProfilerMarker NotifyExpansionConsumersMarker =
         new("TerritorySystem.NotifyExpansionConsumers");
+    private static readonly ProfilerMarker ChunkDeltaPacketizeMarker =
+        new("TerritorySystem.ChunkDeltaPacketize");
+    private static readonly ProfilerMarker ChunkTransferFlushMarker =
+        new("TerritorySystem.ChunkTransferFlush");
 
     const int TerritoryVertexSyncChunkSize = 10;
     const int ConfirmedTrailFlushSampleCount = 4;
@@ -56,9 +60,6 @@ public class TerritorySystem : Dev.Network.System
     bool territoryRuntimeCleanedUp;
     FixedTerritoryPoint ownerPredictionPreviousPosition;
 
-    [Networked]
-    private ulong AuthoritativeTerritoryChunkRevision { get; set; }
-
     public Territory Territory;
     public TerritoryVisible TerritoryVisible;
     public bool IsExpanding => expansionSession.IsExpanding;
@@ -83,7 +84,8 @@ public class TerritorySystem : Dev.Network.System
     {
         territoryRuntimeCleanedUp = false;
         territoryChunkShadowStore = new TerritoryChunkStore();
-        chunkReplicationStream.Reset();
+        if (Object == null || Object.HasStateAuthority)
+            chunkReplicationStream.Reset();
         TerritoryVisible = Dev.Network.StageBootstrapper.Instance.TerritoryVisible;
         trailChunkRenderer = gameObject.GetComponent<TerritoryTrailChunkRenderer>();
         if (trailChunkRenderer == null)
@@ -130,17 +132,7 @@ public class TerritorySystem : Dev.Network.System
             return;
 
         if (Object.HasStateAuthority)
-        {
             FlushTerritoryChunkTransfers();
-            return;
-        }
-
-        if (chunkReplicationStream.TickRecovery(AuthoritativeTerritoryChunkRevision))
-        {
-            RPC_RequestTerritoryChunkSnapshot(
-                chunkReplicationStream.ReplicaSnapshot.Revision,
-                AuthoritativeTerritoryChunkRevision);
-        }
     }
 
     void GenerateInitialTerritory()
@@ -963,8 +955,12 @@ public class TerritorySystem : Dev.Network.System
             return;
         }
 
-        AuthoritativeTerritoryChunkRevision = result.Revision;
-        if (!chunkReplicationStream.TryEnqueueDelta(result, out string replicationReason))
+        string replicationReason;
+        bool enqueued;
+        using (ChunkDeltaPacketizeMarker.Auto())
+            enqueued = chunkReplicationStream.TryEnqueueDelta(result, out replicationReason);
+
+        if (!enqueued)
         {
             Debug.LogWarning(
                 $"{ShadowLogOwnerName} - Chunk Territory delta enqueue failed. " +
@@ -982,22 +978,13 @@ public class TerritorySystem : Dev.Network.System
 
     private void FlushTerritoryChunkTransfers()
     {
+        using var _ = ChunkTransferFlushMarker.Auto();
         int dataPacketsSent = 0;
         while (chunkReplicationStream.TryTakeOutbound(
                    TerritoryChunkReplicationStream.MaximumDataPacketsPerTick - dataPacketsSent,
                    out TerritoryChunkReplicationStream.OutboundMessage message))
         {
-            if (message.IsTargeted && !IsActivePlayer(message.Target))
-            {
-                if (message.Type != TerritoryChunkReplicationStream.OutboundMessageType.Complete)
-                    chunkReplicationStream.SkipCurrentOutbound();
-                continue;
-            }
-
-            if (message.IsTargeted)
-                SendTargetedTerritoryChunkMessage(message);
-            else
-                SendBroadcastTerritoryChunkMessage(message);
+            SendBroadcastTerritoryChunkMessage(message);
 
             if (message.Type == TerritoryChunkReplicationStream.OutboundMessageType.Data)
                 dataPacketsSent++;
@@ -1011,14 +998,12 @@ public class TerritorySystem : Dev.Network.System
         {
             case TerritoryChunkReplicationStream.OutboundMessageType.Begin:
                 RPC_BeginTerritoryChunkDelta(
-                    (int)message.Kind,
                     message.BaseRevision,
                     message.Revision,
                     message.PacketCount);
                 break;
             case TerritoryChunkReplicationStream.OutboundMessageType.Data:
                 RPC_AppendTerritoryChunkDelta(
-                    (int)message.Kind,
                     message.BaseRevision,
                     message.Revision,
                     message.PacketSequence,
@@ -1026,79 +1011,29 @@ public class TerritorySystem : Dev.Network.System
                 break;
             case TerritoryChunkReplicationStream.OutboundMessageType.Complete:
                 RPC_CompleteTerritoryChunkDelta(
-                    (int)message.Kind,
                     message.BaseRevision,
                     message.Revision);
                 break;
         }
-    }
-
-    private void SendTargetedTerritoryChunkMessage(
-        TerritoryChunkReplicationStream.OutboundMessage message)
-    {
-        switch (message.Type)
-        {
-            case TerritoryChunkReplicationStream.OutboundMessageType.Begin:
-                RPC_BeginTerritoryChunkSnapshot(
-                    message.Target,
-                    (int)message.Kind,
-                    message.BaseRevision,
-                    message.Revision,
-                    message.PacketCount);
-                break;
-            case TerritoryChunkReplicationStream.OutboundMessageType.Data:
-                RPC_AppendTerritoryChunkSnapshot(
-                    message.Target,
-                    (int)message.Kind,
-                    message.BaseRevision,
-                    message.Revision,
-                    message.PacketSequence,
-                    message.Words);
-                break;
-            case TerritoryChunkReplicationStream.OutboundMessageType.Complete:
-                RPC_CompleteTerritoryChunkSnapshot(
-                    message.Target,
-                    (int)message.Kind,
-                    message.BaseRevision,
-                    message.Revision);
-                break;
-        }
-    }
-
-    private bool IsActivePlayer(PlayerRef player)
-    {
-        if (Runner == null || player == PlayerRef.None)
-            return false;
-
-        foreach (PlayerRef activePlayer in Runner.ActivePlayers)
-        {
-            if (activePlayer == player)
-                return true;
-        }
-
-        return false;
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.Proxies, Channel = RpcChannel.Reliable)]
     private void RPC_BeginTerritoryChunkDelta(
-        int kind,
         ulong baseRevision,
         ulong revision,
         int packetCount)
     {
-        HandleTerritoryChunkTransferBegin(kind, baseRevision, revision, packetCount);
+        HandleTerritoryChunkTransferBegin(baseRevision, revision, packetCount);
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.Proxies, Channel = RpcChannel.Reliable)]
     private void RPC_AppendTerritoryChunkDelta(
-        int kind,
         ulong baseRevision,
         ulong revision,
         uint packetSequence,
         int[] words)
     {
         HandleTerritoryChunkTransferData(
-            kind,
             baseRevision,
             revision,
             packetSequence,
@@ -1107,78 +1042,13 @@ public class TerritorySystem : Dev.Network.System
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.Proxies, Channel = RpcChannel.Reliable)]
     private void RPC_CompleteTerritoryChunkDelta(
-        int kind,
         ulong baseRevision,
         ulong revision)
     {
-        HandleTerritoryChunkTransferComplete(kind, baseRevision, revision);
-    }
-
-    [Rpc(RpcSources.All, RpcTargets.StateAuthority, Channel = RpcChannel.Reliable)]
-    private void RPC_RequestTerritoryChunkSnapshot(
-        ulong localRevision,
-        ulong advertisedRevision,
-        RpcInfo rpcInfo = default)
-    {
-        if (territoryRuntimeCleanedUp)
-            return;
-
-        PlayerRef requester = rpcInfo.Source;
-        if (!IsActivePlayer(requester) || territoryChunkShadowStore.Current.Revision == 0)
-            return;
-
-        if (!chunkReplicationStream.TryEnqueueSnapshot(
-                requester,
-                territoryChunkShadowStore.Current,
-                out string reason))
-        {
-            Debug.LogWarning(
-                $"{ShadowLogOwnerName} - Chunk Territory recovery enqueue failed. " +
-                $"Requester: {requester}, Local revision: {localRevision}, " +
-                $"Advertised revision: {advertisedRevision}, Reason: {reason}");
-        }
-    }
-
-    [Rpc(RpcSources.StateAuthority, RpcTargets.All, Channel = RpcChannel.Reliable)]
-    private void RPC_BeginTerritoryChunkSnapshot(
-        [RpcTarget] PlayerRef target,
-        int kind,
-        ulong baseRevision,
-        ulong revision,
-        int packetCount)
-    {
-        HandleTerritoryChunkTransferBegin(kind, baseRevision, revision, packetCount);
-    }
-
-    [Rpc(RpcSources.StateAuthority, RpcTargets.All, Channel = RpcChannel.Reliable)]
-    private void RPC_AppendTerritoryChunkSnapshot(
-        [RpcTarget] PlayerRef target,
-        int kind,
-        ulong baseRevision,
-        ulong revision,
-        uint packetSequence,
-        int[] words)
-    {
-        HandleTerritoryChunkTransferData(
-            kind,
-            baseRevision,
-            revision,
-            packetSequence,
-            words);
-    }
-
-    [Rpc(RpcSources.StateAuthority, RpcTargets.All, Channel = RpcChannel.Reliable)]
-    private void RPC_CompleteTerritoryChunkSnapshot(
-        [RpcTarget] PlayerRef target,
-        int kind,
-        ulong baseRevision,
-        ulong revision)
-    {
-        HandleTerritoryChunkTransferComplete(kind, baseRevision, revision);
+        HandleTerritoryChunkTransferComplete(baseRevision, revision);
     }
 
     private void HandleTerritoryChunkTransferBegin(
-        int kind,
         ulong baseRevision,
         ulong revision,
         int packetCount)
@@ -1187,7 +1057,6 @@ public class TerritorySystem : Dev.Network.System
             return;
 
         if (!chunkReplicationStream.TryBeginInbound(
-                (TerritoryChunkTransferKind)kind,
                 baseRevision,
                 revision,
                 packetCount,
@@ -1200,7 +1069,6 @@ public class TerritorySystem : Dev.Network.System
     }
 
     private void HandleTerritoryChunkTransferData(
-        int kind,
         ulong baseRevision,
         ulong revision,
         uint packetSequence,
@@ -1210,7 +1078,6 @@ public class TerritorySystem : Dev.Network.System
             return;
 
         chunkReplicationStream.TryAppendInbound(
-            (TerritoryChunkTransferKind)kind,
             baseRevision,
             revision,
             packetSequence,
@@ -1219,7 +1086,6 @@ public class TerritorySystem : Dev.Network.System
     }
 
     private void HandleTerritoryChunkTransferComplete(
-        int kind,
         ulong baseRevision,
         ulong revision)
     {
@@ -1227,7 +1093,6 @@ public class TerritorySystem : Dev.Network.System
             return;
 
         if (!chunkReplicationStream.TryCompleteInbound(
-                (TerritoryChunkTransferKind)kind,
                 baseRevision,
                 revision,
                 out TerritoryChunkSnapshot snapshot,

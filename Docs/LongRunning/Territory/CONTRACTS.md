@@ -91,16 +91,17 @@ Status: Approved
   vertex RPC와 consumer callback이 계속 게임 결과를 소유한다.
 - changed-Chunk 복제, recovery와 Late Join snapshot은 C006에 포함하지 않는다.
 
-## C007 Chunk Territory replication and recovery
+## C007 Fixed two-peer Chunk Territory delta replication
 
 Status: Approved
 
-- State Authority의 C006 immutable sparse snapshot이 권위 원본이다. RPC는 bounded
-  transfer이고 Proxy replica는 shadow 상태이며, `[Networked]` authoritative revision이
-  지속적인 수렴 신호다.
-- changed-Chunk delta는 `BaseRevision -> Revision`, 전체 snapshot은 빈 replica에서
-  `0 -> Revision` transaction으로 적용한다. transaction, packet과 record 순서가
-  연속이고 terminal 검증이 끝난 뒤에만 새 replica를 원자적으로 공개한다.
+- State Authority의 C006 immutable sparse store가 권위 원본이다. RPC는 bounded
+  transfer이고 Proxy replica는 shadow 상태다. 두 Peer는 스테이지 시작부터 존재하며
+  한 Peer 이탈 시 스테이지가 종료된다.
+- 최초 changed-Chunk delta는 빈 replica의 `0 -> 1`, 이후 delta는
+  `BaseRevision -> BaseRevision + 1` transaction으로 적용한다. transaction, packet과
+  record 순서가 연속이고 terminal 검증이 끝난 뒤에만 새 replica를 원자적으로
+  공개한다.
 - 한 data packet은 최대 48개의 signed 32-bit word를 보유한다. `Full`과 `Empty`
   tombstone은 같은 Y와 fill의 연속 X를 run으로 인코딩할 수 있다. `Boundary`는
   Chunk 좌표, center-inside, 전체 segment 수와 각 fixed local 방향성 segment의
@@ -108,22 +109,17 @@ Status: Approved
 - packetizer는 coverage를 `(Y, X)` 순서로 정규화하고 packet sequence를 0부터
   연속으로 만든다. 한 Boundary가 packet 경계를 넘어도 segment를 제거·이동하거나
   tolerance를 늘리지 않는다.
-- 수신자는 transaction kind/revision, packet count, packet sequence, record 구조,
-  run 범위, 중복 Chunk, Boundary segment count/sequence/local 범위를 검증한다. gap,
-  stale base, malformed payload, 중복 terminal과 중단된 transaction은 이전 replica를
-  보존한다.
+- 수신자는 base/revision, packet count, packet sequence, record 구조, run 범위,
+  중복 Chunk, Boundary segment count/sequence/local 범위를 검증한다. gap, stale base,
+  malformed payload, 중복 terminal과 중단된 transaction은 이전 replica를 보존한다.
 - State Authority는 simulation tick마다 최대 2 data packet만 발송한다. begin/end
   제어 RPC는 data packet 예산과 별개지만 transaction 순서를 앞지르지 않는다.
-- Proxy는 advertised revision과 local revision이 다르고 적용 가능한 inbound
-  transaction도 없을 때 snapshot recovery를 요청한다. Peer마다 outstanding 요청은
-  하나만 유지한다. State Authority는 `RpcInfo.Source`를 요청자로 사용해 해당
-  `PlayerRef`에만 immutable 전체 snapshot을 Reliable stream으로 보낸다.
-- recovery 도중 새 revision이 공개되면 수신한 snapshot/delta를 각 transaction
-  revision에 맞게 검증하고 최종 advertised revision까지 다시 수렴한다. Late Join,
-  AOI 재진입, packet 거부와 spawn 준비 순서 차이는 같은 snapshot 경로를 사용한다.
-- Despawn/TearDown은 outbound queue, inbound candidate와 outstanding recovery를
-  소각한다. C007은 Legacy polygon, 확장 판정, vertex RPC, mesh나 consumer event의
-  권위를 전환하지 않는다.
+- Proxy는 NetworkObject가 RPC를 받을 수 있는 시점부터 delta를 수용한다. Additive
+  `SetUp`이 늦어도 먼저 받은 inbound transaction/replica를 초기화하지 않고,
+  Despawn/TearDown은 outbound queue, inbound candidate와 replica를 소각한다.
+- Late Join, reconnect, AOI 재진입 recovery, snapshot transfer kind, retry timer와
+  targeted `PlayerRef` 전송은 지원하지 않는다. C007은 Legacy polygon, 확장 판정,
+  vertex RPC, mesh나 consumer event의 권위를 전환하지 않는다.
 
 ## Future contracts not approved here
 

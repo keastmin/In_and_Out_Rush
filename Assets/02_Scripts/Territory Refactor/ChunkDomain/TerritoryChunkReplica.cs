@@ -12,7 +12,6 @@ namespace ProjectIO.Territory
         private readonly List<int> _receivedWords = new();
         private readonly HashSet<TerritoryChunkCoordinate> _receivedChunks = new();
 
-        private TerritoryChunkTransferKind _kind;
         private ulong _baseRevision;
         private ulong _revision;
         private uint _expectedPacketSequence;
@@ -28,10 +27,7 @@ namespace ProjectIO.Territory
         public bool IsReceiving => _isReceiving;
         public ulong IncomingRevision => _isReceiving ? _revision : 0;
         public ulong IncomingBaseRevision => _isReceiving ? _baseRevision : 0;
-        public TerritoryChunkTransferKind IncomingKind => _isReceiving ? _kind : default;
-
         public bool TryBegin(
-            TerritoryChunkTransferKind kind,
             ulong baseRevision,
             ulong revision,
             int packetCount,
@@ -47,39 +43,17 @@ namespace ProjectIO.Territory
                 reason = "Chunk transfer requires at least one packet.";
                 return false;
             }
-            if (kind == TerritoryChunkTransferKind.Delta)
+            if (baseRevision == ulong.MaxValue || revision != baseRevision + 1UL)
             {
-                if (baseRevision == ulong.MaxValue || revision != baseRevision + 1UL)
-                {
-                    reason = "Delta revisions must be consecutive.";
-                    return false;
-                }
-                if (Current.Revision != baseRevision)
-                {
-                    reason = $"Delta base revision {baseRevision} does not match replica {Current.Revision}.";
-                    return false;
-                }
+                reason = "Delta revisions must be consecutive.";
+                return false;
             }
-            else if (kind == TerritoryChunkTransferKind.Snapshot)
+            if (Current.Revision != baseRevision)
             {
-                if (baseRevision != 0 || revision == 0)
-                {
-                    reason = "Snapshot transfer revisions are invalid.";
-                    return false;
-                }
-                if (revision < Current.Revision)
-                {
-                    reason = $"Snapshot revision {revision} is older than replica {Current.Revision}.";
-                    return false;
-                }
-            }
-            else
-            {
-                reason = "Unknown Chunk transfer kind.";
+                reason = $"Delta base revision {baseRevision} does not match replica {Current.Revision}.";
                 return false;
             }
 
-            _kind = kind;
             _baseRevision = baseRevision;
             _revision = revision;
             _expectedPacketCount = packetCount;
@@ -102,8 +76,7 @@ namespace ProjectIO.Territory
                 reason = "Chunk transfer packet cannot be null.";
                 return false;
             }
-            if (packet.Kind != _kind || packet.BaseRevision != _baseRevision ||
-                packet.Revision != _revision)
+            if (packet.BaseRevision != _baseRevision || packet.Revision != _revision)
             {
                 reason = "Chunk transfer packet metadata does not match the active transaction.";
                 return false;
@@ -158,7 +131,6 @@ namespace ProjectIO.Territory
 
         public void Abort()
         {
-            _kind = default;
             _baseRevision = 0;
             _revision = 0;
             _expectedPacketSequence = 0;
@@ -191,11 +163,8 @@ namespace ProjectIO.Territory
             }
 
             var chunks = new Dictionary<TerritoryChunkCoordinate, TerritoryChunkCoverage>();
-            if (_kind == TerritoryChunkTransferKind.Delta)
-            {
-                foreach (KeyValuePair<TerritoryChunkCoordinate, TerritoryChunkCoverage> pair in Current.Chunks)
-                    chunks.Add(pair.Key, pair.Value);
-            }
+            foreach (KeyValuePair<TerritoryChunkCoordinate, TerritoryChunkCoverage> pair in Current.Chunks)
+                chunks.Add(pair.Key, pair.Value);
 
             _receivedChunks.Clear();
             int offset = 1;
@@ -263,13 +232,6 @@ namespace ProjectIO.Territory
                 reason = "Chunk run record has an invalid fill or length.";
                 return false;
             }
-            if (_kind == TerritoryChunkTransferKind.Snapshot &&
-                fillValue == (int)TerritoryChunkFill.Empty)
-            {
-                reason = "Sparse snapshot transfer cannot contain Empty tombstones.";
-                return false;
-            }
-
             long lastX = (long)startX + runLength - 1L;
             if (lastX > int.MaxValue)
             {

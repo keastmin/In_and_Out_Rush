@@ -28,7 +28,6 @@ namespace ProjectIO.Territory
             }
 
             return TryCreate(
-                TerritoryChunkTransferKind.Delta,
                 result.BaseRevision,
                 result.Revision,
                 result.ChangedChunks,
@@ -36,33 +35,7 @@ namespace ProjectIO.Territory
                 out reason);
         }
 
-        public bool TryCreateSnapshot(
-            TerritoryChunkSnapshot snapshot,
-            out IReadOnlyList<TerritoryChunkTransferPacket> packets,
-            out string reason)
-        {
-            if (snapshot == null || snapshot.Revision == 0)
-            {
-                packets = null;
-                reason = "A published Chunk snapshot is required.";
-                return false;
-            }
-
-            var snapshotCoverage = new List<TerritoryChunkCoverage>(snapshot.Chunks.Count);
-            foreach (TerritoryChunkCoverage item in snapshot.Chunks.Values)
-                snapshotCoverage.Add(item);
-
-            return TryCreate(
-                TerritoryChunkTransferKind.Snapshot,
-                0,
-                snapshot.Revision,
-                snapshotCoverage,
-                out packets,
-                out reason);
-        }
-
         private bool TryCreate(
-            TerritoryChunkTransferKind kind,
             ulong baseRevision,
             ulong revision,
             IReadOnlyList<TerritoryChunkCoverage> coverage,
@@ -75,15 +48,9 @@ namespace ProjectIO.Territory
                 reason = "Chunk coverage cannot be null.";
                 return false;
             }
-            if (kind == TerritoryChunkTransferKind.Delta &&
-                (baseRevision == ulong.MaxValue || revision != baseRevision + 1UL))
+            if (baseRevision == ulong.MaxValue || revision != baseRevision + 1UL)
             {
                 reason = "Delta revisions must be consecutive.";
-                return false;
-            }
-            if (kind == TerritoryChunkTransferKind.Snapshot && (baseRevision != 0 || revision == 0))
-            {
-                reason = "Snapshot transfer revisions are invalid.";
                 return false;
             }
 
@@ -96,13 +63,6 @@ namespace ProjectIO.Territory
                     reason = "Chunk coverage cannot contain null.";
                     return false;
                 }
-                if (kind == TerritoryChunkTransferKind.Snapshot &&
-                    item.Fill == TerritoryChunkFill.Empty)
-                {
-                    reason = "Sparse snapshots cannot contain Empty coverage.";
-                    return false;
-                }
-
                 _orderedCoverage.Add(item);
             }
 
@@ -184,7 +144,6 @@ namespace ProjectIO.Territory
                 var packetWords = new int[wordCount];
                 _words.CopyTo(wordOffset, packetWords, 0, wordCount);
                 _packets.Add(new TerritoryChunkTransferPacket(
-                    kind,
                     baseRevision,
                     revision,
                     packetSequence,

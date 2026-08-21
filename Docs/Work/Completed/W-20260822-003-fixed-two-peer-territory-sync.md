@@ -1,6 +1,6 @@
 # W-20260822-003 고정 2인 Territory 동기화 단순화
 
-Status: Reserved
+Status: Complete
 
 ## 동기화 기준
 
@@ -144,11 +144,36 @@ Fusion 설정과 Inspector 참조를 변경하지 않는다.
 
 ## 실제 변경
 
-예약 단계. 구현 후 기록한다.
+- `TerritoryChunkTransferKind` script/meta와 Snapshot packetizer/replica 분기를 삭제하고
+  최초 `0 -> 1`부터 연속 delta만 표현하도록 packet metadata를 축소했다.
+- replica는 current coverage 복사본에 Full/Boundary 변경과 Empty tombstone을 적용하고
+  terminal 검증 후에만 새 revision을 공개한다. stale base, sequence gap, malformed
+  payload에서는 기존 snapshot을 유지한다.
+- `TerritoryChunkReplicationStream`에서 Fusion `PlayerRef`, targeted transfer,
+  snapshot queue, recovery timer/dedup을 제거했다. broadcast delta queue와 tick당 최대
+  2 data packet 예산만 유지했다.
+- `TerritorySystem`에서 `[Networked]` recovery revision, request/targeted Snapshot RPC와
+  active-player 검증을 제거했다. State Authority만 setup 시 stream을 초기화해 Proxy가
+  Additive `SetUp` 전에 받은 delta를 보존하고 TearDown/Dispose는 전체 상태를
+  소각한다.
+- `TerritorySystem.ChunkDeltaPacketize`와 `TerritorySystem.ChunkTransferFlush` Profiler
+  marker를 추가했다. Legacy 확장, consumer와 Trail transport는 변경하지 않았다.
+- C007, Territory 기능 문서와 장기 milestone/handoff/roadmap/test 문서를 실제 고정
+  2인 delta-only 계약과 수동 검증 절차로 갱신했다.
 
 ## 검증 결과
 
-예약 단계. 구현 후 기록한다.
+- 변경 source와 기존 ChunkDomain 테스트를 직접 포함한 독립 validation 35/35 통과.
+- 최초 `0 -> 1`, 연속/빈 delta, Full/Empty run, fragmented Boundary, stale base,
+  packet gap, malformed terminal과 Reset 소각 assertion 통과.
+- adapter validation에서 30-segment Boundary delta가 최대 48-word data packet 4개로
+  나뉘고 tick당 2개씩 2 tick에 종료됨.
+- 신규 source를 임시 target으로 주입한 `Assembly-CSharp.csproj` 통합 compile 오류
+  0개, 기존 warning 16개.
+- `TerritoryChunkTransferKind.cs`와 `.meta`가 함께 삭제됐고 Snapshot/recovery/targeted
+  source 참조가 남지 않았음을 확인했다.
+- 실제 Unity import/Fusion Weaver, EditMode 전체와 Host·Client 걷기·달리기·긴 경로·
+  확장·Abort·Profiler 절차는 작업자가 완료했다고 보고했다.
 
 ## 남은 위험
 
@@ -158,3 +183,6 @@ Fusion 설정과 Inspector 참조를 변경하지 않는다.
 - Legacy polygon union, 256 vertex 보정과 synchronous Chunk state build는 이번
   단순화 범위 밖이므로 정상 확장 frame hitch의 주원인이면 후속 CPU/GPU milestone이
   필요하다.
+- Reliable delta가 Proxy spawn 준비보다 먼저 유실되는 실제 ordering이 있다면
+  recovery 없는 shadow replica가 뒤처질 수 있다. 고정 2인 runtime에서 initial
+  revision 1 수신을 반드시 확인해야 한다.

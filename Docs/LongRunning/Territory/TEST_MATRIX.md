@@ -14,10 +14,10 @@
 | 외부 강제 이동 pause/resume | suspension RPC·reconcile 및 SandTomb runtime 통과 | 지연 회귀 |
 | Host 로컬 Runner | owner prediction 수동 검증 통과 | 장기 부하 회귀 |
 | Client Input Authority Runner | 달리기·확장·걷기와 속도 전환 수동 검증 통과 | 장기 부하 회귀 |
-| Chunk delta/snapshot codec | 48-word 상한, Full/Empty run, fragmented Boundary round-trip 독립 validation 통과 | Unity EditMode 회귀 |
-| Chunk replica 원자성 | 빈 delta, stale base, gap/malformed terminal, snapshot 역행 거부 통과 | Fusion 지연·손실 runtime |
+| Chunk delta codec | 최초 0→1, 48-word 상한, Full/Empty run, fragmented Boundary round-trip 독립 validation 통과 | Unity EditMode 회귀 |
+| Chunk replica 원자성 | 빈 delta, stale base, gap/malformed terminal과 Reset 소각 통과 | Fusion 지연 runtime |
 | Tick 전송 예산 | 30-segment Boundary 4 packet을 2/tick으로 2 tick 종료 | Fusion traffic/Profiler 확인 |
-| Late Join | targeted recovery 구현, runtime 미검증 | Host + 기존 Client + Late Join 수동 검증 |
+| Late Join·재접속 | 고정 2인 제품 계약에 따라 지원 경로 제거 | 기능 도입 결정 시 새 계약 필요 |
 | GPU/CPU fallback | 범위 밖 | presentation milestone |
 | Chunk Empty/Full/Boundary | 신규 assertion 5개 및 Unity EditMode 통과 | 장기 부하 회귀 |
 | fixed local 경계 연속성 | 다중 Chunk 원본 경로 재구성과 runtime 통과 | 장기 부하 회귀 |
@@ -39,3 +39,10 @@ W-014 신규 packetizer/replica assertion 7개를 포함한 ChunkDomain 독립 v
 35/35 통과했다. adapter 전송 예산 validation과 신규 source 주입 통합 compile도
 통과했지만 실제 Unity import/Fusion Weaver와 Host·Client·Late Join runtime은 작업자
 검증 전이므로 완료로 표시하지 않는다.
+
+고정 2인 단순화 slice는 Snapshot/recovery 테스트를 delta-only assertion으로 교체한
+뒤 기존 ChunkDomain 회귀와 함께 독립 validation 35/35를 통과했다. 30-segment
+Boundary delta는 48-word packet 4개, tick당 2개씩 2 tick에 종료됐고 신규 source
+주입 `Assembly-CSharp` compile은 오류 0개였다. 작업자는 안내된 Unity import/compile,
+Host·Client 걷기·달리기·속도 전환·긴 경로·확장·Abort와 Profiler runtime 절차 완료를
+보고했다.

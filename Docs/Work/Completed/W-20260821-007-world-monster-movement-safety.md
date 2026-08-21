@@ -1,6 +1,6 @@
 # W-20260821-007 World Monster 이동 안전성
 
-Status: Reserved
+Status: Complete
 
 ## 동기화 기준
 
@@ -75,13 +75,19 @@ Monster와 Projectile, Territory, Resource Spawn
 
 ## 실제 변경
 
-예약 단계.
+- `Monster`가 파생 몬스터에 Territory와 활성 Sanctuary를 구분해 제공하도록 보호 판정을 확장했다.
+- `WorldMonster`가 목적지와 매 tick 이동 구간에서 Territory·Sanctuary 경로 표본, 기존 바위 bounds, `ResourceVisible` Collider sweep/overlap을 함께 검사하도록 했다.
+- Gigantia는 Territory 내부에서 밖으로 나가는 안전한 목적지를 다시 선택하며, 이동 중 Sanctuary 통과나 Territory 재진입은 계속 거부한다.
+- Strider 슬라이드와 Stalker 추적도 공통 이동 안전성 판정을 사용한다.
 
 ## 검증 결과
 
-예약 단계.
+- `dotnet build Assembly-CSharp.csproj --no-restore --verbosity minimal` 성공: 오류 0개, 기존 Fusion/Unity analyzer 경고 16개.
+- `git diff --check` 성공. 저장소의 기존 CRLF 변환 경고는 출력되지만 공백 오류는 없다.
+- Unity Host·Client 동시 실행은 이 환경에서 수행하지 못했다. Host에서 Gigantia·Strider·Stalker를 자원/바위/영역 경계에 배치해 이동과 이탈을 확인하고, Client에서 복제 Transform이 동일하게 보이는지 수동 확인이 남아 있다.
 
 ## 남은 위험
 
 - Runtime 자원 수와 Collider 크기에 따라 목적지 탐색 재시도 비용이 늘 수 있으므로, 기존 횟수 제한 안에서만 검사하고 실패 시 다음 tick에 다시 시도한다.
 - Gigantia의 Territory 이탈은 내부에서 외부로 나가는 구간만 예외로 허용한다. 외부에서 Territory 안으로 들어가는 목적지나 구간은 허용하지 않으며, 활성 Sanctuary는 이탈 중에도 통과하지 않는다.
+- Physics non-alloc hit buffer는 64개다. 매우 조밀한 자원 군집에서 buffer가 포화되면 Unity 수동 실행으로 경로 차단을 확인한다.

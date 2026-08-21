@@ -182,6 +182,9 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
         => IsPositionInTerritory(position) ||
            IsPositionInActiveSanctuary(new Vector3(position.x, transform.position.y, position.y));
 
+    protected bool IsPositionInTerritory(Vector3 position)
+        => IsPositionInTerritory(new Vector2(position.x, position.z));
+
     protected bool IsTargetInRunnerSafeZone(Transform target)
         => target != null && IsPositionInRunnerSafeZone(target.position);
 
@@ -206,7 +209,7 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
         return true;
     }
 
-    private static bool IsPositionInActiveSanctuary(Vector3 position)
+    protected static bool IsPositionInActiveSanctuary(Vector3 position)
         => Dev.Network.StageBootstrapper.Instance != null &&
            Dev.Network.StageBootstrapper.Instance.IsPointInActiveSanctuary(position);
 

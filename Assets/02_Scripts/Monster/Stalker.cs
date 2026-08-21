@@ -156,7 +156,7 @@ public class Stalker : WorldMonster
             return;
         }
 
-        if (IsWorldObstaclePathBlocked(currentPosition, nextPosition))
+        if (IsMovementPathBlocked(currentPosition, nextPosition))
         {
             StopChasing();
             return;

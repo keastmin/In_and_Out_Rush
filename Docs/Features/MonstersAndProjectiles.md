@@ -33,6 +33,7 @@ Monster와 Projectile prefab, `GameWorld.unity`의 spawn parent와 systems, `Wor
 - Client 표시와 Late Join
 - World monster obstacle-list injection after authoritative obstacle spawn
 - Patrol, slide, and chase paths avoiding the occupied bounds of spawned rocks
+- World Monster patrol, Strider slide, and Stalker chase paths also reject Territory and active Sanctuary crossings plus generated resource Collider overlaps. Gigantia may leave Territory through a newly selected outside target, but it never selects or re-enters a Territory/Sanctuary path.
 - Wave 종료·정착·내재화 시 중복 Spawn
 - Despawn 후 projectile registry와 이벤트 정리
 - World monster record는 고정 pivot Chunk로 색인하며 refresh에서는 플레이어
@@ -54,6 +55,8 @@ Local Monster 계층과 Network Monster 계층이 병존한다. 어떤 경로가
 Network World Monster의 Chunk 후보 선택은 `ProjectIO.Monsters` 순수 assembly가,
 Unity 장애물 bounds broadphase는 Legacy assembly의 adapter가 담당한다. Monster
 AI tick cadence와 전투 규칙은 Legacy Network Monster가 계속 소유한다.
+
+World Monster의 이동 안전성 판정은 Legacy `WorldMonster`가 State Authority에서 수행한다. 바위는 `WorldObstacleBoundsIndex`, 자원은 Physics query로 생성된 `ResourceVisible` Collider를 확인하며, Territory·Sanctuary는 일정 간격의 경로 표본으로 통과를 막는다. Client는 기존 NetworkObject Transform 복제만 관찰한다.
 
 ## World Monster Spawn 후보 선택 slice
 

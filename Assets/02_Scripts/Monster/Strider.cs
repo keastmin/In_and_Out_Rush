@@ -96,7 +96,7 @@ public sealed class Strider : WorldMonster
             if (IsPositionInRunnerSafeZone(targetPosition))
                 continue;
 
-            if (IsWorldObstaclePathBlocked(RigidbodyPosition, targetPosition))
+            if (IsMovementPathBlocked(RigidbodyPosition, targetPosition))
                 continue;
 
             State = MovementState.Sliding;
@@ -141,7 +141,7 @@ public sealed class Strider : WorldMonster
             return;
         }
 
-        if (IsWorldObstaclePathBlocked(currentPosition, nextPosition))
+        if (IsMovementPathBlocked(currentPosition, nextPosition))
         {
             BeginRest();
             return;

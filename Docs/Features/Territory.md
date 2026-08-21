@@ -42,6 +42,11 @@ Grid 표시, Fog of War, Resource 수집·Spawn, Track·World Monster, Sacred Zo
 - 확장 결과의 검증된 triangle data를 Host mesh에 재사용하고 같은 polygon을
   중복 triangulation하지 않는지
 
+## 외부 강제 이동 사선 중단
+
+- `TerritorySystem`은 State Authority에서 진행 중인 사선을 외부 강제 이동 동안 일시 정지할 수 있다. 정지 동안에는 경로·Trail chunk renderer·path RPC를 갱신하지 않는다.
+- 재개 시 정지점과 현재 위치를 강제 경로점으로 복제하고, 기존 자기 교차·Lifeline·영토 확장 규칙을 그대로 적용한다.
+
 ## 기술 부채
 
 현재 기능 문서와 장기 milestone 문서가 분리되어 있지 않은 부분이 있다. Territory Skill은 장기 마이그레이션 절차를 계속 소유한다.

@@ -5,6 +5,8 @@ public class SandTomb : WorldMonster
 {
     private const string ActivationRangeName = "Activation Range";
     private const int ActivationRangeSegments = 64;
+    private const float MaxHealthDamageRate = 0.10f;
+    private const float CurrentHealthDamageRate = 0.30f;
 
     public enum SandTombState
     {
@@ -20,16 +22,15 @@ public class SandTomb : WorldMonster
     [SerializeField] private Material _activeMaterial;
     [SerializeField] private Material _inactiveMaterial;
     [SerializeField] private float _activationRadius = 4f;
-    [SerializeField] private float _activationDuration = 5f;
+    [SerializeField] private float _explosionDelay = 4f;
     [SerializeField] private float _suckedIntoSpeed = 2f;
     [SerializeField] private float _suckedIntoRadius = 5f;
-    [SerializeField] private float _attackSpeed = 5f;
 
     [Networked, OnChangedRender(nameof(ApplyStateVisual))]
     private SandTombState State { get; set; }
+    [Networked] private TickTimer ExplosionTimer { get; set; }
 
-    private float _activationTimer = 0f;
-    private float _attackElapsedTime = 0f;
+    private bool _isExpansionPathSuspended;
     private Mesh _activationRangeMesh;
 
     private void Awake()
@@ -48,45 +49,93 @@ public class SandTomb : WorldMonster
     {
         base.FixedUpdateNetwork();
 
-        if (!HasStateAuthority || IsStunned) return;
-        if (playerTransform == null) return;
+        if (!HasStateAuthority || playerTransform == null) return;
 
-        var distanceToPlayer = Vector3.Distance(RigidbodyPosition, playerTransform.position);
-        UpdateActivation(distanceToPlayer);
-
-        if (State == SandTombState.Active)
+        float distanceToPlayer = Vector3.Distance(RigidbodyPosition, playerTransform.position);
+        if (State == SandTombState.Inactive)
         {
-            if (IsPlayerInTerritory()) return;
-            if (IsPlayerOutOfSuckedIntoRadius(distanceToPlayer)) return;
-            SuckIntoSandTomb();
-            Attack();
+            if (!IsStunned && distanceToPlayer <= _activationRadius)
+                Activate();
+
+            return;
         }
+
+        if (ExplosionTimer.Expired(Runner))
+        {
+            ResumeExpansionPath();
+            Explode(distanceToPlayer);
+            DestroyMonster();
+            return;
+        }
+
+        if (IsStunned || IsPlayerInTerritory())
+        {
+            ResumeExpansionPath();
+            return;
+        }
+
+        if (IsPlayerOutOfSuckedIntoRadius(distanceToPlayer))
+        {
+            ResumeExpansionPath();
+            return;
+        }
+
+        PauseExpansionPath();
+        SuckIntoSandTomb();
     }
-    
-    private void UpdateActivation(float distanceToPlayer)
+
+    public override void DestroyMonster()
     {
-        if (distanceToPlayer <= _activationRadius)
-        {
-            if (State == SandTombState.Inactive)
-            {
-                Debug.Log($"{name} is activated by {playerTransform.name}");
-                State = SandTombState.Active;
-                _activationTimer = 0f;
-            }
-        }
-        else
-        {
-            if (State == SandTombState.Active)
-            {
-                _activationTimer += Runner.DeltaTime;
-                if (_activationTimer >= _activationDuration)
-                {
-                    Debug.Log($"{name} is deactivated due to timeout");
-                    State = SandTombState.Inactive;
-                    _activationTimer = 0f;
-                }
-            }
-        }
+        ResumeExpansionPath();
+        base.DestroyMonster();
+    }
+
+    public override void Despawned(NetworkRunner runner, bool hasState)
+    {
+        if (runner != null && runner.IsServer)
+            ResumeExpansionPath();
+
+        base.Despawned(runner, hasState);
+    }
+
+    private void Activate()
+    {
+        Debug.Log($"{name} is activated by {playerTransform.name}");
+        State = SandTombState.Active;
+        ExplosionTimer = TickTimer.CreateFromSeconds(Runner, Mathf.Max(0f, _explosionDelay));
+    }
+
+    private void PauseExpansionPath()
+    {
+        if (_isExpansionPathSuspended || territoryExpansionSystem == null)
+            return;
+
+        _isExpansionPathSuspended = territoryExpansionSystem.TryPauseExpandingPath(playerTransform.position);
+    }
+
+    private void ResumeExpansionPath()
+    {
+        if (!_isExpansionPathSuspended)
+            return;
+
+        territoryExpansionSystem?.ResumePausedExpandingPath(
+            playerTransform.position,
+            playerTransform.GetComponent<PlayerRunner>());
+        _isExpansionPathSuspended = false;
+    }
+
+    private void Explode(float distanceToPlayer)
+    {
+        if (IsPlayerInTerritory() || IsPlayerOutOfSuckedIntoRadius(distanceToPlayer))
+            return;
+
+        PlayerRunner runner = playerTransform.GetComponent<PlayerRunner>();
+        if (runner == null)
+            return;
+
+        float damage = runner.MaxHealth * MaxHealthDamageRate + runner.Health * CurrentHealthDamageRate;
+        runner.TakeDamage(damage);
+        Debug.Log($"{name} exploded on {runner.name} for {damage:F2} damage.");
     }
 
     private void ApplyStateVisual()
@@ -179,17 +228,6 @@ public class SandTomb : WorldMonster
     {
         Vector3 direction = (transform.position - playerTransform.position).normalized;
         playerTransform.position += _suckedIntoSpeed * Runner.DeltaTime * direction;
-    }
-
-    private void Attack()
-    {
-        _attackElapsedTime += Runner.DeltaTime * _attackSpeed;
-        if (_attackElapsedTime >= 1f)
-        {
-            playerTransform.GetComponent<IDamageable>()?.TakeDamage(1f);
-            Debug.Log($"{name} attacks {playerTransform.name}");
-            _attackElapsedTime = 0f;
-        }
     }
 
     private void OnDrawGizmosSelected()

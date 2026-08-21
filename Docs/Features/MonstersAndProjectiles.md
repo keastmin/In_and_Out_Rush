@@ -42,6 +42,12 @@ Monster와 Projectile prefab, `GameWorld.unity`의 spawn parent와 systems, `Wor
 - 월드 장애물 bounds cache는 파괴된 장애물을 무시하고 기존 segment/bounds
   판정과 같은 결과를 내는지
 
+## SandTomb 벌레지옥
+
+- State Authority가 activation radius 진입으로 SandTomb을 활성화하고, Networked `TickTimer` 4초 뒤 폭발과 Despawn을 결정한다.
+- 활성 중 sucked-into radius에 들어온 Runner는 Territory 확장 사선을 진입 위치에서 일시 정지한 채 흡입된다. 반경 이탈, 폭발, 또는 Despawn은 해당 위치와 현재 Runner 위치를 연결한 뒤 사선 기록을 재개한다.
+- 폭발 순간 sucked-into radius 안이고 영토 보호 밖인 Runner는 최대 체력 10%와 현재 체력 30%의 합만큼 피해를 받는다.
+
 ## 기술 부채
 
 Local Monster 계층과 Network Monster 계층이 병존한다. 어떤 경로가 활성인지 소비자별로 확인해야 한다.

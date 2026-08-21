@@ -38,6 +38,7 @@ public class TerritorySystem : Dev.Network.System
     readonly List<Vector2> pendingExpansionPathPoints = new(ExpansionPathSyncBatchSize);
     TerritoryTrailChunkRenderer trailChunkRenderer;
     TickTimer expansionPathSyncTimer;
+    bool expansionPathSuspended;
 
     public Territory Territory;
     public TerritoryVisible TerritoryVisible;
@@ -113,6 +114,7 @@ public class TerritorySystem : Dev.Network.System
 
     private void StopExpanding()
     {
+        expansionPathSuspended = false;
         expansionSession.Stop();
         pendingExpansionPathPoints.Clear();
         expansionPathSyncTimer = default;
@@ -171,6 +173,70 @@ public class TerritorySystem : Dev.Network.System
         return expansionSession.TryCopyPathTo(results);
     }
 
+    public bool TryPauseExpandingPath(Vector3 position)
+    {
+        if (!Object.HasStateAuthority ||
+            !expansionSession.IsExpanding ||
+            expansionSession.IsRecoveringFromLifeline ||
+            expansionPathSuspended)
+        {
+            return false;
+        }
+
+        Vector2 pausePosition = new(position.x, position.z);
+        if (expansionSession.HasMovedEnough(pausePosition, 0.0001f))
+        {
+            AddExpandingPathPoint(pausePosition, true);
+            QueueExpansionPathPointForReplication(pausePosition);
+            FlushExpansionPathPoints();
+        }
+
+        expansionSession.SetPreviousPosition(pausePosition);
+        expansionPathSuspended = true;
+        return true;
+    }
+
+    public void ResumePausedExpandingPath(Vector3 position, PlayerRunner playerRunner)
+    {
+        if (!Object.HasStateAuthority || !expansionPathSuspended)
+            return;
+
+        expansionPathSuspended = false;
+        if (!expansionSession.IsExpanding || Territory == null)
+            return;
+
+        Vector2 currentPosition = new(position.x, position.z);
+        if (Territory.IsPointInPolygon(currentPosition))
+        {
+            if (expansionSession.PlayerPathCount > 1)
+            {
+                AddExpandingPathPoint(currentPosition, true);
+                QueueExpansionPathPointForReplication(currentPosition);
+                FlushExpansionPathPoints();
+                ExpandTerritoryFromCurrentPath();
+            }
+
+            StopExpanding();
+            RPC_StopExpanding();
+            expansionSession.SetPreviousPosition(currentPosition);
+            return;
+        }
+
+        if (!expansionSession.HasMovedEnough(currentPosition, 0.0001f))
+        {
+            expansionSession.SetPreviousPosition(currentPosition);
+            return;
+        }
+
+        if (CheckPlayerRunnerCrossedOwnPath(currentPosition, true, playerRunner))
+            return;
+
+        AddExpandingPathPoint(currentPosition, true);
+        QueueExpansionPathPointForReplication(currentPosition);
+        FlushExpansionPathPoints();
+        expansionSession.SetPreviousPosition(currentPosition);
+    }
+
     public void HandlePlayerPositionChanged(Vector3 position, PlayerRunner playerRunner, object sender) // 러너만
     {
         using (HandlePlayerPositionChangedMarker.Auto())
@@ -178,6 +244,9 @@ public class TerritorySystem : Dev.Network.System
         var currentPosition = new Vector2(position.x, position.z);
 
         if (!Object.HasStateAuthority)
+            return;
+
+        if (expansionPathSuspended)
             return;
 
         bool isInTerritory = Territory.IsPointInPolygon(currentPosition);

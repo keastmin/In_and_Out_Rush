@@ -16,7 +16,7 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
     protected float maxHealth;
 
     protected Territory territory;
-    private TerritorySystem territoryExpansionSystem;
+    protected TerritorySystem territoryExpansionSystem;
     [SerializeField] protected Transform playerTransform;
     protected Rigidbody rigidBody;
 

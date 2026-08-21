@@ -1,6 +1,6 @@
 # W-20260821-001 SandTomb 벌레지옥 사선 중단 및 재개
 
-Status: Reserved
+Status: Completed
 
 ## 동기화 기준
 
@@ -92,3 +92,16 @@ Scene, ScriptableObject, ProjectSettings, Package 변경은 없다.
 
 - SandTomb과 TerritorySystem의 FixedUpdate/Render 순서 차이로 정지·재개 프레임의 경로 점이 달라질 수 있어 Host와 Client runtime 검증이 필요하다.
 - 기존 Territory path RPC는 Late Join 시 진행 중 경로를 재구성하지 않으므로, 이 작업은 그 기존 범위를 확대하지 않는다.
+
+## 구현 결과
+
+- `SandTomb`은 4초 Networked 폭발 타이머, 반경 진입별 사선 정지·흡입, 반경 이탈·폭발·Despawn의 사선 재개, 폭발 피해식을 사용한다.
+- `TerritorySystem`은 State Authority 전용 사선 정지·재개 API로 연결선을 path RPC에 즉시 반영하고, 기존 교차·Lifeline·영토 확장 흐름을 사용한다.
+- `SandTomb.prefab`은 `_explosionDelay: 4`로 갱신했다.
+
+## 검증 기록
+
+- `git diff --check` 통과.
+- `dotnet build ProjectIO.slnx --no-restore`는 Unity가 생성하는 `Temp/obj/*/project.assets.json` 부재로 시작 전 실패했다. 코드 컴파일과 실제 Host·Client 실행은 Unity Editor에서 별도로 확인해야 한다.
+- `dotnet build ProjectIO.Monsters.csproj` 및 `dotnet build Assembly-CSharp.csproj`는 오류 없이 통과했다. 후자는 기존 경고 16개를 출력했다.
+- Unity Editor에서 Host와 Client를 함께 실행하는 runtime 검증은 이 환경에서 수행하지 못했다. 각 Peer에서 진입·이탈·재진입 사선, 폭발 반경 피해, Despawn 정리를 확인해야 한다.

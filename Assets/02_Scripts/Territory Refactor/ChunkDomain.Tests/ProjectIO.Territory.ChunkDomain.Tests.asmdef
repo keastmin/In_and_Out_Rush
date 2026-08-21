@@ -1,0 +1,21 @@
+{
+  "name": "ProjectIO.Territory.ChunkDomain.Tests",
+  "rootNamespace": "ProjectIO.Territory.Tests",
+  "references": [
+    "ProjectIO.Territory.ChunkDomain"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

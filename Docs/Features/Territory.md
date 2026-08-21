@@ -2,7 +2,7 @@
 
 Status: Migrating to chunk-based pipeline
 
-Last reviewed: 2026-08-15
+Last reviewed: 2026-08-21
 
 ## 책임
 
@@ -19,7 +19,13 @@ Last reviewed: 2026-08-15
 - `TerritorySystem`, `Territory`, `TerritoryExpansion`, `TerritoryVisible`
 - `TerritoryTrailSegmentIndex`, `TerritoryTrailChunkRenderer`
 - `TerritoryBoundsIndex`, `TerritoryMeshData`
+- 신규 순수 기반: `ProjectIO.Territory.ChunkDomain` assembly의
+  `FixedTerritoryPoint`, `TerritoryChunkCoordinate`,
+  `TerritorySegmentChunkTraversal`, `TerritoryTrailSession`
 - `.agents/skills/build-chunk-territory/`
+
+신규 Chunk domain은 아직 런타임에 연결되지 않았다. 현재 확장 결과와 모든
+consumer에는 계속 Legacy polygon만 authoritative하다.
 
 ## 주요 소비자
 
@@ -41,6 +47,9 @@ Grid 표시, Fog of War, Resource 수집·Spawn, Track·World Monster, Sacred Zo
   cache를 같은 시점에 갱신하는지
 - 확장 결과의 검증된 triangle data를 Host mesh에 재사용하고 같은 polygon을
   중복 triangulation하지 않는지
+- Chunk domain의 1 world unit = 256 fixed unit, 8 world-unit Chunk,
+  half-open 소유권과 Trail sequence 계약을 변경하지 않는지. 변경이 필요하면
+  `Docs/LongRunning/Territory/CONTRACTS.md`와 migration을 먼저 갱신한다.
 
 ## 외부 강제 이동 사선 중단
 

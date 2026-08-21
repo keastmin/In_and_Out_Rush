@@ -1,6 +1,6 @@
 # W-20260821-010 Chunk Territory 도메인 기반
 
-Status: Reserved
+Status: Completed
 
 ## 동기화 기준
 
@@ -122,11 +122,31 @@ Compute Shader, ScriptableObject와 Fusion Project 설정은 수정하지 않는
 
 ## 실제 변경
 
-예약 단계. 구현 전.
+- `ProjectIO.Territory.ChunkDomain` 순수 asmdef와 fixed point, Chunk coordinate,
+  segment traversal, Trail sample/fragment/session/status를 추가했다.
+- half-open Chunk 소유권, 음수 floor, exact-corner 동시 step과 fixed 분할점
+  연속성을 구현했다.
+- sample/fragment sequence 연속성, 같은 Chunk 재방문 순서, Abort payload 소각과
+  stale session 거부를 구현했다.
+- Unity EditMode 테스트 assembly와 결정론·경계·재방문·gap·Abort 테스트를
+  추가했다.
+- `Docs/LongRunning/Territory/`에 계약, milestone, roadmap, handoff와 test matrix를
+  작성하고 Territory 기능 문서에 아직 연결되지 않은 신규 기반을 기록했다.
+- Legacy runtime, Fusion, Scene, Prefab, Material, Shader와 consumer는 변경하지
+  않았다.
 
 ## 검증 결과
 
-예약 단계. 구현 전.
+- Unity 6000.0.69f1 별도 최소 프로젝트에서 신규 runtime/test asmdef를 import하고
+  EditMode 테스트 15/15 통과.
+- 주 프로젝트 `Assembly-CSharp.csproj` 빌드 0 error 통과. 표시된 warning 16건은
+  기존 Fusion/Legacy analyzer warning이다.
+- runtime asmdef에 UnityEngine, Fusion, Assembly-CSharp 참조가 없고
+  `noEngineReferences: true`임을 확인.
+- 신규 Asset 11개와 폴더 2개의 `.meta`가 모두 짝을 이루며 GUID 중복 0건.
+- runtime/test asmdef JSON parse 통과.
+- Legacy runtime과 Scene·Prefab·네트워크 직렬화 Asset diff 없음.
+- `git diff --check` 통과.
 
 ## 남은 위험
 
@@ -136,3 +156,6 @@ Compute Shader, ScriptableObject와 Fusion Project 설정은 수정하지 않는
 - 순수 도메인 기반만으로는 현재 보고된 Trail 지연이나 확장 hitch가 개선되지
   않는다. 가시적 개선은 후속 Fusion Trail integration, Chunk state, GPU
   presentation 마일스톤에서 순차적으로 제공한다.
+- 주 Unity Editor가 열려 있어 신규 assembly 검증은 같은 Unity 버전의 별도 최소
+  프로젝트에서 수행했다. 작업자가 주 Editor에 focus해 import한 뒤 Test Runner로
+  동일 15개 테스트를 재실행할 수 있다.

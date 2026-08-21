@@ -12,6 +12,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Stalker
       objectReference: {fileID: 0}
+    - target: {fileID: 5851169694264762905, guid: 3f204e3d39da8664e820553faf1f691e, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: d41458d0ad49e3848987b7585c090ef4, type: 2}
     - target: {fileID: 6102025025699949262, guid: 3f204e3d39da8664e820553faf1f691e, type: 3}
       propertyPath: SortKey
       value: 208858976
@@ -109,6 +113,7 @@ MonoBehaviour:
   playerTransform: {fileID: 0}
   patrolMinimumRadius: 5
   patrolMaximumRadius: 10
+  obstaclePathPadding: 0.25
   _sensingRange: 5
   _attackRange: 2
   _attackSpeed: 3

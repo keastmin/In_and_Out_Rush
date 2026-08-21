@@ -12,6 +12,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Strider
       objectReference: {fileID: 0}
+    - target: {fileID: 5851169694264762905, guid: 3f204e3d39da8664e820553faf1f691e, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: a92bce0287d4311409bb8c87eb9c7de3, type: 2}
     - target: {fileID: 6102025025699949262, guid: 3f204e3d39da8664e820553faf1f691e, type: 3}
       propertyPath: SortKey
       value: 2181056569
@@ -27,7 +31,7 @@ PrefabInstance:
     - target: {fileID: 6102025025699949262, guid: 3f204e3d39da8664e820553faf1f691e, type: 3}
       propertyPath: 'NetworkedBehaviours.Array.data[1]'
       value: 
-      objectReference: {fileID: -975318642097531864}
+      objectReference: {fileID: 98614144489674213}
     - target: {fileID: 6758519122597076904, guid: 3f204e3d39da8664e820553faf1f691e, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -77,6 +81,17 @@ PrefabInstance:
       insertIndex: 3
       addedObject: {fileID: -1357924680135792468}
   m_SourcePrefab: {fileID: 100100000, guid: 3f204e3d39da8664e820553faf1f691e, type: 3}
+--- !u!114 &98614144489674213 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6282168818028803302, guid: 3f204e3d39da8664e820553faf1f691e, type: 3}
+  m_PrefabInstance: {fileID: 6228731497898483971}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9105002797011308963}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a591d221a634417e9827eb58e17de84, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &9105002797011308963 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 2894567192362922144, guid: 3f204e3d39da8664e820553faf1f691e, type: 3}
@@ -101,17 +116,7 @@ MonoBehaviour:
   playerTransform: {fileID: 0}
   patrolMinimumRadius: 0
   patrolMaximumRadius: 0
+  obstaclePathPadding: 0.25
   _slideDistanceInTiles: 3
   _slideSpeedMultiplier: 1.5
   _restDuration: 1.5
---- !u!114 &-975318642097531864 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 6282168818028803302, guid: 3f204e3d39da8664e820553faf1f691e, type: 3}
-  m_PrefabInstance: {fileID: 6228731497898483971}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9105002797011308963}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0a591d221a634417e9827eb58e17de84, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 

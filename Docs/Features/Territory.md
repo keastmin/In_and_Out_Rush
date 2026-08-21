@@ -24,6 +24,8 @@ Last reviewed: 2026-08-22
   `TerritorySegmentChunkTraversal`, `TerritoryTrailSession`,
   `TerritoryTrailPacket`, `TerritoryTrailPacketizer`,
   `TerritoryTrailReceiver`, `TerritoryTrailShadowComparer`
+- Chunk state 기반: `TerritoryChunkFill`, `TerritoryChunkCoverage`,
+  `TerritoryChunkSnapshot`, `TerritoryChunkStateBuilder`, `TerritoryChunkStore`
 - State Authority adapter: `TerritoryTrailShadowRecorder`,
   `TerritoryTrailReplicationStream`
 - `.agents/skills/build-chunk-territory/`
@@ -33,6 +35,12 @@ confirmed sample을 bounded Reliable packet으로 보내고 Proxy는 같은 orde
 path와 Unreliable live head를 표시한다. 현재 확장 결과와 모든 consumer에는 계속
 Legacy polygon만 authoritative하며 prediction이나 transport mismatch가 게임 결과를
 결정하지 않는다.
+
+State Authority는 초기 Territory와 Legacy 정상 확장 결과를 revisioned sparse
+Chunk shadow snapshot으로도 Commit한다. snapshot은 전역 polygon을 보관하지 않고
+미저장 `Empty`, payload 없는 `Full`, fixed local 경계 선분을 가진 `Boundary`로
+나뉜다. 이 shadow 상태는 아직 RPC, Late Join, 표시와 consumer에 연결되지 않으며
+실패해도 Legacy 성공 결과를 되돌리지 않는다.
 
 ## 주요 소비자
 

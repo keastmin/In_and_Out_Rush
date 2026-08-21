@@ -66,9 +66,33 @@ Status: Approved
 - Abort는 outbound pending, inbound confirmed, prediction과 live head를 소각한다.
 - 진행 중 Trail Late Join 복원은 C005에 포함하지 않는다.
 
+## C006 Chunk Territory state and atomic commit
+
+Status: Approved
+
+- Chunk Territory snapshot은 전역 polygon을 보관하지 않는 sparse map이다.
+- map에 없는 Chunk는 `Empty`다. `Full`은 Chunk 전체가 내부이며 경계 payload가
+  없다. `Boundary`는 polygon 진행 방향을 보존하는 fixed Chunk-local 선분과
+  결정적인 내부 기준을 가진다.
+- local 좌표는 Chunk minimum을 0으로 한 closed `[0, 2048]` fixed 범위다.
+  인접 Chunk 경계 선분은 같은 global fixed 끝점을 공유한다.
+- fixed 양자화 뒤 tolerance 증가, vertex budget 단순화, 점 이동이나 제거를
+  적용하지 않는다. 연속 중복점과 정확히 같은 직선 위 중간점 제거만 모양을
+  바꾸지 않는 정규화로 허용한다.
+- snapshot은 외부에서 변경할 수 없다. revision은 0이 아닌 단조 증가 `ulong`이고
+  최초 성공 snapshot은 1이다.
+- Commit은 expected base revision이 현재 revision과 같을 때만 새 snapshot을
+  공개한다. stale base, invalid/self-intersecting/degenerate polygon, overflow와
+  빌드 실패는 기존 snapshot을 변경하지 않는다.
+- changed-Chunk는 생성·변경 coverage와 `Empty` tombstone을 중복 없이 Chunk
+  `(Y, X)` 오름차순으로 제공한다. 동일 coverage의 재Commit은 revision은
+  증가하지만 delta는 비어 있다.
+- 이번 마일스톤에서는 State Authority shadow store만 Commit한다. Legacy polygon,
+  vertex RPC와 consumer callback이 계속 게임 결과를 소유한다.
+- changed-Chunk 복제, recovery와 Late Join snapshot은 C006에 포함하지 않는다.
+
 ## Future contracts not approved here
 
 - Territory revision and changed-Chunk replication
-- Chunk interior/boundary storage and fill
 - GPU buffer and mask format
 - Late Join snapshot framing

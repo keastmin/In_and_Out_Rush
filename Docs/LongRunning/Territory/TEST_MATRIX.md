@@ -16,8 +16,18 @@
 | Client Input Authority Runner | 달리기·확장·걷기와 속도 전환 수동 검증 통과 | 장기 부하 회귀 |
 | Late Join | 범위 밖 | snapshot milestone |
 | GPU/CPU fallback | 범위 밖 | presentation milestone |
+| Chunk Empty/Full/Boundary | 신규 assertion 5개 및 Unity EditMode 통과 | 장기 부하 회귀 |
+| fixed local 경계 연속성 | 다중 Chunk 원본 경로 재구성과 runtime 통과 | 장기 부하 회귀 |
+| revision과 동일 상태 delta | 초기 1, 연속 증가, 빈 delta 및 Host runtime 통과 | 복제 milestone 회귀 |
+| stale/invalid/overflow 원자성 | 신규 assertion 4개와 실패·Abort runtime 통과 | recovery 회귀 |
 
 Unity 6000.0.69f1 EditMode 25/25 passed다. 신규 packetizer/receiver/codec 7개와
 기존 fixed/traversal/session/shadow comparer 회귀를 포함한다. Client 걷기 거리
 누적 회귀 수정 후 솔루션 compile 0 errors이며 작업자가 안내된 Host·Client
 정상·실패·중단/재개 runtime 절차와 걷기/달리기 전환 재검증 완료를 보고했다.
+
+W-013 신규 테스트 9개는 Unity가 생성한 csproj import 전이라 실제 신규 소스를
+포함한 독립 validation에서 NUnit assertion을 직접 실행해 통과했다. 같은 소스로
+domain과 `Assembly-CSharp` 통합 compile 0 errors를 확인했다. 작업자가 Unity
+import/compile, Territory EditMode 전체와 Host·Client shadow revision runtime 절차
+완료를 보고했다.

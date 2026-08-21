@@ -1,6 +1,6 @@
 # W-20260822-001 Chunk Territory 상태와 확장 Commit
 
-Status: Reserved
+Status: Complete
 
 ## 동기화 기준
 
@@ -149,14 +149,37 @@ vertex RPC와 consumer event가 계속 유일한 게임 권위 경로다.
 
 ## 실제 변경
 
-구현 후 기록한다.
+- sparse `Empty/Full/Boundary` coverage, fixed local point/방향성 boundary segment,
+  immutable snapshot과 결정적 changed-Chunk commit result를 ChunkDomain에 추가했다.
+- `TerritoryChunkStateBuilder`는 C003으로 polygon edge를 Chunk별로 분할하고 행별
+  scanline 교차를 재사용해 interior `Full`을 분류한다. 전역 polygon은 빌드 입력으로만
+  사용하고 snapshot에 보관하지 않는다.
+- `TerritoryChunkStore`는 expected base revision, invalid polygon과 overflow를 검증한
+  뒤 candidate 전체가 성공한 경우에만 snapshot을 교체한다. 동일 coverage는 빈
+  delta, 제거 Chunk는 `Empty` tombstone이며 `(Y, X)` 순서다.
+- `TerritorySystem`은 State Authority에서 초기 Territory와 Legacy 정상 확장 성공
+  직후 shadow Commit을 한 번 실행한다. 새 RPC, Networked 상태, consumer 호출과
+  Inspector 연결은 추가하지 않았다.
+- C006을 Approved로 고정하고 Current Milestone, Roadmap, Handoff, Test Matrix와
+  Territory 기능 문서를 갱신했다.
 
 ## 검증 결과
 
-구현 후 기록한다.
+- 예약된 builder/store NUnit assertion 9개를 실제 신규 source로 직접 실행해 통과.
+- 1000×1000 사각형 15,875 Chunk build 6~11ms, 256점·반경 500 world-unit 원형
+  12,532 Chunk build 17~20ms. 로컬 .NET validation 수치이며 Unity Profiler가 아니다.
+- 실제 신규 source domain compile 0 errors, `Assembly-CSharp` 통합 compile 0 errors
+  (기존 warning 13개).
+- 작업자가 Unity import/compile과 `ProjectIO.Territory.Tests` 전체 실행 완료를
+  보고했다.
+- 작업자가 Host 로컬/Client Input Authority 정상·연속 확장, 거부/Abort와
+  revision 단일 증가 runtime 절차 완료를 보고했다.
 
 ## 남은 위험
 
 - 이번 마일스톤은 Legacy polygon 결과를 shadow Chunk snapshot으로 변환하므로 기존
   256 vertex 보정과 영역 확장 hitch를 아직 제거하지 않는다.
 - Chunk snapshot 복제와 Late Join 복원 전에는 Proxy가 shadow 상태를 소유하지 않는다.
+- snapshot rebuild는 아직 동기식이다. 1000×1000·256점 synthetic validation에서
+  17~20ms였으므로 실제 Unity Profiler 수치에 따라 후속 incremental/time-slice가
+  필요할 수 있다.

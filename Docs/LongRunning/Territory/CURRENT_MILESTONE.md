@@ -4,94 +4,89 @@ Status: Complete
 
 ## Objective
 
-Input Authority의 Runner가 fixed 좌표 Trail을 네트워크 왕복 전에 즉시 예측
-표시하고, State Authority가 확정 sample을 bounded Reliable packet으로 보내 각
-peer가 같은 ordered Chunk fragment를 재구성한다. 아직 packet에 포함되지 않은
-최신 점은 Unreliable latest-wins live head로만 표시한다.
+State Authority에 revision 기반 sparse Chunk Territory shadow 저장소를 추가한다.
+저장소는 전역 polygon을 보관하지 않고 Chunk별 `Empty`, `Full`, `Boundary`를
+소유하며, 정상 빌드가 끝난 snapshot만 원자적으로 Commit한다.
 
-Territory polygon, 확장 판정, Kill, Lifeline과 consumer 결과는 계속 Legacy
-State Authority 경로가 결정한다.
+Legacy polygon, 확장 판정, vertex RPC, mesh와 consumer callback은 계속 유일한
+게임 권위 경로다.
 
 ## Prerequisites
 
-- Active reservation `W-20260821-012-chunk-territory-predicted-confirmed-trail`
-- implementation base `90d58aa589ab0fc74aa078723cf2b95d18841ab5`
-- `CONTRACTS.md`의 C001-C005가 Approved일 것
-- shadow Trail milestone commit `ae457bf`
+- Active reservation `W-20260822-001-chunk-territory-state-commit`
+- implementation base `908b09cc307f8d366cfd3c9517ec6567a0fa2400`
+- `CONTRACTS.md`의 C001-C006이 Approved일 것
+- predicted/confirmed Trail milestone commit `6ba172f`
 
 ## Read first
 
 - `AGENTS.md`
 - `Docs/Features/Territory.md`
-- `Docs/Features/PlayerRunner.md`
-- `Docs/Work/Active/W-20260821-012-chunk-territory-predicted-confirmed-trail.md`
+- `Docs/Work/Completed/W-20260822-001-chunk-territory-state-commit.md`
 - `Docs/LongRunning/Territory/CONTRACTS.md`
 - `.agents/skills/build-chunk-territory/SKILL.md`
 - `.agents/skills/photon-fusion-feature/SKILL.md`
 
-## Implemented files
+## Allowed files
 
 - `Assets/02_Scripts/Territory/TerritorySystem.cs`
-- `Assets/02_Scripts/Territory Refactor/Adapters/Fusion/TerritoryTrailShadowRecorder.cs`
-- `Assets/02_Scripts/Territory Refactor/Adapters/Fusion/TerritoryTrailReplicationStream.cs`
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryTrailPacket.cs`
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryTrailPacketizer.cs`
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryTrailReceiver.cs`
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain.Tests/TerritoryTrailPacketizerTests.cs`
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain.Tests/TerritoryTrailReceiverTests.cs`
-- `Assets/02_Scripts/Territory Refactor/Trail/TerritoryTrailChunkRenderer.cs`
-- 이번 milestone 문서와 기능 문서
+- 예약된 `Assets/02_Scripts/Territory Refactor/ChunkDomain/` 신규 상태 파일
+- 예약된 `Assets/02_Scripts/Territory Refactor/ChunkDomain.Tests/` 신규 테스트 파일
+- `Docs/Features/Territory.md`
+- 이번 milestone 장기 문서와 Active 작업 문서
 
 ## Reserved Scene·Prefab·Data Asset
 
-없음. 기존 `TerritorySystem.lineRenderer` 참조를 runtime template로 사용한다.
+없음. Inspector 참조와 직렬화 Asset을 변경하지 않는다.
+
+## Prohibited changes
+
+- Legacy polygon, 확장 판정, vertex RPC와 consumer callback의 권위 전환·삭제
+- changed-Chunk Fusion 복제, recovery와 Late Join snapshot
+- GPU/CPU presentation, consumer migration
+- Scene, Prefab, Bootstrapper, asmdef, Package와 Fusion 설정 변경
 
 ## Required behavior
 
-- Host/Client Input Authority owner는 모두 local fixed prediction으로 즉시 선을 본다.
-- State Authority sample만 확정 packet이 되며 packet당 sample은 최대 24개다.
-- Reliable Start/packet/suspend/Commit/Abort와 Unreliable latest-wins live head를
-  분리한다.
-- 수신자는 SessionId, packet sequence와 sample sequence gap, stale terminal을
-  거부하고 accepted sample만 C003 traversal로 fragment화한다.
-- fixed 양자화 이후 path 단순화나 vertex budget 모양 보정을 하지 않는다.
-- LineRenderer 하나의 point 수는 256으로 제한하고 같은 Chunk continuation
-  segment를 pool에서 이어 사용한다.
-- 자기 교차, Lifeline, Stop과 teardown은 outbound/inbound/prediction/live payload와
-  선을 소각한다.
-- SandTomb pause는 확정점까지 owner prediction을 reconcile한 뒤 정지하며 resume
-  강제점부터 이어 간다.
-- Legacy Territory 확장, vertex sync와 consumer callback은 변경하지 않는다.
+- sparse map에 없는 Chunk는 `Empty`, 전체 내부 Chunk는 payload 없는 `Full`,
+  경계를 포함하는 Chunk는 방향성 fixed local 선분을 가진 `Boundary`다.
+- fixed 양자화 뒤 추가 tolerance, vertex budget 단순화나 점 이동을 적용하지 않는다.
+- snapshot은 immutable이고 revision은 초기 성공 1부터 단조 증가한다.
+- Commit은 expected base revision이 현재 revision과 일치할 때만 성공한다.
+- invalid polygon, stale base, overflow와 빌드 실패는 이전 snapshot을 보존한다.
+- changed-Chunk는 생성·변경 상태와 `Empty` tombstone을 결정적 순서로 제공한다.
+- State Authority만 초기화와 Legacy 정상 확장 성공 뒤 shadow Commit을 한 번 실행한다.
+- shadow 실패는 Legacy 성공 결과나 Host·Client presentation을 바꾸지 않는다.
 
 ## Acceptance criteria
 
-- bounded packet, round-trip codec, gap/stale/Abort와 fragment 재구성 테스트 통과
-- Fusion Weaver를 포함한 프로젝트 compile 통과
-- Host 로컬/Client Input Authority 정상·장거리 Trail, 자기 교차/Lifeline과
-  SandTomb pause/resume 실제 플레이 통과
-- owner 즉시 선, proxy 확정+live head, terminal 후 잔존/중복 없음 확인
-- Scene·Prefab·Material·Shader·Compute·Fusion 설정 diff 없음
-- `.meta` pairing과 `git diff --check` 통과
-
-## Current evidence
-
-- ChunkDomain runtime/test project compile: 0 errors
-- Unity 6000.0.69f1 EditMode 25/25 통과. 신규 packetizer/receiver/codec 7개와
-  기존 fixed/traversal/session/shadow comparer 회귀를 포함한다.
-- 최종 Unity compile과 Fusion IL post-process: 0 errors
-- 작업자가 안내된 Host 로컬/Client Input Authority 정상·장거리 Trail,
-  자기 교차/Lifeline, SandTomb pause/resume 런타임 절차 완료를 보고했다.
-- Client 걷기 중 선이 끊기던 거리 누적 회귀를 수정한 뒤 걷기와
-  걷기/달리기 전환 재검증도 통과했다.
-- owner 즉시 선, 정상 영역 확장과 terminal 정리를 포함한 W-012 수동 검증 완료.
+- 음수 좌표, half-open 경계, Full/Boundary/Empty와 fixed local 경계 보존 테스트 통과
+- 초기 revision, 연속 Commit, 동일 상태 빈 delta, stale/invalid/overflow 실패 원자성 통과
+- State Authority 초기화·정상 확장 뒤 한 번만 Commit하고 실패/Abort에는 증가하지 않음
+- Legacy Territory, W-012 Trail, RPC, mesh와 consumer 결과 회귀 없음
+- ChunkDomain EditMode 테스트와 Fusion Weaver 포함 프로젝트 compile 통과
+- Host·Client 정상 확장·거부/Abort 수동 절차 또는 정확한 미검증 기록
+- `.meta` pairing, `git diff --check`, Scene·Prefab·설정 diff 없음
 
 ## Rollback
 
-신규 packetizer/receiver/replication stream과 `TerritorySystem` RPC·prediction hook,
-renderer paging/live-head 변경 및 C005 기록만 제거한다. 비활성 상태로 남아 있는
-기존 Legacy path RPC와 authoritative Territory 확장 경로는 이전 fallback이다.
+`TerritorySystem`의 shadow store hook과 신규 Chunk state/store/test, C006 문서만
+제거한다. Legacy polygon과 기존 RPC/consumer 경로는 변경 없이 계속 동작한다.
 
 ## Out of scope
 
-Chunk Territory state/fill/revision, changed-Chunk replication, Late Join 진행 Trail,
-GPU presentation, consumer migration, Legacy authoritative cutover와 삭제.
+Chunk 기반 확장 후보 계산, Legacy 256 vertex 보정 제거, changed-Chunk replication,
+Late Join 복원, GPU, consumer cutover와 Legacy 삭제.
+
+## Current evidence
+
+- 예약된 신규 Chunk state/store 테스트 9개를 실제 신규 소스와 NUnit assertion으로
+  직접 실행해 모두 통과했다.
+- 실제 신규 소스 wildcard domain compile과 `Assembly-CSharp` 통합 compile 0 errors.
+- 1000×1000 fixed 사각형은 15,875 Chunk를 6~11ms, 256점·반경 500 world-unit
+  원형은 12,532 Chunk를 17~20ms에 빌드했다. 측정은 로컬 .NET Debug/Release
+  validation이며 Unity Profiler 수치가 아니다.
+- 작업자가 Unity import/compile과 `ProjectIO.Territory.Tests` 전체 실행 완료를
+  보고했다.
+- 작업자가 Host 로컬/Client Input Authority 정상·연속 확장, 실패·Abort와
+  revision 단일 증가 runtime 절차 완료를 보고했다.

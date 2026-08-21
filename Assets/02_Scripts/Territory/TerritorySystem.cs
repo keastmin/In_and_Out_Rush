@@ -38,9 +38,11 @@ public class TerritorySystem : Dev.Network.System
     readonly TerritoryExpansionReplication expansionReplication = new();
     readonly TerritoryTrailShadowRecorder shadowTrailRecorder = new();
     readonly TerritoryTrailReplicationStream trailReplicationStream = new();
+    TerritoryChunkStore territoryChunkShadowStore = new();
     readonly List<Vector2> shadowLegacyPath = new();
     readonly List<FixedTerritoryPoint> ownerPredictedTrail = new();
     readonly List<FixedTerritoryPoint> replicatedTrailPath = new();
+    readonly List<FixedTerritoryPoint> territoryChunkPolygon = new();
     TerritoryTrailChunkRenderer trailChunkRenderer;
     TickTimer confirmedTrailFlushTimer;
     TickTimer trailLiveHeadSyncTimer;
@@ -76,6 +78,7 @@ public class TerritorySystem : Dev.Network.System
     protected override void OnSetUp()
     {
         territoryRuntimeCleanedUp = false;
+        territoryChunkShadowStore = new TerritoryChunkStore();
         TerritoryVisible = Dev.Network.StageBootstrapper.Instance.TerritoryVisible;
         trailChunkRenderer = gameObject.GetComponent<TerritoryTrailChunkRenderer>();
         if (trailChunkRenderer == null)
@@ -120,6 +123,7 @@ public class TerritorySystem : Dev.Network.System
         var vertices = GenerateCircleTerritory();
 
         CreateTerritory(vertices);
+        CommitTerritoryChunkShadow("initial Territory");
         TerritoryVisible.name = $"{Runner.name} - Territory";
         TerritoryVisible.SetVertices(vertices);
     }
@@ -880,6 +884,8 @@ public class TerritorySystem : Dev.Network.System
             }
         }
 
+        CommitTerritoryChunkShadow("Legacy expansion");
+
         using (UpdateExpansionMeshMarker.Auto())
             TerritoryVisible.SetMeshData(meshData);
 
@@ -891,6 +897,53 @@ public class TerritorySystem : Dev.Network.System
             using (NotifyExpansionConsumersMarker.Auto())
                 OnTerritoryExpandedEvent?.Invoke(Territory, this); // 호스트만
         }
+        }
+    }
+
+    private void CommitTerritoryChunkShadow(string cause)
+    {
+        if (Object == null || !Object.HasStateAuthority ||
+            Territory == null || Territory.Vertices == null)
+        {
+            return;
+        }
+
+        territoryChunkPolygon.Clear();
+        try
+        {
+            for (int i = 0; i < Territory.Vertices.Count; i++)
+            {
+                Vector2 vertex = Territory.Vertices[i];
+                territoryChunkPolygon.Add(FixedTerritoryPoint.FromWorld(vertex.x, vertex.y));
+            }
+        }
+        catch (ArgumentOutOfRangeException exception)
+        {
+            Debug.LogWarning(
+                $"{ShadowLogOwnerName} - Chunk Territory shadow conversion failed. " +
+                $"Cause: {cause}, Reason: {exception.Message}");
+            return;
+        }
+
+        ulong baseRevision = territoryChunkShadowStore.Current.Revision;
+        if (!territoryChunkShadowStore.TryCommit(
+                baseRevision,
+                territoryChunkPolygon,
+                out TerritoryChunkCommitResult result,
+                out string reason))
+        {
+            Debug.LogWarning(
+                $"{ShadowLogOwnerName} - Chunk Territory shadow commit failed. " +
+                $"Base revision: {baseRevision}, Cause: {cause}, Reason: {reason}");
+            return;
+        }
+
+        if (Debug.isDebugBuild)
+        {
+            Debug.Log(
+                $"{ShadowLogOwnerName} - Chunk Territory shadow committed. " +
+                $"Revision: {result.Revision}, Changed Chunks: {result.ChangedChunks.Count}, " +
+                $"Cause: {cause}");
         }
     }
 

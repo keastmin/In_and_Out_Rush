@@ -176,8 +176,10 @@ namespace ProjectIO.Territory
                 SessionId,
                 _exitContact.Point,
                 _entryContact.Point,
-                SequenceAt(_exitContact.BoundaryPosition),
-                SequenceAt(_entryContact.BoundaryPosition),
+                _exitContact.Sequence,
+                _entryContact.Sequence,
+                _exitContact.SegmentId,
+                _entryContact.SegmentId,
                 boundaryForward,
                 selectedArea,
                 _planTrailPoints.AsReadOnly(),
@@ -507,16 +509,6 @@ namespace ProjectIO.Territory
             _lastBoundaryContactPoint = default;
             _exitContact = default;
             _entryContact = default;
-        }
-
-        private int SequenceAt(decimal boundaryPosition)
-        {
-            decimal normalized = boundaryPosition;
-            if (normalized < 0m)
-                normalized += _boundaryIndex.SegmentCount;
-            if (normalized >= _boundaryIndex.SegmentCount)
-                normalized -= _boundaryIndex.SegmentCount;
-            return (int)decimal.Floor(normalized);
         }
 
         private static bool SameContact(

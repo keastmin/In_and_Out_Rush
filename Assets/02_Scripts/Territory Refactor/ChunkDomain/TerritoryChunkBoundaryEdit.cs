@@ -9,19 +9,22 @@ namespace ProjectIO.Territory
         private readonly ReadOnlyCollection<TerritoryChunkBoundarySegment> _addedTrailSegments;
         private readonly ReadOnlyCollection<TerritoryChunkBoundarySegment> _replacedBoundarySegments;
         private readonly ReadOnlyCollection<int> _removedSourceSequences;
+        private readonly ReadOnlyCollection<TerritoryBoundarySegmentId> _removedSourceIds;
 
         internal TerritoryChunkBoundaryEdit(
             TerritoryChunkCoordinate chunk,
             bool centerInsideAddedRegion,
             List<TerritoryChunkBoundarySegment> addedTrailSegments,
             List<TerritoryChunkBoundarySegment> replacedBoundarySegments,
-            List<int> removedSourceSequences)
+            List<int> removedSourceSequences,
+            List<TerritoryBoundarySegmentId> removedSourceIds)
         {
             Chunk = chunk;
             CenterInsideAddedRegion = centerInsideAddedRegion;
             _addedTrailSegments = (addedTrailSegments ?? throw new ArgumentNullException(nameof(addedTrailSegments))).AsReadOnly();
             _replacedBoundarySegments = (replacedBoundarySegments ?? throw new ArgumentNullException(nameof(replacedBoundarySegments))).AsReadOnly();
             _removedSourceSequences = (removedSourceSequences ?? throw new ArgumentNullException(nameof(removedSourceSequences))).AsReadOnly();
+            _removedSourceIds = (removedSourceIds ?? throw new ArgumentNullException(nameof(removedSourceIds))).AsReadOnly();
 
             if (_addedTrailSegments.Count + _replacedBoundarySegments.Count == 0)
                 throw new ArgumentException("A Boundary edit requires at least one exact local segment.");
@@ -32,6 +35,7 @@ namespace ProjectIO.Territory
         public IReadOnlyList<TerritoryChunkBoundarySegment> AddedTrailSegments => _addedTrailSegments;
         public IReadOnlyList<TerritoryChunkBoundarySegment> ReplacedBoundarySegments => _replacedBoundarySegments;
         public IReadOnlyList<int> RemovedSourceSequences => _removedSourceSequences;
+        public IReadOnlyList<TerritoryBoundarySegmentId> RemovedSourceIds => _removedSourceIds;
         public int CapturedRegionSegmentCount =>
             _addedTrailSegments.Count + _replacedBoundarySegments.Count;
     }

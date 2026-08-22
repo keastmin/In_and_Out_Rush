@@ -13,6 +13,8 @@ namespace ProjectIO.Territory
             FixedTerritoryPoint entryPoint,
             int exitBoundarySequence,
             int entryBoundarySequence,
+            TerritoryBoundarySegmentId exitBoundaryId,
+            TerritoryBoundarySegmentId entryBoundaryId,
             bool boundaryForwardFromEntryToExit,
             decimal resultTwiceArea,
             ReadOnlyCollection<FixedTerritoryPoint> trailPoints,
@@ -25,6 +27,8 @@ namespace ProjectIO.Territory
             EntryPoint = entryPoint;
             ExitBoundarySequence = exitBoundarySequence;
             EntryBoundarySequence = entryBoundarySequence;
+            ExitBoundaryId = exitBoundaryId;
+            EntryBoundaryId = entryBoundaryId;
             BoundaryForwardFromEntryToExit = boundaryForwardFromEntryToExit;
             ResultTwiceArea = resultTwiceArea;
             TrailPoints = trailPoints ?? throw new ArgumentNullException(nameof(trailPoints));
@@ -38,6 +42,8 @@ namespace ProjectIO.Territory
         public FixedTerritoryPoint EntryPoint { get; }
         public int ExitBoundarySequence { get; }
         public int EntryBoundarySequence { get; }
+        public TerritoryBoundarySegmentId ExitBoundaryId { get; }
+        public TerritoryBoundarySegmentId EntryBoundaryId { get; }
         public bool BoundaryForwardFromEntryToExit { get; }
         public decimal ResultTwiceArea { get; }
         public decimal ResultAbsoluteTwiceArea => Math.Abs(ResultTwiceArea);

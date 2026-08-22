@@ -8,6 +8,7 @@ namespace ProjectIO.Territory
         private readonly SegmentRecord[] _segments;
         private readonly decimal[] _prefixTwiceArea;
         private readonly Dictionary<TerritoryChunkCoordinate, int[]> _sequencesByChunk;
+        private readonly TerritoryCompactSnapshot _compactSnapshot;
 
         private TerritoryBoundaryLoopIndex(
             ulong revision,
@@ -21,10 +22,21 @@ namespace ProjectIO.Territory
             _sequencesByChunk = sequencesByChunk;
         }
 
+        private TerritoryBoundaryLoopIndex(TerritoryCompactSnapshot compactSnapshot)
+        {
+            _compactSnapshot = compactSnapshot;
+            Revision = compactSnapshot.Revision;
+            _segments = Array.Empty<SegmentRecord>();
+            _prefixTwiceArea = Array.Empty<decimal>();
+            _sequencesByChunk = new Dictionary<TerritoryChunkCoordinate, int[]>();
+        }
+
         public ulong Revision { get; }
-        public int SegmentCount => _segments.Length;
-        public decimal SignedTwiceArea => _prefixTwiceArea[_prefixTwiceArea.Length - 1];
+        public int SegmentCount => _compactSnapshot?.Boundary.Count ?? _segments.Length;
+        public decimal SignedTwiceArea => _compactSnapshot?.Boundary.SignedTwiceArea ??
+                                          _prefixTwiceArea[_prefixTwiceArea.Length - 1];
         public decimal AbsoluteTwiceArea => Math.Abs(SignedTwiceArea);
+        internal bool IsPersistent => _compactSnapshot != null;
 
         public static bool TryCreate(
             TerritoryChunkSnapshot snapshot,
@@ -170,11 +182,47 @@ namespace ProjectIO.Territory
             return true;
         }
 
+        public static bool TryCreate(
+            TerritoryCompactSnapshot snapshot,
+            out TerritoryBoundaryLoopIndex index,
+            out string reason)
+        {
+            index = null;
+            reason = string.Empty;
+            if (snapshot == null)
+            {
+                reason = "A Boundary index requires a compact snapshot.";
+                return false;
+            }
+            if (snapshot.Revision == 0 || snapshot.Boundary.Count < 3 || snapshot.Boundary.SignedTwiceArea <= 0m)
+            {
+                reason = "Compact Boundary state is not a valid canonical loop.";
+                return false;
+            }
+
+            index = new TerritoryBoundaryLoopIndex(snapshot);
+            return true;
+        }
+
         public bool TryGetOrderedSegment(
             int sequence,
             out FixedTerritoryPoint start,
             out FixedTerritoryPoint end)
         {
+            if (_compactSnapshot != null)
+            {
+                if (!_compactSnapshot.Boundary.TryGetOrderedSegment(sequence, out TerritoryCompactBoundarySegment compact))
+                {
+                    start = default;
+                    end = default;
+                    return false;
+                }
+
+                start = compact.GlobalStart;
+                end = compact.GlobalEnd;
+                return true;
+            }
+
             if (sequence < 0 || sequence >= _segments.Length)
             {
                 start = default;
@@ -184,6 +232,98 @@ namespace ProjectIO.Territory
 
             start = _segments[sequence].Start;
             end = _segments[sequence].End;
+            return true;
+        }
+
+        internal bool TryGetSegment(
+            TerritoryBoundarySegmentId id,
+            out FixedTerritoryPoint start,
+            out FixedTerritoryPoint end)
+        {
+            if (_compactSnapshot != null)
+            {
+                if (!_compactSnapshot.Boundary.TryGetSegment(id, out TerritoryCompactBoundarySegment compact))
+                {
+                    start = default;
+                    end = default;
+                    return false;
+                }
+
+                start = compact.GlobalStart;
+                end = compact.GlobalEnd;
+                return true;
+            }
+
+            if (!id.IsValid || id.Value > (ulong)_segments.Length)
+            {
+                start = default;
+                end = default;
+                return false;
+            }
+
+            return TryGetOrderedSegment((int)id.Value - 1, out start, out end);
+        }
+
+        internal bool TryGetSegmentPart(
+            TerritoryBoundarySegmentId id,
+            out TerritoryChunkCoordinate chunk,
+            out TerritoryChunkLocalPoint start,
+            out TerritoryChunkLocalPoint end)
+        {
+            if (_compactSnapshot != null)
+            {
+                if (_compactSnapshot.Boundary.TryGetSegment(id, out TerritoryCompactBoundarySegment compact))
+                {
+                    chunk = compact.Chunk;
+                    start = compact.Start;
+                    end = compact.End;
+                    return true;
+                }
+            }
+            else if (id.IsValid && id.Value <= (ulong)_segments.Length)
+            {
+                SegmentRecord record = _segments[(int)id.Value - 1];
+                chunk = record.SourceChunk;
+                start = ToLocal(chunk, record.Start);
+                end = ToLocal(chunk, record.End);
+                return true;
+            }
+
+            chunk = default;
+            start = default;
+            end = default;
+            return false;
+        }
+
+        internal bool TryGetNextSegmentId(
+            TerritoryBoundarySegmentId id,
+            int direction,
+            out TerritoryBoundarySegmentId nextId)
+        {
+            if (direction != 1 && direction != -1)
+                throw new ArgumentOutOfRangeException(nameof(direction));
+
+            if (_compactSnapshot != null)
+            {
+                bool found = direction > 0
+                    ? _compactSnapshot.Boundary.TryGetNext(id, out TerritoryCompactBoundarySegment next)
+                    : _compactSnapshot.Boundary.TryGetPrevious(id, out next);
+                nextId = found ? next.Id : default;
+                return found;
+            }
+
+            if (!id.IsValid || id.Value > (ulong)_segments.Length)
+            {
+                nextId = default;
+                return false;
+            }
+
+            int sequence = (int)id.Value - 1 + direction;
+            if (sequence < 0)
+                sequence = _segments.Length - 1;
+            else if (sequence >= _segments.Length)
+                sequence = 0;
+            nextId = new TerritoryBoundarySegmentId((ulong)sequence + 1UL);
             return true;
         }
 
@@ -198,6 +338,50 @@ namespace ProjectIO.Territory
             contacts.Clear();
             candidateChecks = 0;
             overlapsBoundary = false;
+
+            if (_compactSnapshot != null)
+            {
+                if (!_compactSnapshot.TryGetCandidateIds(chunk, out IReadOnlyList<TerritoryBoundarySegmentId> ids))
+                    return true;
+
+                for (int i = 0; i < ids.Count; i++)
+                {
+                    TerritoryBoundarySegmentId id = ids[i];
+                    if (!_compactSnapshot.Boundary.TryGetSegment(id, out TerritoryCompactBoundarySegment boundary))
+                        throw new InvalidOperationException("Compact Boundary candidate index contains a stale identity.");
+                    candidateChecks++;
+
+                    IntersectionKind kind = TryIntersect(
+                        trailStart,
+                        trailEnd,
+                        boundary.GlobalStart,
+                        boundary.GlobalEnd,
+                        out decimal trailT,
+                        out decimal boundaryT,
+                        out decimal x,
+                        out decimal y);
+                    if (kind == IntersectionKind.Overlap)
+                    {
+                        overlapsBoundary = true;
+                        return false;
+                    }
+                    if (kind != IntersectionKind.Point)
+                        continue;
+
+                    contacts.Add(new Contact(
+                        x,
+                        y,
+                        trailT,
+                        boundaryT,
+                        -1,
+                        id,
+                        boundary.GlobalStart,
+                        boundary.GlobalEnd));
+                }
+
+                contacts.Sort(Contact.CompareByTrailPosition);
+                return true;
+            }
 
             if (!_sequencesByChunk.TryGetValue(chunk, out int[] sequences))
                 return true;
@@ -237,6 +421,7 @@ namespace ProjectIO.Territory
                     trailT,
                     position,
                     sequence,
+                    new TerritoryBoundarySegmentId((ulong)sequence + 1UL),
                     boundary.Start,
                     boundary.End));
             }
@@ -247,6 +432,15 @@ namespace ProjectIO.Territory
 
         internal decimal GetForwardArcTwiceArea(Contact from, Contact to)
         {
+            if (_compactSnapshot != null)
+            {
+                return _compactSnapshot.Boundary.GetForwardArcTwiceArea(
+                    from.SegmentId,
+                    from.Point,
+                    to.SegmentId,
+                    to.Point);
+            }
+
             decimal fromPosition = NormalizePosition(from.BoundaryPosition);
             decimal toPosition = NormalizePosition(to.BoundaryPosition);
             int fromSequence = (int)decimal.Floor(fromPosition);
@@ -384,6 +578,15 @@ namespace ProjectIO.Territory
             return _prefixTwiceArea[endExclusive] - _prefixTwiceArea[startInclusive];
         }
 
+        private static TerritoryChunkLocalPoint ToLocal(
+            TerritoryChunkCoordinate chunk,
+            FixedTerritoryPoint point)
+        {
+            long x = point.X - chunk.MinimumX;
+            long y = point.Y - chunk.MinimumY;
+            return new TerritoryChunkLocalPoint((int)x, (int)y);
+        }
+
         internal enum IntersectionKind
         {
             None,
@@ -399,6 +602,7 @@ namespace ProjectIO.Territory
                 decimal trailPosition,
                 decimal boundaryPosition,
                 int sequence,
+                TerritoryBoundarySegmentId segmentId,
                 FixedTerritoryPoint boundaryStart,
                 FixedTerritoryPoint boundaryEnd)
             {
@@ -408,6 +612,7 @@ namespace ProjectIO.Territory
                 TrailPosition = trailPosition;
                 BoundaryPosition = boundaryPosition;
                 Sequence = sequence;
+                SegmentId = segmentId;
                 BoundaryStart = boundaryStart;
                 BoundaryEnd = boundaryEnd;
             }
@@ -418,6 +623,7 @@ namespace ProjectIO.Territory
             public decimal TrailPosition { get; }
             public decimal BoundaryPosition { get; }
             public int Sequence { get; }
+            public TerritoryBoundarySegmentId SegmentId { get; }
             public FixedTerritoryPoint BoundaryStart { get; }
             public FixedTerritoryPoint BoundaryEnd { get; }
 

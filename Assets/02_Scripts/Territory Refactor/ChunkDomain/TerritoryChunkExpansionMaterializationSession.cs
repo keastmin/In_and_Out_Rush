@@ -28,12 +28,14 @@ namespace ProjectIO.Territory
         private int _trailEdgeIndex;
         private int _arcDirection;
         private int _arcSequence;
+        private TerritoryBoundarySegmentId _arcId;
         private int _arcTraversedSequences;
         private FixedTerritoryPoint _arcPoint;
         private bool _arcStarted;
         private bool _arcComplete;
         private bool _splitIsTrail;
         private int _splitSourceSequence;
+        private TerritoryBoundarySegmentId _splitSourceId;
         private int _capturedPartSequence;
         private int _minimumBoundaryRow;
         private int _maximumBoundaryRow;
@@ -110,8 +112,8 @@ namespace ProjectIO.Territory
                 reason = "Exit and entry contacts must be distinct.";
                 return false;
             }
-            if (!TryValidateContact(boundaryIndex, plan.ExitBoundarySequence, plan.ExitPoint) ||
-                !TryValidateContact(boundaryIndex, plan.EntryBoundarySequence, plan.EntryPoint))
+            if (!TryValidateContact(boundaryIndex, plan.ExitBoundaryId, plan.ExitPoint) ||
+                !TryValidateContact(boundaryIndex, plan.EntryBoundaryId, plan.EntryPoint))
             {
                 reason = "Expansion plan contacts are not on their declared Boundary sequences.";
                 return false;
@@ -132,6 +134,78 @@ namespace ProjectIO.Territory
             _phase = Phase.BuildTrail;
             _arcDirection = plan.BoundaryForwardFromEntryToExit ? -1 : 1;
             _arcSequence = plan.EntryBoundarySequence;
+            _arcId = plan.EntryBoundaryId;
+            _arcPoint = plan.EntryPoint;
+            reason = null;
+            return true;
+        }
+
+        public bool TryBegin(
+            TerritoryCompactSnapshot sourceSnapshot,
+            TerritoryBoundaryLoopIndex boundaryIndex,
+            TerritoryChunkExpansionPlan plan,
+            out string reason)
+        {
+            if (sourceSnapshot == null)
+            {
+                reason = "A compact materialization requires a persistent source snapshot.";
+                return false;
+            }
+            if (boundaryIndex == null || plan == null)
+            {
+                reason = "A compact materialization requires a Boundary index and expansion plan.";
+                return false;
+            }
+            if (Status == TerritoryTrailSessionStatus.Active)
+            {
+                reason = "The current materialization session is still active.";
+                return false;
+            }
+            if (plan.SessionId == 0 || plan.SessionId <= SessionId)
+            {
+                reason = $"SessionId {plan.SessionId} is stale; the last SessionId is {SessionId}.";
+                return false;
+            }
+            if (sourceSnapshot.Revision != boundaryIndex.Revision ||
+                sourceSnapshot.Revision != plan.SourceRevision)
+            {
+                reason = "Persistent snapshot, Boundary index and expansion plan revisions must match.";
+                return false;
+            }
+            if (!plan.BoundaryForwardFromEntryToExit)
+            {
+                reason = "Canonical compact Boundary expansion must retain the forward entry-to-exit arc.";
+                return false;
+            }
+            if (plan.TrailPoints.Count < 2 ||
+                plan.TrailPoints[0] != plan.ExitPoint ||
+                plan.TrailPoints[plan.TrailPoints.Count - 1] != plan.EntryPoint ||
+                plan.ExitPoint == plan.EntryPoint)
+            {
+                reason = "Expansion plan Trail contacts are malformed.";
+                return false;
+            }
+            if (!TryValidateContact(boundaryIndex, plan.ExitBoundaryId, plan.ExitPoint) ||
+                !TryValidateContact(boundaryIndex, plan.EntryBoundaryId, plan.EntryPoint))
+            {
+                reason = "Expansion plan contacts are not on their stable Boundary identities.";
+                return false;
+            }
+            if (plan.ResultAbsoluteTwiceArea <= boundaryIndex.AbsoluteTwiceArea)
+            {
+                reason = "Expansion plan must add positive Territory area.";
+                return false;
+            }
+
+            ResetCandidate();
+            _boundaryIndex = boundaryIndex;
+            _plan = plan;
+            SessionId = plan.SessionId;
+            Status = TerritoryTrailSessionStatus.Active;
+            _phase = Phase.BuildTrail;
+            _arcDirection = -1;
+            _arcSequence = -1;
+            _arcId = plan.EntryBoundaryId;
             _arcPoint = plan.EntryPoint;
             reason = null;
             return true;
@@ -244,7 +318,7 @@ namespace ProjectIO.Territory
                                 return false;
                             }
 
-                            StartGlobalEdge(start, end, true, -1);
+                            StartGlobalEdge(start, end, true, -1, default);
                             _trailEdgesRead++;
                             reason = null;
                             return true;
@@ -259,12 +333,17 @@ namespace ProjectIO.Territory
 
                         if (!_arcComplete)
                         {
-                            if (!TryTakeNextArcEdge(out FixedTerritoryPoint start, out FixedTerritoryPoint end, out int sourceSequence, out reason))
+                            if (!TryTakeNextArcEdge(
+                                    out FixedTerritoryPoint start,
+                                    out FixedTerritoryPoint end,
+                                    out int sourceSequence,
+                                    out TerritoryBoundarySegmentId sourceId,
+                                    out reason))
                                 return false;
                             if (start == end)
                                 continue;
 
-                            StartGlobalEdge(start, end, false, sourceSequence);
+                            StartGlobalEdge(start, end, false, sourceSequence, sourceId);
                             _replacedBoundarySegmentsRead++;
                             return true;
                         }
@@ -423,7 +502,8 @@ namespace ProjectIO.Territory
                                 edit.CenterInsideAddedRegion,
                                 edit.AddedTrailSegments,
                                 edit.ReplacedBoundarySegments,
-                                edit.RemovedSourceSequences));
+                                edit.RemovedSourceSequences,
+                                edit.RemovedSourceIds));
                             reason = null;
                             return true;
                         }
@@ -447,12 +527,23 @@ namespace ProjectIO.Territory
                             0L,
                             0L,
                             0L);
+                        if (!TerritoryBoundarySplice.TryCreate(
+                                _boundaryIndex,
+                                _plan,
+                                _boundaryEdits,
+                                out TerritoryBoundarySplice splice,
+                                out reason))
+                        {
+                            return false;
+                        }
+
                         _result = new TerritoryChunkExpansionMaterialization(
                             _plan.SourceRevision,
                             _plan.SessionId,
                             _plan.ResultAbsoluteTwiceArea - _boundaryIndex.AbsoluteTwiceArea,
                             _boundaryEdits,
                             _fullRuns,
+                            splice,
                             metrics);
                         Status = TerritoryTrailSessionStatus.Committed;
                         _phase = Phase.Done;
@@ -489,6 +580,7 @@ namespace ProjectIO.Territory
                 {
                     edit.ReplacedBoundarySegments.Add(localSegment);
                     edit.AddRemovedSequence(_splitSourceSequence);
+                    edit.AddRemovedId(_splitSourceId);
                 }
 
                 if (!_boundaryXsByRow.TryGetValue(part.Chunk.Y, out SortedSet<int> boundaryXs))
@@ -511,13 +603,15 @@ namespace ProjectIO.Territory
             FixedTerritoryPoint start,
             FixedTerritoryPoint end,
             bool isTrail,
-            int sourceSequence)
+            int sourceSequence,
+            TerritoryBoundarySegmentId sourceId)
         {
             int edgeIndex = _globalEdges.Count;
             _globalEdges.Add(new GlobalEdge(start, end));
             _splitter = new SegmentSplitCursor(start, end);
             _splitIsTrail = isTrail;
             _splitSourceSequence = sourceSequence;
+            _splitSourceId = sourceId;
 
             if (start.Y == end.Y)
                 return;
@@ -542,11 +636,13 @@ namespace ProjectIO.Territory
             out FixedTerritoryPoint start,
             out FixedTerritoryPoint end,
             out int sourceSequence,
+            out TerritoryBoundarySegmentId sourceId,
             out string reason)
         {
             start = default;
             end = default;
             sourceSequence = -1;
+            sourceId = default;
 
             while (!_arcComplete)
             {
@@ -555,16 +651,16 @@ namespace ProjectIO.Territory
                     reason = "Replaced Boundary arc exceeded its deterministic sequence bound.";
                     return false;
                 }
-                if (!_boundaryIndex.TryGetOrderedSegment(
-                        _arcSequence,
+                if (!_boundaryIndex.TryGetSegment(
+                        _arcId,
                         out FixedTerritoryPoint segmentStart,
                         out FixedTerritoryPoint segmentEnd))
                 {
-                    reason = $"Boundary sequence {_arcSequence} is unavailable.";
+                    reason = $"Boundary identity {_arcId} is unavailable.";
                     return false;
                 }
 
-                bool onExitSequence = _arcSequence == _plan.ExitBoundarySequence;
+                bool onExitSequence = _arcId == _plan.ExitBoundaryId;
                 if (onExitSequence && (_arcStarted || IsAheadOnSegment(
                         segmentStart,
                         segmentEnd,
@@ -575,6 +671,7 @@ namespace ProjectIO.Territory
                     start = _arcPoint;
                     end = _plan.ExitPoint;
                     sourceSequence = _arcSequence;
+                    sourceId = _arcId;
                     _arcComplete = true;
                     reason = null;
                     return true;
@@ -582,6 +679,7 @@ namespace ProjectIO.Territory
 
                 FixedTerritoryPoint endpoint = _arcDirection > 0 ? segmentEnd : segmentStart;
                 sourceSequence = _arcSequence;
+                sourceId = _arcId;
                 start = _arcPoint;
                 end = endpoint;
                 AdvanceArc(endpoint);
@@ -599,24 +697,26 @@ namespace ProjectIO.Territory
         private void AdvanceArc(FixedTerritoryPoint endpoint)
         {
             _arcPoint = endpoint;
-            _arcSequence += _arcDirection;
-            if (_arcSequence < 0)
-                _arcSequence = _boundaryIndex.SegmentCount - 1;
-            else if (_arcSequence >= _boundaryIndex.SegmentCount)
-                _arcSequence = 0;
-            _arcPoint = GetArcSequenceEntryPoint(_arcSequence);
+            if (!_boundaryIndex.TryGetNextSegmentId(_arcId, _arcDirection, out _arcId))
+                throw new InvalidOperationException("Boundary arc could not advance to its next stable identity.");
+            _arcSequence = _boundaryIndex.IsPersistent
+                ? -1
+                : _arcId.Value <= int.MaxValue
+                    ? (int)_arcId.Value - 1
+                    : -1;
+            _arcPoint = GetArcSequenceEntryPoint(_arcId);
             _arcStarted = true;
             _arcTraversedSequences++;
         }
 
-        private FixedTerritoryPoint GetArcSequenceEntryPoint(int sequence)
+        private FixedTerritoryPoint GetArcSequenceEntryPoint(TerritoryBoundarySegmentId id)
         {
-            if (!_boundaryIndex.TryGetOrderedSegment(
-                    sequence,
+            if (!_boundaryIndex.TryGetSegment(
+                    id,
                     out FixedTerritoryPoint start,
                     out FixedTerritoryPoint end))
             {
-                throw new InvalidOperationException($"Boundary sequence {sequence} is unavailable.");
+                throw new InvalidOperationException($"Boundary identity {id} is unavailable.");
             }
 
             return _arcDirection > 0 ? start : end;
@@ -715,9 +815,9 @@ namespace ProjectIO.Territory
 
         private static bool TryValidateContact(
             TerritoryBoundaryLoopIndex index,
-            int sequence,
+            TerritoryBoundarySegmentId id,
             FixedTerritoryPoint point)
-            => index.TryGetOrderedSegment(sequence, out FixedTerritoryPoint start, out FixedTerritoryPoint end) &&
+            => index.TryGetSegment(id, out FixedTerritoryPoint start, out FixedTerritoryPoint end) &&
                TerritoryBoundaryLoopIndex.PointOnSegment(point, start, end);
 
         private static bool IsAheadOnSegment(
@@ -812,8 +912,10 @@ namespace ProjectIO.Territory
             _trailEdgeIndex = 0;
             _arcDirection = 0;
             _arcSequence = 0;
+            _arcId = default;
             _arcTraversedSequences = 0;
             _arcPoint = default;
+            _splitSourceId = default;
             _arcStarted = false;
             _arcComplete = false;
             _capturedPartSequence = 0;
@@ -854,11 +956,22 @@ namespace ProjectIO.Territory
             public List<TerritoryChunkBoundarySegment> AddedTrailSegments { get; } = new();
             public List<TerritoryChunkBoundarySegment> ReplacedBoundarySegments { get; } = new();
             public List<int> RemovedSourceSequences { get; } = new();
+            public List<TerritoryBoundarySegmentId> RemovedSourceIds { get; } = new();
 
             public void AddRemovedSequence(int sequence)
             {
-                if (_removedSet.Add(sequence))
+                if (sequence >= 0 && _removedSet.Add(sequence))
                     RemovedSourceSequences.Add(sequence);
+            }
+
+            public void AddRemovedId(TerritoryBoundarySegmentId id)
+            {
+                if (!id.IsValid)
+                    return;
+                for (int i = 0; i < RemovedSourceIds.Count; i++)
+                    if (RemovedSourceIds[i] == id)
+                        return;
+                RemovedSourceIds.Add(id);
             }
         }
 

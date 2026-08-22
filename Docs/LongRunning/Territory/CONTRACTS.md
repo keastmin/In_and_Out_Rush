@@ -173,7 +173,39 @@ Status: Approved
   System/Burst는 이 계약의 배열과 cursor를 바꾸지 않고 실행할 후속 adapter이며,
   authoritative store 적용·Fusion 복제·표시는 별도 계약이다.
 
+## C010 Persistent compact Territory state and atomic splice apply
+
+Status: Approved
+
+- C006 sparse snapshot은 persistent compact state로 최초 한 번 변환할 수 있다. 이
+  변환만 source Chunk와 Boundary sequence를 전부 읽으며 정상 C010 apply metrics와
+  분리한다.
+- compact Boundary는 counter-clockwise canonical loop, exact fixed local endpoint와
+  `ulong` stable segment identity를 가진다. 저장 순서는 전역 연속 sequence가 아니며
+  유지되는 segment identity를 확장마다 재번호화하지 않는다.
+- Boundary 순서·면적 prefix와 stable identity lookup은 persistent balanced tree다.
+  Chunk-local candidate index도 persistent map이며 다음 C008 session은 compact
+  snapshot에서 전체 loop 재구축 없이 직접 시작한다.
+- 내부 Full state는 Y별 정렬·비중첩·최대 병합 inclusive run이다. C009 Full run은
+  해당 Y row에 union하며 면적만큼 Full coverage나 Chunk 객체로 전개하지 않는다.
+- C009 stable splice는 제거되는 contiguous forward arc identity, 접점에서 보존되는
+  exact source residual과 exact Trail part를 한 transaction으로 검증한다. 변경되지
+  않은 Boundary와 Full row branch는 이전 immutable snapshot과 구조적으로 공유한다.
+- apply `TryStep(maxWorkUnits)`는 양수 budget 이하의 결정적 단계만 수행하고 terminal
+  이전에는 candidate를 공개하지 않는다. Store는 expected source object/revision이
+  현재 상태와 같은 완료 candidate만 다음 revision으로 원자 공개한다.
+- stale revision/identity, duplicate·non-contiguous splice, endpoint 불연속, area
+  mismatch, overflow, Abort와 중간 실패는 candidate를 소각하고 source snapshot을
+  보존한다.
+- 정상 apply의 source-wide Boundary scan, source-wide Full scan, global Boundary
+  renumber, Full Chunk 전개와 unchanged-node copy metric은 0이다. 질의는 expansion
+  parent delta chain을 따라가지 않고 현재 balanced root에서 직접 수행한다.
+- C010은 순수 정수 CPU 저장 계약이며 GPU/CPU fallback을 두지 않는다. Job/Burst
+  scheduling, State Authority runtime 연결, compact delta 복제와 exact presentation은
+  후속 계약이다.
+
 ## Future contracts not approved here
 
-- compact materialization의 persistent store 적용과 frame/Job scheduling
+- persistent compact state의 frame/Job scheduling과 State Authority shadow 연결
+- compact changed-state delta replication
 - exact Chunk presentation and consumer cutover

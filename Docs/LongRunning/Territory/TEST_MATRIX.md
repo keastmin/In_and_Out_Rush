@@ -31,6 +31,10 @@
 | C009 bounded work | budget 1과 10000 결과·metrics 동일, 호출 budget 상한 통과 | Job/Burst frame scheduler |
 | C009 compressed Full | 1000×1000 stress에서 개별 Full 대신 행 run, source scan/renumber 0 | runtime memory/Profiler |
 | C009 원자성 | 완료 전 비공개, Abort/revision mismatch 소각, session 재사용 뒤 이전 결과 불변 통과 | authoritative apply |
+| C010 최초 compact 변환 | CW/CCW canonical화, stable identity, 1000×1000 Full row 압축과 exact area 통과 | Unity EditMode |
+| C010 persistent Boundary | stable lookup/order/prefix area, endpoint splice와 retained identity 보존 통과 | Job/Burst profile |
+| C010 bounded atomic apply | budget 1/10000 결과·metrics 동일, 완료 전 비공개, Abort/stale Store 소각 통과 | State Authority shadow |
+| C010 100회 연속 확장 | 1000×1000에서 compact result로 다음 C008/C009 직접 반복, 매 회 source-wide scan/renumber/Full 전개 0 | Unity Profiler |
 
 Unity 6000.0.69f1 EditMode 25/25 passed다. 신규 packetizer/receiver/codec 7개와
 기존 fixed/traversal/session/shadow comparer 회귀를 포함한다. Client 걷기 거리
@@ -72,3 +76,13 @@ Boundary 전체 scan, source Full scan과 Boundary renumber metric은 모두 0�
 Full 저장량은 행 run 수에 비례한다. Unity import/EditMode와 재생성된 솔루션 compile은
 작업자가 완료했다. 신규 source를 포함한 `dotnet build ProjectIO.slnx --no-restore`는
 오류 0개, 기존 warning 21개로 통과했다.
+
+W-007 신규 persistent compact 테스트 7개를 포함한 현재 ChunkDomain 회귀를 같은
+source set으로 직접 compile·실행해 73/73 통과했다. C006 최초 변환의 canonical
+Boundary/row run, stable identity와 prefix area, budget 1/10000 apply 결정성, 완료 전
+비공개·Abort·stale Store 원자성을 검증했다. 1000×1000 world에서 compact result를
+다음 C008/C009 입력으로 직접 사용해 100회 연속 확장했으며 매 회 source-wide
+Boundary/Full scan, global renumber, Full Chunk 전개와 unchanged-node copy metrics는
+모두 0이었다. 작업자가 Unity import/Console compile과 Territory EditMode 전체 검증을
+완료했다. Unity가 재생성한 solution의 `dotnet build ProjectIO.slnx`는 오류 0개,
+기존 warning 25개로 통과했다.

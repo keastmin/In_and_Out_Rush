@@ -30,6 +30,12 @@ namespace ProjectIO.Territory.Tests
                 Assert.That(index.TryGetOrderedSegment((i + 1) % index.SegmentCount, out FixedTerritoryPoint nextStart, out _), Is.True);
                 Assert.That(end, Is.EqualTo(nextStart));
             }
+
+            var compactBuilder = new TerritoryCompactSnapshotBuilder();
+            Assert.That(compactBuilder.TryBuild(snapshot, out TerritoryCompactSnapshot compact, out reason), Is.True, reason);
+            Assert.That(TerritoryBoundaryLoopIndex.TryCreate(compact, out TerritoryBoundaryLoopIndex compactIndex, out reason), Is.True, reason);
+            Assert.That(compactIndex.SegmentCount, Is.EqualTo(index.SegmentCount));
+            Assert.That(compactIndex.AbsoluteTwiceArea, Is.EqualTo(index.AbsoluteTwiceArea));
         }
 
         [Test]

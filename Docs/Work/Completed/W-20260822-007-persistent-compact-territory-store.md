@@ -1,6 +1,6 @@
 # W-20260822-007 영속 압축 Territory Store
 
-Status: Reserved
+Status: Complete
 
 ## 동기화 기준
 
@@ -188,11 +188,41 @@ stable Boundary splice, Full run state, next revision과 metrics 또는 같은 �
 
 ## 실제 변경
 
-예약 단계. 구현 후 기록한다.
+- C006 snapshot을 최초 한 번 canonical compact state로 변환하는
+  `TerritoryCompactSnapshotBuilder`를 추가했다.
+- Full 내부를 Y별 maximally merged run으로 보존하는 `TerritoryCompactRowCoverage`와
+  parent delta chain 없는 immutable `TerritoryCompactSnapshot`을 추가했다.
+- stable `TerritoryBoundarySegmentId`, exact local segment와 order/area가 증분 집계되는
+  `TerritoryPersistentBoundaryTree`를 추가했다.
+- Boundary/row/Chunk candidate의 변경 경로만 복사하는 generic persistent AVL map을
+  추가했다.
+- C008 Boundary index/plan이 compact snapshot의 stable identity와 Chunk candidate를
+  전체 rebuild 없이 직접 사용하도록 확장했다.
+- C009 edit/materialization이 stable removed identity와 canonical
+  `TerritoryBoundarySplice`를 제공하도록 확장했다. endpoint가 source segment 끝과
+  일치하는 zero-length 제거 부분은 실제 splice arc에서 제외한다.
+- `TerritoryCompactApplySession`이 removed arc, exact residual/Trail, Full run과 Boundary
+  center를 bounded candidate에 적용하고 terminal에서만 다음 snapshot을 만든다.
+- `TerritoryCompactStore`는 같은 current source의 완료 candidate만 원자 공개한다.
+- persistent snapshot/tree/apply/store 신규 테스트와 기존 C008/C009 stable identity
+  회귀를 추가했다.
+- C010 계약, 기능 문서, milestone/handoff/roadmap/test matrix를 구현 상태로 갱신했다.
 
 ## 검증 결과
 
-예약 단계. 구현 후 기록한다.
+- 신규 source 포함 순수 ChunkDomain compile warning 0, error 0.
+- 신규 persistent compact 테스트 7개를 포함한 직접 회귀 73/73 통과.
+- budget 1과 10000 apply의 exact area, Boundary count, next identity, revision과 metrics가
+  동일하고 각 `TryStep`은 전달 budget 이하를 사용했다.
+- 완료 전 result 비공개, Abort, revision mismatch와 stale Store publish가 source를
+  보존했다.
+- 1000×1000 world에서 compact result를 다음 C008/C009 입력으로 직접 사용해 100회
+  연속 확장했다. retained stable identity가 유지됐고 매 회 source-wide Boundary/Full
+  scan, global renumber, Full Chunk 전개와 unchanged-node copy metrics는 모두 0이었다.
+- 기존 C001-C009 exact/invalid/1000×1000 회귀를 함께 통과했다.
+- 작업자가 Unity import/Console compile과 Territory EditMode 전체 검증을 완료했다.
+- Unity가 재생성한 solution의 `dotnet build ProjectIO.slnx`는 오류 0개, 기존 warning
+  25개로 통과했다.
 
 ## 남은 위험
 
@@ -203,4 +233,9 @@ stable Boundary splice, Full run state, next revision과 metrics 또는 같은 �
   따른 불필요한 재계산을 제거하고 작업량 상한을 나눌 수 있게 하는 것이며, 실제
   budget과 완료 latency는 후속 runtime profile로 정한다.
 - persistent balanced structure가 한 방향으로 퇴화하거나 expansion chain query가
-  선형 누적되지 않음을 stress metrics와 테스트로 반드시 증명한다.
+  선형 누적되지 않음은 100회 stress로 검증했다. 다만 한 접점 사이만 극단적으로
+  반복하는 장기 profile에서 arbitrary-precision order key 비교 비용은 후속
+  Job/Burst/frame milestone에서 계속 관찰한다.
+- 실제 runtime frame과 Host·Client 체감은 이번 순수 store로 아직 바뀌지 않는다.
+  compact 결과를 C006 개별 Full/전역 sequence로 다시 펼쳐 연결하면 이 작업의 성능
+  계약을 훼손하므로 금지한다.

@@ -32,6 +32,7 @@ namespace ProjectIO.Territory.Tests
             Assert.That(result.FullRuns, Is.Ordered.By("Y").Then.By("MinimumX"));
             Assert.That(result.BoundaryEdits.Sum(edit => edit.AddedTrailSegments.Count), Is.GreaterThan(3));
             Assert.That(result.BoundaryEdits.Sum(edit => edit.RemovedSourceSequences.Count), Is.GreaterThan(0));
+            Assert.That(result.BoundaryEdits.Sum(edit => edit.RemovedSourceIds.Count), Is.GreaterThan(0));
             AssertExactTrailEndpoints(result, plan.ExitPoint, plan.EntryPoint);
             AssertZeroSourceWideWork(result.Metrics);
         }
@@ -328,6 +329,7 @@ namespace ProjectIO.Territory.Tests
                 CollectionAssert.AreEqual(left.AddedTrailSegments, right.AddedTrailSegments);
                 CollectionAssert.AreEqual(left.ReplacedBoundarySegments, right.ReplacedBoundarySegments);
                 CollectionAssert.AreEqual(left.RemovedSourceSequences, right.RemovedSourceSequences);
+                CollectionAssert.AreEqual(left.RemovedSourceIds, right.RemovedSourceIds);
             }
         }
 

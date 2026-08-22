@@ -38,6 +38,10 @@ Last reviewed: 2026-08-22
 - 압축 변경 영역 기반: `TerritoryChunkExpansionMaterializationSession`,
   `TerritoryChunkExpansionMaterialization`, `TerritoryChunkBoundaryEdit`,
   `TerritoryChunkFillRun`, `TerritoryChunkExpansionMaterializationMetrics`
+- 영속 압축 상태 기반: `TerritoryCompactSnapshot`,
+  `TerritoryPersistentBoundaryTree`, `TerritoryCompactRowCoverage`,
+  `TerritoryCompactApplySession`, `TerritoryCompactStore`,
+  `TerritoryBoundarySplice`
 - State Authority adapter: `TerritoryTrailShadowRecorder`,
   `TerritoryTrailReplicationStream`, `TerritoryChunkReplicationStream`
 - `.agents/skills/build-chunk-territory/`
@@ -78,6 +82,15 @@ source snapshot의 Full Chunk나 전체 Boundary를 순회·복사·재번호화
 결과도 아직 C006 store, Legacy 확장, Fusion 또는 renderer에 연결되지 않아 runtime과
 Inspector 구성은 바뀌지 않는다.
 
+C010 순수 store는 C006 shadow snapshot을 최초 한 번 counter-clockwise stable
+Boundary와 Y별 Full run으로 바꾼다. 이후 C008/C009는 이 compact snapshot을 직접
+입력으로 사용하고, 확장은 제거 arc의 stable identity와 exact endpoint residual/Trail
+part만 splice한다. 변경된 Boundary 경로와 Full row만 persistent balanced node로
+교체하며 나머지 branch는 이전 immutable revision과 공유한다. 정상 apply는 source
+전체 scan, 전역 sequence 재번호화와 Full Chunk 전개를 하지 않고 terminal에서만 새
+revision을 공개한다. 이 store 역시 아직 runtime, Fusion, renderer와 consumer에
+연결되지 않아 현재 플레이에는 변화가 없다.
+
 ## 주요 소비자
 
 Grid 표시, Fog of War, Resource 수집·Spawn, Track·World Monster, Sacred Zone, PlayerRunner 보호 판정.
@@ -106,6 +119,9 @@ Grid 표시, Fog of War, Resource 수집·Spawn, Track·World Monster, Sacred Zo
 - C009 materialization은 source/index/plan revision과 session이 일치하는지, 호출별
   work 사용량이 budget 이하인지, Full run과 Boundary edit가 `(Y, X)` 결정 순서를
   유지하는지 확인한다.
+- C010 apply는 stable splice가 contiguous한지, endpoint가 retained Boundary에 exact로
+  연결되는지, source와 candidate root가 terminal 전후에도 immutable한지, 정상
+  metrics의 전체 scan/renumber/Full 전개가 0인지 확인한다.
 
 ## 외부 강제 이동 사선 중단
 

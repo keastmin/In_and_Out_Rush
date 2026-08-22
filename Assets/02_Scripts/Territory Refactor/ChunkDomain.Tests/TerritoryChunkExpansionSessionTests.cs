@@ -33,6 +33,8 @@ namespace ProjectIO.Territory.Tests
                 plan.TrailPoints);
             Assert.That(plan.SourceRevision, Is.EqualTo(1));
             Assert.That(plan.SessionId, Is.EqualTo(10));
+            Assert.That(plan.ExitBoundaryId.IsValid, Is.True);
+            Assert.That(plan.EntryBoundaryId.IsValid, Is.True);
             Assert.That(plan.ResultAbsoluteTwiceArea, Is.EqualTo(2300000m));
             Assert.That(plan.Metrics.TerminalBoundarySegmentScans, Is.Zero);
             Assert.That(plan.Metrics.TerminalTrailPointScans, Is.Zero);

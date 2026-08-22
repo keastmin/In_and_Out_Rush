@@ -15,6 +15,7 @@ namespace ProjectIO.Territory
             decimal addedAbsoluteTwiceArea,
             List<TerritoryChunkBoundaryEdit> boundaryEdits,
             List<TerritoryChunkFillRun> fullRuns,
+            TerritoryBoundarySplice boundarySplice,
             TerritoryChunkExpansionMaterializationMetrics metrics)
         {
             if (sourceRevision == 0)
@@ -29,6 +30,7 @@ namespace ProjectIO.Territory
             AddedAbsoluteTwiceArea = addedAbsoluteTwiceArea;
             _boundaryEdits = (boundaryEdits ?? throw new ArgumentNullException(nameof(boundaryEdits))).AsReadOnly();
             _fullRuns = (fullRuns ?? throw new ArgumentNullException(nameof(fullRuns))).AsReadOnly();
+            BoundarySplice = boundarySplice;
             Metrics = metrics;
         }
 
@@ -37,6 +39,7 @@ namespace ProjectIO.Territory
         public decimal AddedAbsoluteTwiceArea { get; }
         public IReadOnlyList<TerritoryChunkBoundaryEdit> BoundaryEdits => _boundaryEdits;
         public IReadOnlyList<TerritoryChunkFillRun> FullRuns => _fullRuns;
+        public TerritoryBoundarySplice BoundarySplice { get; }
         public TerritoryChunkExpansionMaterializationMetrics Metrics { get; }
     }
 }

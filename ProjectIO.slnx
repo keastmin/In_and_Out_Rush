@@ -5,6 +5,7 @@
   <Project Path="ProjectIO.ResourceSpawn.csproj" />
   <Project Path="ProjectIO.Monsters.csproj" />
   <Project Path="Fusion.Addons.Physics.csproj" />
+  <Project Path="ProjectIO.Territory.ChunkDomain.csproj" />
   <Project Path="Fusion.Addons.FSM.Editor.csproj" />
   <Project Path="ProjectIO.GridPlacement.Tests.csproj" />
   <Project Path="ProjectIO.ResourceSpawn.Tests.csproj" />
@@ -13,7 +14,6 @@
   <Project Path="ProjectIO.GridPlacement.csproj" />
   <Project Path="ProjectIO.Construction.csproj" />
   <Project Path="Fusion.Unity.csproj" />
-  <Project Path="ProjectIO.Territory.ChunkDomain.csproj" />
   <Project Path="ProjectIO.ResourceEconomy.csproj" />
   <Project Path="ProjectIO.MatchProgression.csproj" />
   <Project Path="Fusion.Addons.Physics.Editor.csproj" />

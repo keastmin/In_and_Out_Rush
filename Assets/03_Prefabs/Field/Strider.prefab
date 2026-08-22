@@ -118,5 +118,5 @@ MonoBehaviour:
   patrolMaximumRadius: 0
   obstaclePathPadding: 0.25
   _slideDistanceInTiles: 3
-  _slideSpeedMultiplier: 1.5
+  _slideSpeedMultiplier: 4.5
   _restDuration: 1.5

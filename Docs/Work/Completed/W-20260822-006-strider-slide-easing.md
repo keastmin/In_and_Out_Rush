@@ -1,6 +1,6 @@
 # W-20260822-006 Strider 슬라이드 종료 감속
 
-Status: Reserved
+Status: Completed
 
 ## 동기화 기준
 

@@ -111,7 +111,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   attackTargetTransform: {fileID: 0}
   health: 2500
-  movementSpeed: 3
+  movementSpeed: 4.8
   arrivalThreshold: 0.1
   playerTransform: {fileID: 0}
   patrolMinimumRadius: 0
@@ -119,4 +119,5 @@ MonoBehaviour:
   obstaclePathPadding: 0.25
   _slideDistanceInTiles: 3
   _slideSpeedMultiplier: 4.5
+  _slideDecelerationDistanceRatio: 0.35
   _restDuration: 1.5

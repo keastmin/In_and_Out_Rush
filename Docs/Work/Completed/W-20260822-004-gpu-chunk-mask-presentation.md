@@ -1,6 +1,6 @@
 # W-20260822-004 GPU Chunk Mask/SDF 표시
 
-Status: Reserved
+Status: Superseded
 
 ## 동기화 기준
 
@@ -156,18 +156,33 @@ Inspector 참조를 변경하지 않는다. Compute/표시 Shader는 `Resources/
 
 ## 실제 변경
 
-예약 단계. 구현 후 기록한다.
+- GPU/CPU 32×32 Boundary SDF prototype을 로컬에서 구현했지만 runtime 검증 실패로
+  채택하지 않았다. 구현 코드와 Shader, 테스트, C008 계약 및 장기 문서 변경은
+  commit하지 않고 모두 `906f79d` 기준으로 되돌렸다.
+- 기존에 Push된 이 예약 문서만 실패 증거와 폐기 이유를 보존하기 위해 Completed로
+  이동한다. Scene·Prefab·기존 Material·Inspector 참조는 변경하지 않았다.
+- 다음 작업은 GPU 사용 자체가 아니라 정확한 이동 경로 모양, 변경 범위에 비례하는
+  계산 비용, Host·Client 체감 동등성과 main-thread frame 안정성을 완료 기준으로
+  새로 예약한다.
 
 ## 검증 결과
 
-예약 단계. 구현 후 기록한다.
+- 작업자 runtime에서 Trail과 Legacy authoritative 확장은 동작했지만 시작 영역과
+  확장 영역 외곽이 8×8 Chunk 사각형 단위로 표시됐다.
+- D3D11 Editor 로그에서 `TerritoryChunkMask.compute`의 `point`, `end` 식별자가 HLSL
+  예약 토큰으로 해석되어 `RasterizeBoundary` kernel compile이 실패한 것을 확인했다.
+  `Dispatch`는 반복 `Kernel at index (0) is invalid` 오류를 냈고 GPU tile이 작성되지
+  않아 CPU 비교에서 sign mismatch 986개, 최대 거리 오차 8.0이 발생했다.
+- 이 실패가 자동 CPU/Legacy rollback으로 전환되지 않아 C008 실패 원자성과 rollback
+  완료 조건도 충족하지 못했다.
+- 커널 오류와 별개로 32×32 SDF는 최종 외곽을 근사하므로 러너의 정밀 이동 경로를
+  최종 영역 테두리로 유지한다는 제품 목표의 기본 표현 방식으로 부적합하다고
+  결정했다.
 
 ## 남은 위험
 
-- GPU SDF는 표시용 32×32 Boundary tile 해상도이므로 카메라 확대 시 시각적 계단이나
-  feathering 차이가 보일 수 있다. fixed 원본은 유지하며 해상도 변경은 Profiler와
-  화질 근거가 있을 때 별도 결정한다.
-- Boundary Chunk 수가 texture array slice 한도를 넘거나 page bounds가 장치 texture
-  한도를 넘으면 GPU/CPU mask 대신 Legacy mesh가 유지된다.
-- Legacy polygon union, vertex 보정과 C006 synchronous state build 비용은 이번
-  presentation 작업으로 제거되지 않는다.
+- 저장소는 W-004 시작 전 상태로 복원되므로 Legacy polygon union, vertex 보정과
+  synchronous C006 shadow build 비용이 그대로 남는다.
+- 다음 설계가 실제 profile 없이 GPU 또는 특정 자료구조를 먼저 선택하면 같은 실패를
+  반복할 수 있다. 새 milestone은 모양 오차, 경로 길이, 변경 범위, main-thread 시간과
+  Host·Client runtime 기준을 먼저 고정해야 한다.

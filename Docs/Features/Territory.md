@@ -32,6 +32,9 @@ Last reviewed: 2026-08-22
   `TerritoryChunkSnapshot`, `TerritoryChunkStateBuilder`, `TerritoryChunkStore`
 - Chunk 복제 기반: `TerritoryChunkTransferPacket`,
   `TerritoryChunkTransferPacketizer`, `TerritoryChunkReplica`
+- 정밀 확장 계획 기반: `TerritoryBoundaryLoopIndex`,
+  `TerritoryChunkExpansionSession`, `TerritoryChunkExpansionPlan`,
+  `TerritoryChunkExpansionMetrics`
 - State Authority adapter: `TerritoryTrailShadowRecorder`,
   `TerritoryTrailReplicationStream`, `TerritoryChunkReplicationStream`
 - `.agents/skills/build-chunk-territory/`
@@ -54,6 +57,14 @@ Reliable packet, simulation tick당 최대 2 data packet 예산으로 기존 Cli
 재접속 snapshot, recovery retry와 targeted PlayerRef 전송은 지원하지 않는다. 이
 replica는 아직 표시와 consumer에 연결되지 않으며 전송 실패도 Legacy 성공 결과를
 되돌리지 않는다.
+
+C008 순수 planner는 C006 Boundary sequence를 revision당 한 번 exact fixed loop와
+Chunk-local 후보로 색인한다. C003/C004 fragment는 Runner 이동 중 한 번만 append하며
+진출·재진입 접점, 외부 Trail, 자기 교차와 면적을 증분 누적한다. terminal은 전체
+Boundary나 긴 Trail을 재탐색·복사하지 않고 두 arc 후보를 평가해 현재 게임 규칙의
+큰 확장 후보를 immutable plan으로 만든다. fixed 정밀도 뒤 모양을 바꾸는 단순화는
+없다. 이 plan은 아직 Legacy 확장이나 C006 Commit에 연결되지 않아 현재 runtime
+결과와 Inspector 구성은 바뀌지 않는다.
 
 ## 주요 소비자
 
@@ -78,6 +89,8 @@ Grid 표시, Fog of War, Resource 수집·Spawn, Track·World Monster, Sacred Zo
 - Chunk domain의 1 world unit = 256 fixed unit, 8 world-unit Chunk,
   half-open 소유권과 Trail sequence 계약을 변경하지 않는지. 변경이 필요하면
   `Docs/LongRunning/Territory/CONTRACTS.md`와 migration을 먼저 갱신한다.
+- C008 planner 입력의 첫 fragment가 마지막 영역 내부점 또는 정확한 경계 anchor를
+  포함하고, 이후 fragment가 sequence와 shared endpoint를 유지하는지 확인한다.
 
 ## 외부 강제 이동 사선 중단
 

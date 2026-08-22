@@ -1,6 +1,6 @@
 # W-20260822-005 정밀 증분 영역 확장 계획 기반
 
-Status: Reserved
+Status: Complete
 
 ## 동기화 기준
 
@@ -137,11 +137,34 @@ Input Authority owner prediction, State Authority confirmed Trail과 Proxy 표�
 
 ## 실제 변경
 
-예약 단계. 구현 후 기록한다.
+- C008 exact incremental expansion plan 계약과 현재 milestone/roadmap을 GPU 비의존
+  방향으로 갱신했다.
+- `TerritoryBoundaryLoopIndex`가 C006 Boundary sequence, endpoint 폐합과 fixed area를
+  검증하고 revision별 ordered loop, prefix area와 Chunk-local candidate lookup을 만든다.
+- `TerritoryChunkExpansionSession`이 ordered fragment를 한 번만 처리하며 external
+  Trail만 exact fixed로 누적한다. Boundary contact, self-intersection과 Trail segment
+  spatial cell index를 append 시점에 갱신한다.
+- terminal은 누적 Trail과 Boundary prefix로 두 arc를 O(1) 평가하고 큰 유효 후보를
+  immutable `TerritoryChunkExpansionPlan`으로 공개한다. terminal full scan/copy는 없다.
+- plan은 접점/sequence/arc 방향/exact Trail/영향 Trail Chunk와 deterministic metrics를
+  보유하며 기존 snapshot이나 runtime 상태는 변경하지 않는다.
+- index/session/plan/metrics 신규 source와 loop/session EditMode 테스트를 추가했다.
 
 ## 검증 결과
 
-예약 단계. 구현 후 기록한다.
+- 신규 source와 현재 ChunkDomain source/test 전체 직접 compile: warning 0, error 0.
+- 현재 회귀와 신규 assertion 직접 실행: 56/56 통과(신규 16개).
+- exact 직선·대각선·곡선 표본, concave, Boundary corner, shared Chunk edge와 음수
+  Chunk loop 검증 통과.
+- sequence gap/open loop/global endpoint overflow, Boundary overlap, self-intersection,
+  추가 crossing과 Abort가 plan을 공개하지 않음을 확인했다.
+- 같은 입력의 별도 Peer-role session plan/metrics가 동일함을 확인했다.
+- 1000×1000 world stress에서 400개 초과 Boundary segment와 장거리 multi-Chunk Trail을
+  처리하고 terminal Boundary/Trail scan metrics 0, local candidate 상한 assertion 통과.
+- `git diff --check` 통과.
+- 작업자가 Unity import/compile과 안내된 Territory EditMode 검증 완료를 보고했다.
+  재생성된 project file은 stale W-004 mask 참조를 제거하고 신규 W-005 source/test를
+  포함했으며 최종 `dotnet build ProjectIO.slnx` 오류 0개, 기존 warning 25개로 통과했다.
 
 ## 남은 위험
 
@@ -151,3 +174,6 @@ Input Authority owner prediction, State Authority confirmed Trail과 Proxy 표�
   이번 증분 plan을 이용해 이동 중에 비용을 분산하고 변경 범위만 materialize해야 한다.
 - 기존 C006 snapshot은 Full Chunk를 개별 sparse entry로 보관한다. 매우 넓은 내부
   영역 압축이 필요하다는 profile 근거가 생기면 별도 계약과 milestone으로 다룬다.
+- 이번 plan은 첫 fragment가 마지막 영역 내부점 또는 정확한 경계 anchor를 포함한다는
+  현재 Trail 시작 계약을 사용한다. 후속 runtime 연결에서 이 anchor를 누락하면 첫
+  진출을 복원할 수 없으므로 통합 테스트로 고정해야 한다.

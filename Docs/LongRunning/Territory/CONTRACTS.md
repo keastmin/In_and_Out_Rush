@@ -121,6 +121,35 @@ Status: Approved
   targeted `PlayerRef` 전송은 지원하지 않는다. C007은 Legacy polygon, 확장 판정,
   vertex RPC, mesh나 consumer event의 권위를 전환하지 않는다.
 
+## C008 Exact incremental expansion plan
+
+Status: Approved
+
+- C006 snapshot의 방향성 Boundary segment는 revision마다 한 번 전역 fixed loop로
+  검증·색인한다. sequence는 `0..N-1`로 연속이고 인접 endpoint와 마지막-첫 endpoint가
+  정확히 이어져야 하며, gap, duplicate, 열린/복수 loop와 overflow는 index를
+  공개하지 않는다.
+- index는 Chunk별 Boundary 후보와 loop prefix 면적을 보관한다. ordered Trail
+  fragment append와 terminal은 전체 Boundary를 다시 순회하지 않는다.
+- C003/C004 fragment는 Runner 이동 중 순서대로 한 번만 처리한다. session은 정확한
+  진출·재진입 접점, 외부 Trail, Trail 면적, 자기 교차와 작업량을 증분 누적한다.
+  fragment/session sequence gap, 경계 overlap, 자기 교차와 추가 Boundary crossing은
+  plan을 공개하지 않는다.
+- fixed 정밀도 뒤에는 tolerance 증가, vertex budget, 곡선 단순화와 점 이동·삭제를
+  적용하지 않는다. 연속 중복점과 정확히 같은 직선 위 중간점만 모양 보존
+  정규화로 제거할 수 있다.
+- terminal은 보관 Trail을 다시 순회하거나 복사하지 않고 prefix 면적으로 두 기존
+  Boundary arc 후보를 평가한다. 기존 영역보다 실제 면적이 커지는 후보 중 현재
+  게임 규칙과 같은 큰 후보를 결정적으로 선택한다.
+- immutable plan은 source snapshot revision, session id, 진출·재진입 접점과
+  Boundary sequence, 선택 arc 방향, exact fixed Trail과 결정적 work metrics를
+  제공한다. plan 생성 자체는 snapshot, mesh, renderer, RPC와 consumer 상태를
+  변경하지 않는다.
+- 같은 snapshot과 ordered fragment는 Host·Client 역할이나 호출 Peer와 무관하게
+  같은 fixed plan 또는 같은 실패 결과를 만든다. 권위 적용과 네트워크 공개는 별도
+  계약이다.
+
 ## Future contracts not approved here
 
-- GPU buffer and mask format
+- changed-Chunk expansion materialization and frame-budget scheduling
+- exact Chunk presentation and consumer cutover

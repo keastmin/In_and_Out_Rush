@@ -2,115 +2,100 @@
 
 ## Completed outcome
 
-현재 제품 계약인 고정 2인 세션에 맞춰 Chunk Territory shadow 복제를 delta-only로
-단순화했다. State Authority의 C006 store가 최초 `0 -> 1`과 이후 연속
-changed-Chunk delta를 기존 Client Proxy에 Reliable RPC로 보내고, packet당 최대
-48 word와 TerritorySystem당 simulation tick 최대 2 data packet 예산을 유지한다.
+C006 immutable snapshot의 방향성 Boundary를 revision당 한 번 exact fixed loop와
+Chunk-local 후보로 색인하는 C008 기반을 구현했다. C003/C004 ordered Trail fragment는
+Runner 이동 중 한 번만 append되며 진출·재진입 접점, 외부 Trail, 면적,
+self-intersection 후보와 영향 Trail Chunk를 증분 누적한다.
 
-Snapshot transfer kind와 전체 snapshot packetizer, `[Networked]` recovery revision,
-mismatch/retry timer, 요청자 중복 억제, `RpcInfo.Source` 검증과 targeted PlayerRef RPC는
-제거했다. Proxy는 transaction 전체를 검증한 뒤에만 replica를 원자적으로 공개한다.
-Additive `SetUp`보다 먼저 RPC가 도착해도 Proxy replica를 다시 초기화하지 않으며,
-TearDown/Dispose에서는 outbound, inbound와 published replica를 소각한다.
+재진입 terminal은 전체 Boundary나 보관 Trail을 다시 순회·복사하지 않는다. Boundary
+prefix 면적으로 두 arc를 평가하고 기존 영역보다 커지는 현재 게임 규칙의 큰 후보를
+immutable plan으로 공개한다. fixed 좌표를 이동·근사하지 않으며 연속 중복점과 exact
+collinear 중간점만 모양 보존 정규화로 제거한다.
 
-Legacy polygon, mesh, vertex RPC, consumer callback과 W-012 Trail prediction/confirmed
-transport는 변경하지 않았다. Chunk replica는 계속 shadow 상태이며 게임 결과를
-변경하지 않는다.
+이번 slice는 순수 Domain 기반이다. Legacy polygon, C006 store, mesh, Fusion과 모든
+consumer runtime은 변경하지 않았다.
 
 ## Changed files
 
-- `Assets/02_Scripts/Territory/TerritorySystem.cs`
-- `Assets/02_Scripts/Territory Refactor/Adapters/Fusion/TerritoryChunkReplicationStream.cs`
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkTransferPacket.cs`
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkTransferPacketizer.cs`
-- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkReplica.cs`
-- 위 packetizer/replica 테스트 2개
-- `TerritoryChunkTransferKind.cs`와 `.meta` 삭제
-- Territory 기능 문서, C007, milestone/handoff/roadmap/test 문서와 Active 작업 문서
+- `TerritoryBoundaryLoopIndex`, `TerritoryChunkExpansionSession`
+- `TerritoryChunkExpansionPlan`, `TerritoryChunkExpansionMetrics`
+- 위 index/session 신규 테스트 2개
+- Territory 기능 문서, C008, milestone/handoff/roadmap/test 문서와 Active 작업 문서
 
 ## Decisions used
 
-- `CONTRACTS.md` C001-C006은 그대로 유지하고 C007만 고정 2인 delta-only로 축소
-- 두 Peer는 스테이지 시작부터 존재하고 한 Peer 이탈 시 스테이지 종료
-- Late Join, reconnect, AOI recovery와 다수 요청자 보안 경계는 지원하지 않음
-- State Authority C006 store 원본 + 기존 Client Proxy shadow replica
-- 최대 48-word Reliable data packet, simulation tick당 최대 2개
-- stale base, packet sequence와 malformed payload 검증은 current-session 손상 방지를
-  위한 최소 안정성으로 유지
-- Legacy gameplay authority와 owner-predicted/confirmed Trail 경로 유지
+- GPU는 요구사항이나 fallback 계약이 아니다. authoritative geometry는 C001 exact
+  fixed CPU domain이 소유하고 GPU는 후속 exact 표시 profile이 필요할 때만 검토한다.
+- Boundary index build는 revision당 한 번 허용하되 fragment append와 terminal 전체
+  Boundary scan은 금지한다.
+- Trail은 이동 중 local Boundary 후보와 1-world-unit spatial cell의 기존 Trail
+  후보만 검사한다. 전체 Trail 검사는 terminal로 미루지 않는다.
+- plan은 external Trail만 보관한다. 첫 fragment는 마지막 내부점 또는 경계 anchor를
+  포함해야 하며 재진입 뒤 inside tail은 확장 경로나 self-intersection에 포함하지 않는다.
+- 두 후보 중 기존 면적보다 커지는 후보만 허용하고 큰 면적 후보를 결정적으로 고른다.
+- 실패와 Abort는 pending geometry를 소각하며 source snapshot은 절대 변경하지 않는다.
 
 ## Verification evidence
 
-- 신규 delta-only assertion과 기존 ChunkDomain 회귀를 포함한 독립 validation 35/35
-  통과
-- 최초 `0 -> 1`, 연속 delta, 빈 delta revision 전진, Full/Empty run과 packet 경계
-  Boundary round-trip 통과
-- stale base, packet gap, malformed terminal은 이전 replica를 보존하고 Reset은 inbound와
-  published replica를 소각함을 확인
-- 30-segment Boundary delta 4 packet, tick당 최대 2 data packet, 총 2 tick 종료
-- 신규 source 직접 compile 및 임시 source 주입 `Assembly-CSharp` 통합 compile 오류
-  0개, 기존 프로젝트 warning 16개
-- Snapshot/recovery/targeted 경로의 source 참조가 남지 않았고 script와 `.meta` 삭제가
-  pairing됨
-- 작업자가 안내된 Unity import/compile, Host·Client 걷기·달리기·속도 전환, 긴 외부
-  경로·정상 확장, 자기 교차/Abort와 Profiler runtime 절차 완료를 보고함
+- 신규 source와 현재 ChunkDomain source/test 전체 직접 compile: warning 0, error 0
+- 현재 회귀와 신규 assertion 직접 실행: 56/56 통과, 신규 16개
+- sequence/폐합/음수 Chunk/global overflow와 exact fixed area 통과
+- 직선·대각선·concave·Boundary corner·shared Chunk edge Trail 모양 보존 통과
+- gap, overlap, self-intersection, 추가 crossing과 Abort 실패 원자성 통과
+- 동일 입력의 별도 Host-role/Client-role session plan과 metrics 동일성 통과
+- 1000×1000 world, 400개 초과 Boundary segment, 장거리 multi-Chunk Trail stress 통과
+- stress terminal Boundary/Trail full scan metrics 각각 0
+- Unity import가 stale W-004 mask source 참조를 제거하고 신규 W-005 source/test를
+  project file에 포함한 뒤 `dotnet build ProjectIO.slnx` 오류 0개, 기존 warning
+  25개로 통과했다.
+- 작업자가 Unity compile과 안내된 Territory EditMode 검증 완료를 보고했다.
 
 ## Serialized or manual setup
 
-Scene·Prefab·Inspector 연결 변경은 없다. Unity가 삭제·변경 script를 import한 뒤 아래
-순서로 고정 2인 Host·Client runtime을 확인한다.
+Scene·Prefab·Inspector 연결 변경은 없다. Unity가 신규 script와 `.meta`를 import한 뒤
+아래만 확인한다.
 
-1. Console compile error가 없고 EditMode `ProjectIO.Territory.Tests` 전체가 통과하는지
-   확인한다.
-2. Host와 Client를 스테이지 시작부터 함께 실행한다. Client Console에 initial
-   `Chunk Territory replica applied. Revision: 1`이 한 번 나타나고 transfer reject
-   경고가 없는지 확인한다.
-3. Host Runner로 영역 밖을 걷기, 달리기, 걷기↔달리기 전환 순서로 이동한다. owner
-   선이 러너보다 구조적으로 앞서거나 뒤처지지 않고 끊기지 않는지 확인한다.
-4. Client Runner에서도 같은 순서를 반복한다. 특히 낮은 속도 걷기에서 선이
-   점선처럼 끊기지 않고 Host Runner와 같은 체감인지 확인한다.
-5. Host Runner와 Client Runner 각각 영역 확장 전에 긴 외부 경로를 만든 뒤 정상
-   재진입한다. 양쪽 화면의 Trail, 최종 Legacy 영역 모양, mesh와 consumer 결과가
-   같고 Chunk revision이 성공당 정확히 1 증가하는지 확인한다.
-6. 양쪽 Runner에서 자기 교차 또는 Lifeline/Abort를 실행한다. 선과 pending 상태가
-   즉시 정리되고 Chunk revision/delta가 발생하지 않으며 다음 정상 확장이 가능한지
-   확인한다.
-7. Unity Profiler에서 Host/Client 각각 Trail 이동 frame과 정상 확장 frame을
-   기록한다. `TerritorySystem.ChunkDeltaPacketize`와
-   `TerritorySystem.ChunkTransferFlush` marker의 시간과 spike 여부를 기록하고 Fusion
-   traffic에서 한 tick의 Chunk data RPC가 2개를 넘지 않는지 확인한다.
-8. Stage 종료 또는 한 Peer 이탈 시 반복 transfer warning이나 이전 session replica
-   흔적 없이 기존 게임 흐름대로 종료되는지 확인한다.
+1. Unity import가 끝나 csproj에서 제거된 `TerritoryChunkMaskLayout`과
+   `TerritoryChunkMaskTileRasterizer` 항목이 사라지고 신규 W-005 script가 포함됐는지
+   확인한 뒤 Console compile error가 없는지 확인한다.
+2. EditMode `ProjectIO.Territory.Tests` 전체를 실행한다.
+3. 신규 `TerritoryBoundaryLoopIndexTests`와 `TerritoryChunkExpansionSessionTests`가 모두
+   통과하는지 확인한다.
+
+이번 slice는 runtime에 연결되지 않으므로 Host·Client 플레이 동작과 표시가 바뀌면
+회귀다. 별도의 Scene 설정이나 GPU 토글은 만들지 않았다.
 
 ## Known risks and failures
 
-- Reliable delta가 current-session에서 유실되거나 initial delta 전에 Proxy가 존재하지
-  않는 spawn ordering이면 recovery 없이 shadow replica가 뒤처질 수 있다. 이번 고정
-  2인 runtime에서는 작업자가 안내 절차 완료를 보고했지만, spawn 흐름 변경 시 initial
-  revision 1 수신을 회귀 검증해야 한다.
-- Legacy polygon union, 256 vertex 보정과 synchronous C006 shadow build는 이번
-  단순화 범위 밖이다. 정상 확장 hitch의 주원인이면 다음 CPU/GPU milestone에서
-  별도로 처리한다.
+- 아직 plan을 changed Chunk coverage로 materialize하거나 C006 store에 적용하지 않으므로
+  실제 영역 확장 frame spike와 Legacy 모양 보정은 이번 결과만으로 개선되지 않는다.
+- 무한한 변경 면적의 적용 시간을 0으로 만들 수는 없다. 후속 단계는 plan의 Boundary
+  arc와 영향 범위를 이용해 변경 coverage 생성을 frame budget으로 분산해야 한다.
+- 교차 접점은 fixed grid로 한 번 반올림된다. 추가 tolerance나 해상도 저하는 없으며
+  오차 상한은 C001의 축당 1/512 world unit이다.
+- 한 1-world-unit spatial cell 안에 비정상적으로 많은 Trail segment가 밀집하면 해당
+  cell 후보 비용은 증가한다. 실제 profile로 밀집 경로 문제가 확인되면 더 작은
+  index cell 또는 계층형 index를 별도 계약 없이 내부 최적화할 수 있다.
+- C006 Full Chunk 개별 sparse entry 압축은 이번 범위 밖이다.
 
 ## Remaining legacy consumers
 
-모든 Territory containment, authoritative expansion, mesh, Grid, Fog, Resource,
-Monster와 vertex replication. Chunk replica는 아직 표시나 게임 판정에 사용되지 않는
-shadow 상태다.
+authoritative expansion, changed coverage materialization, containment, mesh, Grid, Fog,
+Resource, Monster, vertex replication과 최종 presentation 모두 Legacy 경로다.
 
 ## Next bounded milestone
 
-위 runtime/Profiler 결과를 먼저 완료한다. Host·Client 체감과 current-session delta가
-통과하면 별도 Active 예약에서 GPU Chunk mask/SDF presentation과 CPU fallback을
-구현한다. Trail이나 expansion frame spike가 관측되면 marker 근거로 해당 CPU 작업만
-먼저 분리한다. Consumer 권위 전환과 Legacy polygon 제거는 그 뒤 consumer별
-milestone으로 유지한다.
+W-005는 Complete다. 다음 별도 예약은 C008 plan을 변경 영향 Chunk의 exact
+`Empty`/`Full`/`Boundary` coverage로
+materialize하고 frame budget 안에서 원자적으로 C006 store에 적용하는 순수/스케줄링
+단계다. runtime 권위 전환, Fusion과 renderer는 그 뒤 분리한다.
 
 ## Exact starting files
 
-- `Assets/02_Scripts/Territory/TerritorySystem.cs`
-- `Assets/02_Scripts/Territory Refactor/Adapters/Fusion/TerritoryChunkReplicationStream.cs`
-- `Assets/02_Scripts/Territory Refactor/Adapters/Fusion/TerritoryTrailReplicationStream.cs`
-- `Assets/02_Scripts/Territory Refactor/Trail/TerritoryTrailChunkRenderer.cs`
-- `Assets/02_Scripts/Territory/TerritoryVisible.cs`
-- `Docs/LongRunning/Territory/CONTRACTS.md`의 C005/C007
+- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryBoundaryLoopIndex.cs`
+- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkExpansionPlan.cs`
+- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkExpansionSession.cs`
+- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkExpansionMetrics.cs`
+- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkStateBuilder.cs`
+- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkStore.cs`
+- `Docs/LongRunning/Territory/CONTRACTS.md`의 C006/C008

@@ -245,10 +245,11 @@ MonoBehaviour:
   playerTransform: {fileID: 0}
   patrolMinimumRadius: 0
   patrolMaximumRadius: 0
+  obstaclePathPadding: 0.25
   _meshRenderer: {fileID: 7125122071249757492}
   _activeMaterial: {fileID: 2100000, guid: 950eb82f1c5900d49bb6054d94818471, type: 2}
   _inactiveMaterial: {fileID: 2100000, guid: 0c81b6260132fef47b7d4f7b4413fa5c, type: 2}
-  _activationRadius: 10
+  _activationRadius: 6.4
   _explosionDelay: 4
   _suckedIntoSpeed: 2
-  _suckedIntoRadius: 9
+  _suckedIntoRadius: 9.6

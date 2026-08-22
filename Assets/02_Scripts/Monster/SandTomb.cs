@@ -4,9 +4,11 @@ using UnityEngine;
 public class SandTomb : WorldMonster
 {
     private const string ActivationRangeName = "Activation Range";
+    private const string SuckedIntoRangeName = "Sucked Into Range";
     private const int ActivationRangeSegments = 64;
     private const float MaxHealthDamageRate = 0.10f;
     private const float CurrentHealthDamageRate = 0.30f;
+    private static readonly int BaseColorProperty = Shader.PropertyToID("_BaseColor");
 
     public enum SandTombState
     {
@@ -19,12 +21,15 @@ public class SandTomb : WorldMonster
 
     [Header("Sand Tomb Settings")]
     [SerializeField] private MeshRenderer _meshRenderer;
+    [SerializeField] private MeshRenderer _suckedIntoMeshRenderer;
     [SerializeField] private Material _activeMaterial;
     [SerializeField] private Material _inactiveMaterial;
     [SerializeField] private float _activationRadius = 4f;
+    [SerializeField, Range(0f, 1f)] private float _activationRangeAlpha = 0.22f;
     [SerializeField] private float _explosionDelay = 4f;
     [SerializeField] private float _suckedIntoSpeed = 2f;
     [SerializeField] private float _suckedIntoRadius = 5f;
+    [SerializeField, Range(0f, 1f)] private float _suckedIntoRangeAlpha = 0.12f;
 
     [Networked, OnChangedRender(nameof(ApplyStateVisual))]
     private SandTombState State { get; set; }
@@ -32,16 +37,19 @@ public class SandTomb : WorldMonster
 
     private bool _isExpansionPathSuspended;
     private Mesh _activationRangeMesh;
+    private Mesh _suckedIntoRangeMesh;
+    private MaterialPropertyBlock _activationRangePropertyBlock;
+    private MaterialPropertyBlock _suckedIntoRangePropertyBlock;
 
     private void Awake()
     {
-        ApplyActivationRangeVisual();
+        ApplyRangeVisuals();
     }
 
     public override void Spawned()
     {
         base.Spawned();
-        ApplyActivationRangeVisual();
+        ApplyRangeVisuals();
         ApplyStateVisual();
     }
 
@@ -140,19 +148,58 @@ public class SandTomb : WorldMonster
 
     private void ApplyStateVisual()
     {
-        if (_meshRenderer == null) return;
+        _activationRangePropertyBlock ??= new MaterialPropertyBlock();
+        _suckedIntoRangePropertyBlock ??= new MaterialPropertyBlock();
 
         Material material = State == SandTombState.Active
             ? _activeMaterial
             : _inactiveMaterial;
 
+        ApplyStateVisual(
+            _meshRenderer,
+            _activationRangePropertyBlock,
+            material,
+            _activationRangeAlpha);
+        ApplyStateVisual(
+            _suckedIntoMeshRenderer,
+            _suckedIntoRangePropertyBlock,
+            material,
+            _suckedIntoRangeAlpha);
+    }
+
+    private static void ApplyStateVisual(
+        MeshRenderer meshRenderer,
+        MaterialPropertyBlock propertyBlock,
+        Material material,
+        float alpha)
+    {
+        if (meshRenderer == null) return;
+
         if (material != null)
-            _meshRenderer.sharedMaterial = material;
+            meshRenderer.sharedMaterial = material;
+
+        Material appliedMaterial = meshRenderer.sharedMaterial;
+        if (appliedMaterial == null) return;
+
+        Color color = appliedMaterial.HasProperty(BaseColorProperty)
+            ? appliedMaterial.GetColor(BaseColorProperty)
+            : Color.white;
+        color.a = Mathf.Clamp01(alpha);
+
+        propertyBlock.Clear();
+        propertyBlock.SetColor(BaseColorProperty, color);
+        meshRenderer.SetPropertyBlock(propertyBlock);
+    }
+
+    private void ApplyRangeVisuals()
+    {
+        ApplyActivationRangeVisual();
+        ApplySuckedIntoRangeVisual();
     }
 
     private void ApplyActivationRangeVisual()
     {
-        MeshFilter meshFilter = FindActivationRangeMeshFilter();
+        MeshFilter meshFilter = FindRangeMeshFilter(ActivationRangeName);
         if (meshFilter == null) return;
 
         UpdateActivationRangeMesh(Mathf.Max(0f, _activationRadius));
@@ -163,11 +210,22 @@ public class SandTomb : WorldMonster
             meshCollider.sharedMesh = _activationRangeMesh;
     }
 
-    private MeshFilter FindActivationRangeMeshFilter()
+    private void ApplySuckedIntoRangeVisual()
     {
-        Transform activationRange = transform.Find(ActivationRangeName);
-        return activationRange != null
-            ? activationRange.GetComponent<MeshFilter>()
+        MeshFilter meshFilter = FindRangeMeshFilter(SuckedIntoRangeName);
+        if (meshFilter == null) return;
+
+        float activationRadius = Mathf.Max(0f, _activationRadius);
+        float suckedIntoRadius = Mathf.Max(activationRadius, _suckedIntoRadius);
+        UpdateSuckedIntoRangeMesh(activationRadius, suckedIntoRadius);
+        meshFilter.sharedMesh = _suckedIntoRangeMesh;
+    }
+
+    private MeshFilter FindRangeMeshFilter(string rangeName)
+    {
+        Transform range = transform.Find(rangeName);
+        return range != null
+            ? range.GetComponent<MeshFilter>()
             : null;
     }
 
@@ -215,6 +273,60 @@ public class SandTomb : WorldMonster
         _activationRangeMesh.RecalculateBounds();
     }
 
+    private void UpdateSuckedIntoRangeMesh(float innerRadius, float outerRadius)
+    {
+        if (_suckedIntoRangeMesh == null)
+        {
+            _suckedIntoRangeMesh = new Mesh
+            {
+                name = "SandTomb Sucked Into Range",
+            };
+        }
+
+        Vector3[] vertices = new Vector3[ActivationRangeSegments * 2];
+        Vector3[] normals = new Vector3[vertices.Length];
+        Vector2[] uvs = new Vector2[vertices.Length];
+        int[] triangles = new int[ActivationRangeSegments * 6];
+        float uvScale = outerRadius > 0f ? 1f / outerRadius : 0f;
+
+        for (int i = 0; i < ActivationRangeSegments; i++)
+        {
+            float angle = i * Mathf.PI * 2f / ActivationRangeSegments;
+            float x = Mathf.Cos(angle);
+            float y = Mathf.Sin(angle);
+            int innerVertexIndex = i * 2;
+            int outerVertexIndex = innerVertexIndex + 1;
+
+            vertices[innerVertexIndex] = new Vector3(x * innerRadius, y * innerRadius, 0f);
+            vertices[outerVertexIndex] = new Vector3(x * outerRadius, y * outerRadius, 0f);
+            normals[innerVertexIndex] = Vector3.back;
+            normals[outerVertexIndex] = Vector3.back;
+            uvs[innerVertexIndex] = new Vector2(
+                x * innerRadius * uvScale * 0.5f + 0.5f,
+                y * innerRadius * uvScale * 0.5f + 0.5f);
+            uvs[outerVertexIndex] = new Vector2(x * 0.5f + 0.5f, y * 0.5f + 0.5f);
+
+            int nextIndex = (i + 1) % ActivationRangeSegments;
+            int nextInnerVertexIndex = nextIndex * 2;
+            int nextOuterVertexIndex = nextInnerVertexIndex + 1;
+            int triangleIndex = i * 6;
+
+            triangles[triangleIndex] = innerVertexIndex;
+            triangles[triangleIndex + 1] = nextOuterVertexIndex;
+            triangles[triangleIndex + 2] = outerVertexIndex;
+            triangles[triangleIndex + 3] = innerVertexIndex;
+            triangles[triangleIndex + 4] = nextInnerVertexIndex;
+            triangles[triangleIndex + 5] = nextOuterVertexIndex;
+        }
+
+        _suckedIntoRangeMesh.Clear();
+        _suckedIntoRangeMesh.vertices = vertices;
+        _suckedIntoRangeMesh.normals = normals;
+        _suckedIntoRangeMesh.uv = uvs;
+        _suckedIntoRangeMesh.triangles = triangles;
+        _suckedIntoRangeMesh.RecalculateBounds();
+    }
+
     private bool IsPlayerInTerritory()
     {
         var playerPosition2d = new Vector2(playerTransform.position.x, playerTransform.position.z);
@@ -240,11 +352,19 @@ public class SandTomb : WorldMonster
 
     private void OnDestroy()
     {
-        if (_activationRangeMesh == null) return;
+        DestroyMesh(ref _activationRangeMesh);
+        DestroyMesh(ref _suckedIntoRangeMesh);
+    }
+
+    private static void DestroyMesh(ref Mesh mesh)
+    {
+        if (mesh == null) return;
 
         if (Application.isPlaying)
-            Destroy(_activationRangeMesh);
+            UnityEngine.Object.Destroy(mesh);
         else
-            DestroyImmediate(_activationRangeMesh);
+            UnityEngine.Object.DestroyImmediate(mesh);
+
+        mesh = null;
     }
 }

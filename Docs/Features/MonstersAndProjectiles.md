@@ -58,6 +58,10 @@ AI tick cadence와 전투 규칙은 Legacy Network Monster가 계속 소유한�
 
 World Monster의 이동 안전성 판정은 Legacy `WorldMonster`가 State Authority에서 수행한다. 바위는 `WorldObstacleBoundsIndex`, 자원은 Physics query로 생성된 `ResourceVisible` Collider를 확인하며, Territory·Sanctuary는 일정 간격의 경로 표본으로 통과를 막는다. Client는 기존 NetworkObject Transform 복제만 관찰한다.
 
+## SandTomb range presentation
+
+SandTomb presents the activation radius as an inner transparent disk and the sucked-into radius as a transparent outer annulus. Both layers reuse the existing 64-segment runtime mesh approach, while the existing activation, suction, damage, timer, and Despawn rules remain unchanged.
+
 ## Stalker projectile attack
 
 `Stalker` keeps its serialized sensing and attack-entry ranges, chase state, and three-attacks-per-second timer. It enters attack at `Attack Range` and remains in attack until the target exceeds the larger `Chase Resume Range`; the Stalker prefab uses 5m and 5.5m respectively to avoid range-boundary state chatter. On each attack tick, its State Authority spawns the shared `MonsterProjectile` from the optional `Stalker.prefab` `Muzzle` child, or the equivalent local `(0, 1, 0.5)` fallback position when that reference is absent, with 1 damage, 8m/s speed, and a 5-second lifetime; it no longer calls `IDamageable.TakeDamage` directly.

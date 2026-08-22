@@ -15,8 +15,11 @@
 5.2. **Superseded** — 32×32 GPU mask/SDF presentation experiment; fixed 경계 손실과
    invalid kernel 경로 때문에 제거
 6. **Complete** — exact fixed Boundary index and incremental Trail expansion plan
-6.1. **Planned** — changed-Chunk exact coverage materialization and frame-budgeted apply
-6.2. **Planned** — exact Chunk presentation; GPU는 정밀도를 바꾸지 않는 표시 가속이
+6.1. **Complete** — exact changed-region Boundary edit와
+   compressed Full row run을 만드는 bounded pure-domain materialization
+6.2. **Planned** — compact materialization을 직접 보존하는 persistent store apply와
+   Job/Burst frame scheduling. C006 개별 Full/전역 sequence로 재전개하지 않는다.
+6.3. **Planned** — exact Chunk presentation; GPU는 정밀도를 바꾸지 않는 표시 가속이
    실제 profile로 필요한 경우에만 사용
 7. **Planned** — one consumer migration per milestone: containment, Grid, Fog, Resource,
    Monster and remaining consumers

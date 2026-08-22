@@ -27,6 +27,10 @@
 | C008 exact expansion plan | 직선·대각선·오목·corner/shared edge 모양 보존 통과 | changed-coverage materialization |
 | C008 invalid Trail 원자성 | gap, self-intersection, Boundary overlap, 추가 crossing, Abort 통과 | runtime integration |
 | C008 1000×1000 stress | terminal Boundary/Trail scan 0, Chunk-local 후보 검사 통과 | Unity Profiler integration |
+| C009 exact changed-region | Trail과 교체 arc의 fixed local segment, same-sequence 접점 통과 | persistent store apply |
+| C009 bounded work | budget 1과 10000 결과·metrics 동일, 호출 budget 상한 통과 | Job/Burst frame scheduler |
+| C009 compressed Full | 1000×1000 stress에서 개별 Full 대신 행 run, source scan/renumber 0 | runtime memory/Profiler |
+| C009 원자성 | 완료 전 비공개, Abort/revision mismatch 소각, session 재사용 뒤 이전 결과 불변 통과 | authoritative apply |
 
 Unity 6000.0.69f1 EditMode 25/25 passed다. 신규 packetizer/receiver/codec 7개와
 기존 fixed/traversal/session/shadow comparer 회귀를 포함한다. Client 걷기 거리
@@ -59,3 +63,12 @@ Boundary/Trail scan metric은 0이다. Unity import/EditMode와 프로젝트 com
 작업자가 Unity import/compile과 안내된 Territory EditMode 검증 완료를 보고했다.
 재생성된 project file은 제거된 W-004 mask 참조를 소각하고 신규 W-005 source/test를
 포함했으며 `dotnet build ProjectIO.slnx`는 오류 0개, 기존 warning 25개로 통과했다.
+
+W-006 신규 assertion 10개와 현재 ChunkDomain 회귀를 같은 source set으로 직접
+compile·실행해 60/60 통과했다. exact Trail/교체 arc local segment, 같은 source
+sequence 안의 두 접점, 음수·대각선, budget 1/10000 결정성, 완료 전 비공개·Abort·stale
+revision·session 재사용 불변성과 1000×1000 stress를 포함한다. stress에서 source
+Boundary 전체 scan, source Full scan과 Boundary renumber metric은 모두 0이고 내부
+Full 저장량은 행 run 수에 비례한다. Unity import/EditMode와 재생성된 솔루션 compile은
+작업자가 완료했다. 신규 source를 포함한 `dotnet build ProjectIO.slnx --no-restore`는
+오류 0개, 기존 warning 21개로 통과했다.

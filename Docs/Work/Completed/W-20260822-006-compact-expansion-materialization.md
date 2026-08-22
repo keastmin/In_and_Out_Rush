@@ -1,6 +1,6 @@
 # W-20260822-006 압축 증분 영역 확장 Materialization
 
-Status: Reserved
+Status: Complete
 
 ## 동기화 기준
 
@@ -152,11 +152,36 @@ edit, Full run, metrics 또는 같은 실패 reason을 만들어야 한다. 실�
 
 ## 실제 변경
 
-예약 단계. 구현 후 기록한다.
+- C009 `TerritoryChunkExpansionMaterializationSession`을 추가했다. exact Trail과 교체
+  arc의 원본 edge 읽기, 긴 edge의 Chunk part 분할, scanline 교차, Boundary Chunk
+  제외, row run과 immutable 결과 공개가 각각 bounded work cursor로 진행된다.
+- `TerritoryChunkBoundaryEdit`는 Chunk별 새 Trail local segment, captured-region의
+  교체 source arc local segment와 제거 source sequence를 분리 보존한다.
+- Boundary가 없는 추가 영역 내부는 개별 `Full` coverage 대신 inclusive
+  `TerritoryChunkFillRun(Y, MinX, MaxX)`으로 정렬·병합한다.
+- source snapshot의 `Chunks`와 전체 Boundary를 materialization 과정에서 순회하거나
+  전역 Boundary sequence를 재번호화하는 경로를 만들지 않았다.
+- 완료 전 결과 비공개, Abort/중간 실패 candidate 소각과 완료 결과의 session 재사용
+  불변성을 구현했다.
+- C009 계약, 기능 문서, milestone/handoff/roadmap/test matrix를 현재 범위에 맞게
+  갱신했다.
 
 ## 검증 결과
 
-예약 단계. 구현 후 기록한다.
+- 신규 source와 현재 ChunkDomain source/test 전체 직접 compile: warning 0, error 0.
+- 신규 assertion 10개 포함 현재 ChunkDomain 회귀 60/60 직접 실행 통과.
+- exact Trail endpoint/연속성, 교체 arc, 같은 Boundary sequence 접점, 음수·대각선,
+  stale revision, Abort, 완료 전 비공개와 session 재사용 불변성 통과.
+- budget 1과 10000의 최종 Boundary edit/Full run/metrics 동일성과 호출별 budget 상한
+  통과.
+- 1000×1000 stress에서 source Boundary full scan, source Full Chunk scan과 Boundary
+  renumber metrics 0. 내부 Full Chunk 수가 run 수보다 크고 run 수는 행 수 이하임을
+  확인했다.
+- Unity import/compile과 안내된 Territory EditMode 전체 검증을 작업자가 완료했다.
+- 신규 source를 포함한 `dotnet build ProjectIO.slnx --no-restore`는 오류 0개, 기존
+  warning 21개로 통과했다.
+- `git diff --check` 통과. Scene·Prefab·설정·Shader·Compute Shader·asmdef diff는
+  없다.
 
 ## 남은 위험
 

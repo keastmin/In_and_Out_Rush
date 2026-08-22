@@ -35,6 +35,9 @@ Last reviewed: 2026-08-22
 - 정밀 확장 계획 기반: `TerritoryBoundaryLoopIndex`,
   `TerritoryChunkExpansionSession`, `TerritoryChunkExpansionPlan`,
   `TerritoryChunkExpansionMetrics`
+- 압축 변경 영역 기반: `TerritoryChunkExpansionMaterializationSession`,
+  `TerritoryChunkExpansionMaterialization`, `TerritoryChunkBoundaryEdit`,
+  `TerritoryChunkFillRun`, `TerritoryChunkExpansionMaterializationMetrics`
 - State Authority adapter: `TerritoryTrailShadowRecorder`,
   `TerritoryTrailReplicationStream`, `TerritoryChunkReplicationStream`
 - `.agents/skills/build-chunk-territory/`
@@ -66,6 +69,15 @@ Boundary나 긴 Trail을 재탐색·복사하지 않고 두 arc 후보를 평가
 없다. 이 plan은 아직 Legacy 확장이나 C006 Commit에 연결되지 않아 현재 runtime
 결과와 Inspector 구성은 바뀌지 않는다.
 
+C009 순수 materializer는 C008 plan의 exact Trail과 실제로 교체되는 기존 Boundary
+arc만 읽는다. 긴 선분의 Chunk 분할, scanline 교차, Boundary Chunk 제외와 결과
+생성을 `TryStep(maxWorkUnits)` budget으로 나누며 완료 전 candidate를 공개하지 않는다.
+Boundary Chunk에는 Trail과 교체 arc의 fixed local segment를 그대로 보존하고, 넓은
+추가 영역 내부는 개별 Full Chunk가 아니라 `(Y, MinX..MaxX)` run으로 압축한다.
+source snapshot의 Full Chunk나 전체 Boundary를 순회·복사·재번호화하지 않는다. 이
+결과도 아직 C006 store, Legacy 확장, Fusion 또는 renderer에 연결되지 않아 runtime과
+Inspector 구성은 바뀌지 않는다.
+
 ## 주요 소비자
 
 Grid 표시, Fog of War, Resource 수집·Spawn, Track·World Monster, Sacred Zone, PlayerRunner 보호 판정.
@@ -91,6 +103,9 @@ Grid 표시, Fog of War, Resource 수집·Spawn, Track·World Monster, Sacred Zo
   `Docs/LongRunning/Territory/CONTRACTS.md`와 migration을 먼저 갱신한다.
 - C008 planner 입력의 첫 fragment가 마지막 영역 내부점 또는 정확한 경계 anchor를
   포함하고, 이후 fragment가 sequence와 shared endpoint를 유지하는지 확인한다.
+- C009 materialization은 source/index/plan revision과 session이 일치하는지, 호출별
+  work 사용량이 budget 이하인지, Full run과 Boundary edit가 `(Y, X)` 결정 순서를
+  유지하는지 확인한다.
 
 ## 외부 강제 이동 사선 중단
 

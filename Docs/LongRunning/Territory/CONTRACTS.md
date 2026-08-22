@@ -149,7 +149,31 @@ Status: Approved
   같은 fixed plan 또는 같은 실패 결과를 만든다. 권위 적용과 네트워크 공개는 별도
   계약이다.
 
+## C009 Compact changed-region materialization
+
+Status: Approved
+
+- 입력은 같은 source revision의 C006 snapshot, C008 Boundary index와 expansion
+  plan이다. revision, session, 접점 또는 Boundary sequence가 맞지 않으면 candidate를
+  시작하지 않는다.
+- 추가 영역은 exact Trail과 선택된 새 경계에서 제외되어 실제로 교체되는 기존
+  Boundary arc만으로 닫는다. 유지되는 기존 Boundary 전체와 source의 Full Chunk는
+  복사·순회·재번호화하지 않는다.
+- 추가 영역 Boundary가 통과하는 Chunk에는 captured-region의 fixed local segment,
+  새 Trail segment와 제거 대상 source sequence를 보존한다. fixed 입력을 이동하거나
+  삭제하지 않으며 연속 중복점과 exact collinear 중간점 외 단순화는 없다.
+- Boundary가 통과하지 않는 추가 영역 내부 Chunk는 `(Y, MinX..MaxX)` inclusive Full
+  run으로 정렬·병합한다. 내부 면적만큼 개별 Full coverage 객체를 생성하지 않는다.
+- materialization session의 `TryStep(maxWorkUnits)`는 양수 budget 이하의 결정적
+  work만 수행한다. 완료 전 결과를 공개하지 않고 Abort, overflow, malformed arc와
+  중간 실패는 candidate 전체를 소각하며 source snapshot은 바꾸지 않는다.
+- 동일 입력은 step budget을 나누는 방식과 Host·Client 역할에 무관하게 같은 immutable
+  Boundary edit, Full run과 algorithmic metrics를 만든다.
+- C009는 순수 정수 CPU 도메인 계약이다. GPU/CPU fallback을 두지 않는다. Job
+  System/Burst는 이 계약의 배열과 cursor를 바꾸지 않고 실행할 후속 adapter이며,
+  authoritative store 적용·Fusion 복제·표시는 별도 계약이다.
+
 ## Future contracts not approved here
 
-- changed-Chunk expansion materialization and frame-budget scheduling
+- compact materialization의 persistent store 적용과 frame/Job scheduling
 - exact Chunk presentation and consumer cutover

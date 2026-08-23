@@ -42,6 +42,9 @@ Last reviewed: 2026-08-22
   `TerritoryPersistentBoundaryTree`, `TerritoryCompactRowCoverage`,
   `TerritoryCompactApplySession`, `TerritoryCompactStore`,
   `TerritoryBoundarySplice`
+- 백그라운드 정밀 확장 기반: `TerritoryCompactExpansionWorkItem`,
+  `TerritoryCompactExpansionWorker`, `TerritoryCompactExpansionWorkResult`,
+  `TerritoryCompactExpansionShadow`
 - State Authority adapter: `TerritoryTrailShadowRecorder`,
   `TerritoryTrailReplicationStream`, `TerritoryChunkReplicationStream`
 - `.agents/skills/build-chunk-territory/`
@@ -91,6 +94,16 @@ part만 splice한다. 변경된 Boundary 경로와 Full row만 persistent balanc
 revision을 공개한다. 이 store 역시 아직 runtime, Fusion, renderer와 consumer에
 연결되지 않아 현재 플레이에는 변화가 없다.
 
+C011 State Authority shadow는 confirmed Trail fragment를 이동 중 증분 수집하고,
+재진입 시 긴 목록을 다시 복사하지 않고 단일 백그라운드 CPU queue에 소유권을 넘긴다.
+worker는 immutable compact revision 순서대로 C008 plan, C009 materialization과 C010
+apply를 실행하며 완료 결과는 `Render`에서 한 건씩 stale source 검증 뒤 원자 publish한다.
+worker는 Unity/Fusion API에 접근하지 않고 실패·취소·teardown은 마지막 compact
+revision과 Legacy gameplay를 보존한다. exact 도메인의 `decimal`과 persistent managed
+tree를 복제하는 Burst/GPU 이중 경로는 만들지 않았으며 profile 결과로 독립 배열 병목이
+확인될 때만 후속 가속 후보를 정한다. 아직 compact delta, Proxy 표시와 authoritative
+cutover에는 연결되지 않아 보이는 영역과 consumer는 계속 Legacy 경로다.
+
 ## 주요 소비자
 
 Grid 표시, Fog of War, Resource 수집·Spawn, Track·World Monster, Sacred Zone, PlayerRunner 보호 판정.
@@ -122,6 +135,9 @@ Grid 표시, Fog of War, Resource 수집·Spawn, Track·World Monster, Sacred Zo
 - C010 apply는 stable splice가 contiguous한지, endpoint가 retained Boundary에 exact로
   연결되는지, source와 candidate root가 terminal 전후에도 immutable한지, 정상
   metrics의 전체 scan/renumber/Full 전개가 0인지 확인한다.
+- C011 worker는 State Authority에서만 session당 한 번 enqueue되는지, confirmed
+  fragment drain이 이동 중 증분인지, queued source revision과 main-thread publish가
+  같은 순서인지, teardown 뒤 완료 결과가 공개되지 않는지 확인한다.
 
 ## 외부 강제 이동 사선 중단
 

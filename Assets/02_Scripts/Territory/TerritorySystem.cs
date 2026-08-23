@@ -25,6 +25,10 @@ public class TerritorySystem : Dev.Network.System
         new("TerritorySystem.ChunkDeltaPacketize");
     private static readonly ProfilerMarker ChunkTransferFlushMarker =
         new("TerritorySystem.ChunkTransferFlush");
+    private static readonly ProfilerMarker CompactExpansionScheduleMarker =
+        new("TerritorySystem.CompactExpansionSchedule");
+    private static readonly ProfilerMarker CompactExpansionPublishMarker =
+        new("TerritorySystem.CompactExpansionPublish");
 
     const int TerritoryVertexSyncChunkSize = 10;
     const int ConfirmedTrailFlushSampleCount = 4;
@@ -44,6 +48,7 @@ public class TerritorySystem : Dev.Network.System
     readonly TerritoryTrailReplicationStream trailReplicationStream = new();
     readonly TerritoryChunkReplicationStream chunkReplicationStream = new();
     TerritoryChunkStore territoryChunkShadowStore = new();
+    TerritoryCompactExpansionShadow compactExpansionShadow;
     readonly List<Vector2> shadowLegacyPath = new();
     readonly List<FixedTerritoryPoint> ownerPredictedTrail = new();
     readonly List<FixedTerritoryPoint> replicatedTrailPath = new();
@@ -57,6 +62,8 @@ public class TerritorySystem : Dev.Network.System
     bool hasOwnerPredictionPosition;
     bool stateRunnerIsLocalOwner;
     bool confirmedTrailCommitPending;
+    bool compactExpansionSchedulePending;
+    ulong compactExpansionPendingSessionId;
     bool territoryRuntimeCleanedUp;
     FixedTerritoryPoint ownerPredictionPreviousPosition;
 
@@ -84,6 +91,9 @@ public class TerritorySystem : Dev.Network.System
     {
         territoryRuntimeCleanedUp = false;
         territoryChunkShadowStore = new TerritoryChunkStore();
+        compactExpansionShadow = Object == null || Object.HasStateAuthority
+            ? new TerritoryCompactExpansionShadow()
+            : null;
         if (Object == null || Object.HasStateAuthority)
             chunkReplicationStream.Reset();
         TerritoryVisible = Dev.Network.StageBootstrapper.Instance.TerritoryVisible;
@@ -118,6 +128,8 @@ public class TerritorySystem : Dev.Network.System
         AbortShadowTrail("Territory system teardown", false);
         ClearTrailPresentation();
         chunkReplicationStream.Reset();
+        compactExpansionShadow?.Dispose();
+        compactExpansionShadow = null;
 
         if (Dev.Network.StageBootstrapper.Instance != null &&
             Dev.Network.StageBootstrapper.Instance.PlayerRunner != null)
@@ -133,6 +145,41 @@ public class TerritorySystem : Dev.Network.System
 
         if (Object.HasStateAuthority)
             FlushTerritoryChunkTransfers();
+    }
+
+    public override void Render()
+    {
+        base.Render();
+        if (territoryRuntimeCleanedUp || Object == null || !Object.HasStateAuthority ||
+            compactExpansionShadow == null)
+        {
+            return;
+        }
+
+        using (CompactExpansionPublishMarker.Auto())
+        {
+            if (!compactExpansionShadow.TryPollOne(
+                    out bool hadCompletion,
+                    out TerritoryCompactCommitResult commit,
+                    out string reason))
+            {
+                Debug.LogWarning(
+                    $"{ShadowLogOwnerName} - background compact expansion stopped: {reason}");
+                compactExpansionShadow.Dispose();
+                compactExpansionShadow = null;
+                return;
+            }
+
+            if (hadCompletion && Debug.isDebugBuild)
+            {
+                TerritoryCompactExpansionWorkerMetrics metrics = compactExpansionShadow.LastMetrics;
+                Debug.Log(
+                    $"{ShadowLogOwnerName} - background compact expansion published. " +
+                    $"Revision: {commit.Revision}, Fragments: {metrics.FragmentCount}, " +
+                    $"Work units: {metrics.TotalWorkUnits}, Worker ms: {metrics.Elapsed.TotalMilliseconds:F2}, " +
+                    $"Queue: {compactExpansionShadow.PendingWorkCount}");
+            }
+        }
     }
 
     void GenerateInitialTerritory()
@@ -230,12 +277,20 @@ public class TerritorySystem : Dev.Network.System
         }
 
         confirmedTrailCommitPending = false;
+        compactExpansionSchedulePending = false;
+        compactExpansionPendingSessionId = 0UL;
         confirmedTrailFlushTimer = default;
         trailLiveHeadSyncTimer = default;
         RPC_BeginConfirmedTrail(sessionId);
 
         if (!stateRunnerIsLocalOwner)
             trailChunkRenderer?.Begin();
+
+        if (compactExpansionShadow != null &&
+            !compactExpansionShadow.TryBeginTrail(sessionId, out string compactReason))
+        {
+            DisableCompactExpansionShadow($"Trail begin failed: {compactReason}");
+        }
     }
 
     private void AppendShadowTrailPoint(Vector2 point)
@@ -257,6 +312,12 @@ public class TerritorySystem : Dev.Network.System
             Debug.LogWarning($"{ShadowLogOwnerName} - confirmed Trail sample rejected: {reason}");
             AbortShadowTrail("Confirmed Trail stream rejected an authoritative sample");
             return;
+        }
+
+        if (compactExpansionShadow != null &&
+            !compactExpansionShadow.TryDrainFragments(shadowTrailRecorder.Fragments, out string compactReason))
+        {
+            DisableCompactExpansionShadow($"Trail fragment drain failed: {compactReason}");
         }
 
         if (!stateRunnerIsLocalOwner)
@@ -289,8 +350,15 @@ public class TerritorySystem : Dev.Network.System
 
         confirmedTrailCommitPending = true;
 
+        if (compactExpansionShadow != null &&
+            !compactExpansionShadow.TryDrainFragments(shadowTrailRecorder.Fragments, out string compactReason))
+        {
+            DisableCompactExpansionShadow($"Terminal Trail fragment drain failed: {compactReason}");
+        }
+
         if (!comparison.IsMatch)
         {
+            compactExpansionShadow?.AbortActiveTrail();
             if (Debug.isDebugBuild)
             {
                 Debug.LogWarning(
@@ -299,6 +367,12 @@ public class TerritorySystem : Dev.Network.System
                     $"First mismatch: {comparison.FirstMismatchIndex}");
             }
             return;
+        }
+
+        if (compactExpansionShadow != null && compactExpansionShadow.IsCollecting)
+        {
+            compactExpansionSchedulePending = true;
+            compactExpansionPendingSessionId = shadowTrailRecorder.LastSessionId;
         }
 
         if (Debug.isDebugBuild)
@@ -314,6 +388,9 @@ public class TerritorySystem : Dev.Network.System
         if (!trailReplicationStream.IsOutboundActive)
         {
             confirmedTrailCommitPending = false;
+            compactExpansionSchedulePending = false;
+            compactExpansionPendingSessionId = 0UL;
+            compactExpansionShadow?.AbortActiveTrail();
             ClearTrailPresentation();
             return;
         }
@@ -334,6 +411,9 @@ public class TerritorySystem : Dev.Network.System
 
         RPC_CommitConfirmedTrail(sessionId);
         confirmedTrailCommitPending = false;
+        compactExpansionSchedulePending = false;
+        compactExpansionPendingSessionId = 0UL;
+        compactExpansionShadow?.AbortActiveTrail();
         confirmedTrailFlushTimer = default;
         trailLiveHeadSyncTimer = default;
         ClearTrailPresentation();
@@ -365,6 +445,9 @@ public class TerritorySystem : Dev.Network.System
             RPC_AbortConfirmedTrail(sessionId);
 
         confirmedTrailCommitPending = false;
+        compactExpansionSchedulePending = false;
+        compactExpansionPendingSessionId = 0UL;
+        compactExpansionShadow?.AbortActiveTrail();
         confirmedTrailFlushTimer = default;
         trailLiveHeadSyncTimer = default;
         ClearTrailPresentation();
@@ -896,12 +979,15 @@ public class TerritorySystem : Dev.Network.System
         {
             if (!expansionSession.TryExpand(Territory, out meshData))
             {
+                compactExpansionSchedulePending = false;
+                compactExpansionPendingSessionId = 0UL;
+                compactExpansionShadow?.AbortActiveTrail();
                 Debug.LogWarning($"{Runner.name} - Territory expansion rejected. Path point count: {expansionSession.CalculationPathCount}");
                 return;
             }
         }
 
-        CommitTerritoryChunkShadow("Legacy expansion");
+        bool chunkShadowCommitted = CommitTerritoryChunkShadow("Legacy expansion");
 
         using (UpdateExpansionMeshMarker.Auto())
             TerritoryVisible.SetMeshData(meshData);
@@ -914,15 +1000,20 @@ public class TerritorySystem : Dev.Network.System
             using (NotifyExpansionConsumersMarker.Auto())
                 OnTerritoryExpandedEvent?.Invoke(Territory, this); // 호스트만
         }
+
+        if (chunkShadowCommitted)
+            ScheduleCompactExpansionShadow();
+        else
+            DisableCompactExpansionShadow("C006 shadow commit failed after Legacy expansion.");
         }
     }
 
-    private void CommitTerritoryChunkShadow(string cause)
+    private bool CommitTerritoryChunkShadow(string cause)
     {
         if (Object == null || !Object.HasStateAuthority ||
             Territory == null || Territory.Vertices == null)
         {
-            return;
+            return false;
         }
 
         territoryChunkPolygon.Clear();
@@ -939,7 +1030,7 @@ public class TerritorySystem : Dev.Network.System
             Debug.LogWarning(
                 $"{ShadowLogOwnerName} - Chunk Territory shadow conversion failed. " +
                 $"Cause: {cause}, Reason: {exception.Message}");
-            return;
+            return false;
         }
 
         ulong baseRevision = territoryChunkShadowStore.Current.Revision;
@@ -952,7 +1043,14 @@ public class TerritorySystem : Dev.Network.System
             Debug.LogWarning(
                 $"{ShadowLogOwnerName} - Chunk Territory shadow commit failed. " +
                 $"Base revision: {baseRevision}, Cause: {cause}, Reason: {reason}");
-            return;
+            return false;
+        }
+
+        if (result.BaseRevision == 0UL && compactExpansionShadow != null &&
+            !compactExpansionShadow.IsInitialized &&
+            !compactExpansionShadow.TryInitialize(territoryChunkShadowStore.Current, out string compactReason))
+        {
+            DisableCompactExpansionShadow($"Initial compact conversion failed: {compactReason}");
         }
 
         string replicationReason;
@@ -974,6 +1072,35 @@ public class TerritorySystem : Dev.Network.System
                 $"Revision: {result.Revision}, Changed Chunks: {result.ChangedChunks.Count}, " +
                 $"Cause: {cause}");
         }
+
+        return true;
+    }
+
+    private void ScheduleCompactExpansionShadow()
+    {
+        if (!compactExpansionSchedulePending || compactExpansionShadow == null)
+            return;
+
+        ulong sessionId = compactExpansionPendingSessionId;
+        compactExpansionSchedulePending = false;
+        compactExpansionPendingSessionId = 0UL;
+        using (CompactExpansionScheduleMarker.Auto())
+        {
+            if (!compactExpansionShadow.TrySchedule(sessionId, out string reason))
+                DisableCompactExpansionShadow($"Work schedule failed: {reason}");
+        }
+    }
+
+    private void DisableCompactExpansionShadow(string reason)
+    {
+        compactExpansionSchedulePending = false;
+        compactExpansionPendingSessionId = 0UL;
+        if (compactExpansionShadow == null)
+            return;
+
+        Debug.LogWarning($"{ShadowLogOwnerName} - compact expansion shadow disabled. {reason}");
+        compactExpansionShadow.Dispose();
+        compactExpansionShadow = null;
     }
 
     private void FlushTerritoryChunkTransfers()

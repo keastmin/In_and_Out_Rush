@@ -4,85 +4,84 @@ Status: Complete
 
 ## Objective
 
-C009 exact Boundary edit와 Full row run을 C006 개별 Full Chunk와 전역 연속 sequence로
-다시 펼치지 않고 반복 적용하는 C010 persistent compact Territory state를 구현한다.
-다음 C008/C009는 compact result에서 직접 이어지며, 확장 횟수와 기존 면적이 커져도
-정상 apply는 source 전체를 순회·복사·재번호화하지 않는다.
+confirmed Trail fragment를 이동 중 증분 수집하고 C008 exact plan, C009 compact
+materialization과 C010 persistent apply를 State Authority의 단일 background CPU queue에
+연결한다. 긴 Trail과 넓은 Territory 계산을 재진입 frame의 main thread에서 분리하고,
+완료 candidate만 revision 순서대로 한 frame에 최대 한 건 publish한다.
 
-이번 milestone은 순수 ChunkDomain 저장 기반만 추가한다. Legacy polygon, C006/C007
-shadow runtime, Fusion, renderer와 gameplay 결과는 계속 기존 경로가 소유한다.
+이번 milestone은 C011 runtime shadow와 profile까지만 추가한다. Legacy polygon,
+C006/C007 replication, mesh, vertex RPC와 consumer가 계속 gameplay 결과를 소유한다.
 
 ## Prerequisites
 
-- Active reservation `W-20260822-007-persistent-compact-territory-store`
-- implementation base `b1f136346d683f2aafa8e21676358e1380df6763`
-- `CONTRACTS.md`의 C001-C010이 Approved일 것
-- W-006 C009 compact materialization이 Complete일 것
+- Active reservation `W-20260822-008-background-compact-expansion-shadow`
+- implementation base `cff010f0631be97c8079511db68276ca9bdd6518`
+- `CONTRACTS.md`의 C001-C011이 Approved일 것
+- W-007 C010 persistent compact store가 Complete일 것
 
 ## Required behavior
 
-- C006 최초 변환만 source Chunk/Boundary 전체를 읽고 canonical stable Boundary와
-  Y별 merged Full run을 만든다.
-- 정상 확장은 stable identity 제거 arc, exact endpoint residual과 Trail part만
-  persistent Boundary에 splice한다.
-- Boundary order/면적 prefix, identity lookup, Chunk candidate와 Full row는 balanced
-  persistent root를 사용하고 변경되지 않은 branch를 공유한다.
-- 다음 C008 index/session과 C009 materialization은 compact snapshot을 직접 사용한다.
-- `TryStep(maxWorkUnits)`는 호출 budget 이하로 진행하고 terminal 이전 결과를
-  공개하지 않는다.
-- stale revision/identity, malformed splice, area mismatch, overflow와 Abort는
-  candidate를 소각하고 source를 보존한다.
-- 정상 apply의 source-wide Boundary/Full scan, global renumber, Full Chunk 전개와
-  unchanged-node copy metric은 0이다.
+- 최초 C006 snapshot만 한 번 compact state로 변환한다.
+- confirmed fragment는 Runner 이동 중 새로 닫힌 항목만 증분 drain한다.
+- terminal에서 전체 Trail을 복사하지 않고 collection ownership을 work item으로 넘긴다.
+- background worker는 request와 source revision을 직렬 처리하고 직전 candidate에서
+  다음 C008-C010을 이어간다.
+- worker thread는 Unity/Fusion API와 mutable Scene state에 접근하지 않는다.
+- main thread는 frame당 최대 한 completion을 stale 검증 뒤 원자 publish한다.
+- failure, cancellation, stale result와 teardown은 마지막 compact state와 Legacy
+  gameplay를 보존한다.
+- exact CPU geometry 한 경로만 사용하며 Burst/GPU fallback을 만들지 않는다.
 
 ## Prohibited changes
 
-- `TerritorySystem`, Legacy `Territory`, mesh와 consumer callback
-- C006/C007 active shadow store·replication 교체 또는 삭제
-- Fusion RPC, Authority, prediction과 presentation
-- Job/Burst frame scheduler와 runtime Composition Root
-- GPU/CPU mask, Shader, Compute Shader, Material
-- Scene, Prefab, ScriptableObject, asmdef, Package와 ProjectSettings
+- Legacy `Territory` authoritative 계산, mesh, vertex RPC와 consumer callback 교체
+- C006/C007 active replication 삭제 또는 compact delta로 전환
+- Proxy compact state와 exact presentation
+- C008-C010 fixed 좌표, exact Boundary, persistent storage 의미 변경
+- Native/Burst geometry 재구현, GPU/CPU mask와 Shader
+- Scene, Prefab, Inspector, ScriptableObject, asmdef, Package와 ProjectSettings
+- Late Join, reconnect, AOI, 다수 Peer와 보안 확장
 
 ## Acceptance criteria
 
-- C006 CW/CCW snapshot의 exact canonical compact 변환과 row 압축
-- stable Boundary identity/order/prefix area와 exact endpoint splice
-- budget 1과 큰 budget의 snapshot·metrics 동일성 및 terminal 원자성
-- stale/Abort/malformed candidate가 source/Store를 변경하지 않음
-- 1000×1000 world에서 compact result로 최소 100회 연속 C008/C009/apply 수행
-- 매 정상 apply의 전체 scan/renumber/Full 전개/unchanged copy metric 0
-- 기존 ChunkDomain 회귀, Unity EditMode, 프로젝트 compile과 `git diff --check` 통과
-- Scene·Prefab·설정·Shader·asmdef diff 없음
+- 1000×1000 초기 state와 100 queued expansion이 source revision 순서대로 완료되고
+  동기 persistent chain과 최종 exact state가 일치한다.
+- 매 정상 apply의 source-wide Boundary/Full scan, global renumber, Full Chunk 전개와
+  unchanged-node copy metric이 0이다.
+- invalid geometry, cancellation, stale publish와 teardown이 partial state를 공개하지 않는다.
+- State Authority만 session당 work item을 한 번 enqueue하고 Host/Client Runner 역할에
+  따라 pure result가 달라지지 않는다.
+- schedule/poll/publish main-thread marker와 worker elapsed/work/queue metrics가 제공된다.
+- 기존 ChunkDomain 회귀, Unity EditMode, project compile과 `git diff --check`가 통과한다.
+- 실제 Host와 Client에서 각 Runner의 걷기·달리기, 긴 Trail, 연속 확장, 자기 교차 Abort,
+  teardown과 Profiler를 검증한다.
 
 ## Current evidence
 
-- 신규 source를 포함한 순수 ChunkDomain compile: warning 0, error 0.
-- 신규 persistent compact 테스트 7개와 기존 회귀를 직접 실행해 73/73 통과.
-- budget 1/10000 apply의 revision, exact area, Boundary count, next stable identity와
-  algorithmic metrics가 동일하고 모든 호출이 전달 budget 이하를 사용했다.
-- 1000×1000 world에서 compact result를 다음 C008/C009 입력으로 직접 사용해 100회
-  연속 확장했다. retained identity가 유지됐고 매 회 전체 Boundary/Full scan,
-  global renumber, Full Chunk 전개와 unchanged-node copy metrics는 모두 0이었다.
-- 기존 C008/C009 exact Trail, 실패 원자성과 1000×1000 회귀를 포함해 통과했다.
-- 작업자가 Unity import/Console compile과 안내된 Territory EditMode 전체 검증을
-  완료했다.
-- Unity가 재생성한 현재 solution에서 `dotnet build ProjectIO.slnx`는 오류 0개,
-  기존 warning 25개로 통과했다.
+- 신규 worker 테스트 2개와 기존 ChunkDomain 회귀 직접 실행 75/75 통과.
+- 1000×1000 initial state에서 미리 준비한 100 request를 선행 enqueue하고 revision 순서,
+  동기 reference와 최종 Boundary area/count/identity 일치를 확인했다.
+- 100회 모두 source-wide scan/renumber/Full 전개/unchanged copy metric 0.
+- invalid geometry 뒤 candidate 비공개, worker fault와 후속 enqueue 거부, source 보존 통과.
+- 신규 source를 명시적으로 포함한 `dotnet build ProjectIO.slnx --no-restore` 오류 0개,
+  기존 warning 25개.
+- 작업자가 Unity import/Console compile, Territory EditMode와 안내된 Host-local/Client
+  Runner의 걷기·달리기·긴 Trail·연속 확장·자기 교차 Abort·teardown 및 Profiler
+  runtime 검증을 완료했다.
 
 ## Rollback
 
-신규 C010 순수 Domain/test 파일과 기존 C008/C009 stable identity 연결 diff를 되돌리면
-W-006 상태로 복원된다. Runtime 연결이 없어 현재 Legacy gameplay rollback은 없다.
+신규 C011 worker/adapter/test와 `TerritorySystem` 및 Trail recorder 연결 diff를 되돌리면
+W-007 상태로 복원된다. Legacy gameplay가 계속 authoritative이므로 gameplay data
+migration이나 Scene rollback은 없다.
 
 ## Out of scope
 
-Job/Burst worker와 frame budget adapter, State Authority runtime 적용, compact delta
-복제, exact renderer, consumer migration, Legacy 제거, Late Join/reconnect/AOI/security.
+compact delta 복제, exact renderer, consumer migration, authoritative cutover, Legacy
+제거, Native/Burst 가속, GPU 표시, Late Join/reconnect/AOI/security.
 
 ## Next bounded milestone
 
-Unity 검증과 W-007 최종 Commit·Push 뒤 persistent planner/materializer/apply를 frame
-budget과 Job/Burst worker에 연결하고 State Authority shadow에서 실제 비용을 profile한다.
-결과 모양과 C010 저장 계약은 바꾸지 않으며 Fusion 권위 전환과 presentation은 별도
-milestone으로 유지한다.
+작업자의 Unity 및 Host·Client Profiler 검증과 W-008 최종 Commit·Push 뒤 C010 changed
+Boundary/Full row를 고정 2인 Client Proxy에 bounded delta로 복제한다. reconnect/Late Join
+복잡성은 추가하지 않고 exact presentation에 필요한 현재 session 동시성만 준비한다.

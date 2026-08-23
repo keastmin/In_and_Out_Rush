@@ -20,8 +20,11 @@
 6.2. **Complete** — compact materialization을
    직접 보존하는 persistent store apply. C006 개별 Full/전역 sequence로 재전개하지
    않고 100회 연속 확장 stress와 Unity 검증을 통과했다.
-6.3. **Planned** — persistent planner/materializer/apply를 frame budget과 Job/Burst
-   worker에 연결하고 State Authority shadow에서 profile한다.
+6.3. **Complete** — confirmed Trail을 증분 수집하고 persistent
+   planner/materializer/apply를 단일 background CPU worker와 State Authority shadow에
+   연결했다. main thread는 schedule과 frame당 한 result publish만 수행하며
+   Host-local/Client Runner runtime과 Profiler 검증을 완료했다.
+6.3.1. **Planned** — C010 changed Boundary/Full row의 고정 2인 compact delta 복제
 6.4. **Planned** — exact Chunk presentation; GPU는 정밀도를 바꾸지 않는 표시 가속이
    실제 profile로 필요한 경우에만 사용
 7. **Planned** — one consumer migration per milestone: containment, Grid, Fog, Resource,

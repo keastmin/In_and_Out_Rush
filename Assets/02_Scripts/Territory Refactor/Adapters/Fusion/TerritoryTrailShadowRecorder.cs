@@ -17,6 +17,7 @@ namespace ProjectIO.Territory
         public bool IsRecording { get; private set; }
         public ulong CurrentSessionId => _currentSessionId;
         public IReadOnlyList<TerritoryTrailSample> Samples => _session.Samples;
+        public IReadOnlyList<TerritoryTrailFragment> Fragments => _session.Fragments;
         public bool HasLastComparison { get; private set; }
         public ulong LastSessionId { get; private set; }
         public TerritoryTrailSessionStatus LastTerminalStatus { get; private set; }

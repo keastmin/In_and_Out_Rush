@@ -204,8 +204,30 @@ Status: Approved
   scheduling, State Authority runtime 연결, compact delta 복제와 exact presentation은
   후속 계약이다.
 
+## C011 Ordered background compact expansion shadow
+
+Status: Approved
+
+- State Authority는 C006 최초 snapshot을 C010 compact state로 한 번만 변환한다.
+  이후 정상 확장은 C006 개별 Full Chunk나 전역 sequence로 되돌아가 재구축하지 않는다.
+- confirmed `TerritoryTrailFragment`는 Runner 이동 중 새로 닫힌 fragment만 증분
+  수집한다. terminal에서 전체 긴 Trail을 다시 복사하지 않고 수집 list의 소유권을
+  immutable work item으로 넘긴다.
+- 단일 background CPU worker는 work item을 expected source revision 순서대로 처리한다.
+  각 item은 같은 pure C008 planner, C009 materializer와 C010 apply를 사용하며 다음
+  item은 직전 성공 candidate를 source로 사용한다.
+- worker는 Unity API, Fusion API, Scene object, Legacy `Territory`와 renderer에 접근하지
+  않는다. 완료 result는 thread-safe queue를 거쳐 State Authority main thread가 한
+  frame에 최대 한 건씩 poll하고 같은 source object/revision일 때만 Store에 publish한다.
+- failure, cancellation, stale publish와 teardown은 pending request/result를 소각하고
+  마지막 published compact snapshot과 Legacy gameplay를 보존한다.
+- C011 exact geometry에는 CPU/GPU fallback이나 별도 Burst geometry를 두지 않는다.
+  현재 `decimal` 및 persistent managed tree를 Native 알고리즘으로 복제하지 않으며,
+  profile로 독립 배열 병목이 확인될 때만 후속 계약에서 Burst 후보를 분리한다.
+- 이번 계약은 runtime shadow와 profile까지만 소유한다. Legacy polygon, C006/C007
+  replication, vertex RPC, mesh와 consumer가 계속 gameplay 및 Peer 표시를 소유한다.
+
 ## Future contracts not approved here
 
-- persistent compact state의 frame/Job scheduling과 State Authority shadow 연결
 - compact changed-state delta replication
 - exact Chunk presentation and consumer cutover

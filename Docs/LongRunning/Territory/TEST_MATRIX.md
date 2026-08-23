@@ -28,13 +28,16 @@
 | C008 invalid Trail 원자성 | gap, self-intersection, Boundary overlap, 추가 crossing, Abort 통과 | runtime integration |
 | C008 1000×1000 stress | terminal Boundary/Trail scan 0, Chunk-local 후보 검사 통과 | Unity Profiler integration |
 | C009 exact changed-region | Trail과 교체 arc의 fixed local segment, same-sequence 접점 통과 | persistent store apply |
-| C009 bounded work | budget 1과 10000 결과·metrics 동일, 호출 budget 상한 통과 | Job/Burst frame scheduler |
+| C009 bounded work | budget 1과 10000 결과·metrics 동일, 호출 budget 상한 통과 | background worker profile |
 | C009 compressed Full | 1000×1000 stress에서 개별 Full 대신 행 run, source scan/renumber 0 | runtime memory/Profiler |
 | C009 원자성 | 완료 전 비공개, Abort/revision mismatch 소각, session 재사용 뒤 이전 결과 불변 통과 | authoritative apply |
 | C010 최초 compact 변환 | CW/CCW canonical화, stable identity, 1000×1000 Full row 압축과 exact area 통과 | Unity EditMode |
-| C010 persistent Boundary | stable lookup/order/prefix area, endpoint splice와 retained identity 보존 통과 | Job/Burst profile |
+| C010 persistent Boundary | stable lookup/order/prefix area, endpoint splice와 retained identity 보존 통과 | background worker profile |
 | C010 bounded atomic apply | budget 1/10000 결과·metrics 동일, 완료 전 비공개, Abort/stale Store 소각 통과 | State Authority shadow |
 | C010 100회 연속 확장 | 1000×1000에서 compact result로 다음 C008/C009 직접 반복, 매 회 source-wide scan/renumber/Full 전개 0 | Unity Profiler |
+| C011 ordered background queue | 1000×1000 기반 100 request 선행 enqueue, revision 순서와 동기 reference 최종 state 일치 | Host·Client runtime |
+| C011 failure/teardown 원자성 | invalid geometry 뒤 worker fault와 후속 enqueue 거부, source revision 보존 통과 | PlayMode teardown |
+| C011 main-thread 경계 | 이동 중 fragment 증분 drain, frame당 최대 한 result publish와 Profiler marker 구현 | Unity Profiler |
 
 Unity 6000.0.69f1 EditMode 25/25 passed다. 신규 packetizer/receiver/codec 7개와
 기존 fixed/traversal/session/shadow comparer 회귀를 포함한다. Client 걷기 거리
@@ -86,3 +89,12 @@ Boundary/Full scan, global renumber, Full Chunk 전개와 unchanged-node copy me
 모두 0이었다. 작업자가 Unity import/Console compile과 Territory EditMode 전체 검증을
 완료했다. Unity가 재생성한 solution의 `dotnet build ProjectIO.slnx`는 오류 0개,
 기존 warning 25개로 통과했다.
+
+W-008 신규 background worker assertion 2개를 포함해 현재 ChunkDomain 회귀를 직접
+실행했고 75/75 통과했다. 1000×1000 초기 state에서 미리 준비한 100 expansion request를
+선행 enqueue한 뒤 revision 순서, 동기 persistent chain과 최종 Boundary area/count/identity,
+매 apply의 전체 scan/renumber/Full 전개/unchanged copy 0을 확인했다. invalid geometry는
+candidate를 publish하지 않고 worker를 fault 처리해 후속 request를 거부했다. 신규 source를
+명시적으로 포함한 project compile은 오류 0개, 기존 warning 25개다. 작업자가 Unity
+import/Console compile, Territory EditMode, Host-local/Client Runner 걷기·달리기·긴
+Trail·연속 확장·자기 교차 Abort·teardown과 Profiler runtime 검증을 완료했다.

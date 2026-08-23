@@ -1,6 +1,6 @@
 # W-20260822-008 백그라운드 정밀 확장 Shadow
 
-Status: Reserved
+Status: Complete
 
 ## 동기화 기준
 
@@ -191,11 +191,40 @@ ProjectSettings와 Inspector 참조를 변경하지 않는다. Unity가 자동 �
 
 ## 실제 변경
 
-예약 단계. 아직 구현하지 않음.
+- confirmed Trail fragment를 복사 없이 소유권 이전할 수 있는
+  `TerritoryCompactExpansionWorkItem`을 추가했다.
+- expected source revision 순서대로 요청을 직렬 처리하는 단일
+  `TerritoryCompactExpansionWorker`를 추가했다. worker는 순수 C008 -> C009 -> C010을
+  background thread에서 실행하고 성공 candidate를 다음 queued source로 사용한다.
+- worker result와 fragment 수, elapsed time, worker thread, plan/materialization/apply
+  metrics를 분리한 측정 구조를 추가했다.
+- `TerritoryCompactExpansionShadow`가 최초 C006 snapshot을 한 번 compact 변환하고,
+  이동 중 새 confirmed fragment만 drain하며, 완료 result를 main thread에서 한 건씩
+  `TerritoryCompactStore`에 publish하도록 구현했다.
+- `TerritoryTrailShadowRecorder`가 immutable confirmed fragment view를 제공하도록 했다.
+- `TerritorySystem` State Authority 경로에 초기화, fragment drain, 성공 재진입 schedule,
+  `Render` completion publish, Abort와 teardown cancellation을 연결했다.
+- schedule/publish Profiler marker와 debug revision/fragment/work/elapsed/queue log를
+  추가했다.
+- 100 queued expansion ordering/reference 일치와 failure 원자성 worker 테스트를 추가했다.
+- C011 계약과 기능/milestone/handoff/roadmap/test 문서를 갱신했다.
 
 ## 검증 결과
 
-예약 단계. 아직 실행하지 않음.
+- 신규 worker assertion 2개와 기존 ChunkDomain 회귀를 직접 실행해 75/75 통과했다.
+- 1000×1000 initial state에서 동기 reference로 미리 만든 100 request를 이전 완료 전에
+  모두 enqueue했다. publish revision 순서와 최종 Boundary area/count/identity가 동기
+  reference와 일치했다.
+- 각 worker apply의 source-wide Boundary/Full scan, global renumber, Full Chunk 전개와
+  unchanged-node copy metrics가 모두 0이었다.
+- invalid geometry는 candidate를 publish하지 않고 worker를 fault 처리했으며 후속
+  enqueue를 거부하고 initial source revision을 보존했다.
+- Unity 생성 project를 수정하지 않고 신규 source를 validation target으로 명시한
+  `dotnet build ProjectIO.slnx --no-restore`가 오류 0개, 기존 warning 25개로 통과했다.
+- `git diff --check` 통과.
+- 작업자가 Unity import/Console compile, Territory EditMode와 안내된 Host-local/Client
+  Runner의 걷기·달리기·긴 Trail·연속 확장·자기 교차 Abort·teardown 및 Profiler
+  runtime 검증을 완료했다.
 
 ## 남은 위험
 
@@ -207,3 +236,6 @@ ProjectSettings와 Inspector 참조를 변경하지 않는다. Unity가 자동 �
   권위 전환은 후속 replication/presentation milestone 전까지 체감에 반영되지 않는다.
 - .NET thread pool scheduling과 Unity 플랫폼별 지원은 Editor/목표 빌드 profile이
   필요하다. 지원하지 않는 플랫폼을 위한 동시 CPU/GPU fallback은 이번에 만들지 않는다.
+- 현재 main thread에는 Legacy polygon 확장, C006 전체 shadow rebuild, mesh와 vertex
+  RPC 비용이 남아 있다. 이번 worker만으로 현재 gameplay 전체 frame spike가 사라졌다고
+  판단하면 안 되며 authoritative/consumer cutover가 후속으로 필요하다.

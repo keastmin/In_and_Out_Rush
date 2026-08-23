@@ -4,8 +4,8 @@ Status: Reserved
 
 ## 동기화 기준
 
-- Base Commit: `b807704341af7dcd2c39d1de85971efdbaa44011`
-- 공용 Upstream: `origin/rebuild-development-environment`
+- Base Commit: b807704341af7dcd2c39d1de85971efdbaa44011
+- 공용 Upstream: origin/rebuild-development-environment
 
 ## 담당자
 
@@ -141,4 +141,3 @@ Territory 영역 확장 계산, 완료 결과의 State Authority 공개와 두 P
   독립된 작은 작업으로 다룬다.
 - exact 결과 크기와 계산 총 latency는 경계 정점 수에 비례한다. background 실행은 frame
   정지를 막지만 결과가 완성되는 실제 시간 자체를 0으로 만들지는 않는다.
-

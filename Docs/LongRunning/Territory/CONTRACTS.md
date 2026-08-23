@@ -250,6 +250,34 @@ Status: Approved
   유한 메모리에서 무한 이력을 약속하는 것이 아니라 append·packetize·표시 hot path에서
   누적 전체 이력 재할당과 재구축을 제거하는 것이다.
 
+## C013 Simple background authoritative polygon expansion
+
+Status: Approved
+
+- State Authority는 정상 재진입 terminal에서 현재 완료 Territory vertex와 authoritative
+  confirmed Trail을 독립 배열로 snapshot하고 한 번에 하나의 background CPU 작업만
+  실행한다.
+- worker는 worker-local `Territory`에서 polygon 확장, finite/simple polygon 검증,
+  triangulation과 결과 packetization까지 완료한다. Unity Mesh, Scene object, Fusion RPC와
+  gameplay event에는 접근하지 않는다.
+- prototype vertex count 상한, RDP 또는 tolerance 기반 단순화를 사용하지 않는다.
+  부동소수점 연산의 기존 `0.0001` 수치 안정성 범위에서 같은 점·공선 중간점을 정리하는
+  것 외에 Trail 모양을 성능 목적으로 변경하지 않는다.
+- 계산 중에는 마지막 완료 Territory가 authoritative query와 presentation을 계속 소유하며
+  simulation, 입력, 이동과 Render를 차단하지 않는다. 동시에 두 확장 mutation을 계산하지
+  않고 다음 획득 Trail은 완료 적용 뒤 현재 위치부터 시작한다.
+- main thread는 source revision이 현재 revision과 같은 성공 결과만 한 번 Mesh,
+  `Territory.Vertices`와 consumer event에 적용한다. 실패·취소·stale 결과는 이전 Territory를
+  보존하고 worker를 영구 fault시키지 않는다.
+- Host-local Runner와 Client Runner는 같은 State Authority schedule 계약을 사용한다.
+  완료 vertex는 float bit 그대로, triangle index는 worker 결과 그대로 최대 48-word Reliable
+  packet과 simulation tick당 최대 2 data packet으로 Proxy에 보낸다.
+- Proxy는 begin/data/terminal, revision, 전체 크기, finite vertex와 triangle index를
+  검증하고 terminal에서만 같은 결과를 적용한다. Proxy에서 polygon 계산이나 재삼각분할을
+  하지 않는다.
+- C008-C011 compact 경로는 C013 active gameplay 확장을 계산·적용하지 않는다. GPU,
+  Burst, Job System, CPU/GPU fallback, Late Join과 reconnect는 이 계약 범위 밖이다.
+
 ## Future contracts not approved here
 
 - compact changed-state delta replication

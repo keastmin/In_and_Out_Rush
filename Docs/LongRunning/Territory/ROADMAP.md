@@ -29,6 +29,12 @@
    planner/materializer/apply를 단일 background CPU worker와 State Authority shadow에
    연결했다. main thread는 schedule과 frame당 한 result publish만 수행하며
    Host-local/Client Runner runtime과 Profiler 검증을 완료했다.
+6.3.2. **Complete** — active gameplay 확장을 C008-C011
+   compact shadow에서 분리하고 State Authority의 단일 background polygon worker로
+   교체했다. 계산·검증·triangulation·packetization은 worker에서 완료하고 main thread는
+   revision 검증 뒤 결과만 적용한다. 48-word packet과 tick당 2 data packet으로 기존
+   Proxy에 동일 float bit와 triangle index를 전달한다. 작업자가 Host-local/Client Runner
+   양방향 확장과 계산 중 플레이 연속성을 확인했다.
 6.3.1. **Paused** — C010 changed Boundary/Full row의 고정 2인 compact delta 복제
 6.4. **Paused** — exact Chunk presentation; GPU는 정밀도를 바꾸지 않는 표시 가속이
    실제 profile로 필요한 경우에만 사용
@@ -36,8 +42,8 @@
    Monster and remaining consumers
 8. **Paused** — authoritative cutover, serialized presentation cutover and Legacy removal
 
-현재 제품 우선순위는 3.1의 장거리 Trail 안정성 하나다. 영역 확장 관련 paused 항목은
-작업자가 목표를 다시 지정하기 전까지 다음 milestone으로 자동 선택하지 않는다.
+현재 제품 우선순위인 3.1 장거리 Trail 안정성과 6.3.2 계산 중 frame 연속성 구현을
+완료했다. 추가 영역 확장 기능을 자동으로 시작하지 않는다.
 
 각 task는 위 milestone 하나 또는 한 consumer만 구현한다. 다음 milestone은 현재
 handoff에 시작 파일과 rollback을 준비한 뒤 별도 Active reservation으로 시작한다.

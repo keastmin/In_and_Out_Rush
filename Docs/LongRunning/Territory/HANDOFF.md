@@ -1,5 +1,27 @@
 # Handoff
 
+## Current W-20260823-002 outcome
+
+active gameplay 영역 확장을 C008-C011 compact shadow와 동기 main-thread 계산에서 분리하고
+State Authority의 단일 background polygon worker로 교체했다. 재진입 frame은 source
+Territory와 authoritative Trail snapshot을 넘기고, worker가 polygon 확장·검증·
+triangulation·bounded packetization을 모두 완료한다. main thread는 source revision이
+현재와 같은 성공 결과만 Mesh, Territory와 consumer event에 한 번 적용한다.
+
+prototype 256 vertex budget과 tolerance 기반 RDP 단순화를 제거했다. 완료 vertex의 float
+bit와 triangle index를 최대 48-word Reliable packet, simulation tick당 최대 2 data
+packet으로 Proxy에 보내며 Proxy는 terminal에서만 동일 결과를 적용한다. 실패한 작업은
+마지막 Territory를 보존하고 worker를 영구 fault시키지 않는다.
+
+Unity가 재생성한 `Assembly-CSharp`와 `Assembly-CSharp-Editor` build는 모두 오류 0개다.
+300개 이상 유효 Trail 꺾임의 worker-thread 계산, 256 초과 결과 vertex, packet
+round-trip 완전 일치, 실패 후 다음 정상 확장 복구와 tick당 data packet 2개 상한 테스트
+3/3이 통과했다. 작업자가 Host-local/Client Runner 양방향 확장, 계산 중 플레이 연속성,
+양쪽 Peer 결과 모양, 연속 확장과 compact 오류 미발생을 수동 확인했다. 정량 Profiler
+수치는 측정하지 않았다.
+
+Scene, Prefab, Inspector와 serialized data 변경은 없다.
+
 ## Completed outcome
 
 W-20260823-001 C012 구현과 Client Input Authority runtime 체감 검증을 완료했다.
@@ -156,12 +178,14 @@ W-008은 visible 결과를 바꾸지 않으므로 양쪽 Peer의 Trail/영역 �
 
 ## Remaining legacy consumers
 
-authoritative expansion, State Authority compact apply, replication, containment, mesh,
-Grid, Fog, Resource, Monster, vertex RPC와 presentation은 모두 Legacy/C006 shadow 경로다.
+authoritative 영역 상태, containment, mesh, Grid, Fog, Resource와 Monster consumer는
+Legacy polygon을 계속 사용한다. active expansion 계산은 C013 background worker이고,
+결과 replication은 C013 bounded result packet 경로다. C006-C011 compact state/replication은
+active 표시와 consumer에 연결되지 않는다.
 
 ## Next starting files
 
-- 추가 milestone을 자동으로 시작하지 않는다.
+- W-20260823-002 완료 뒤 추가 milestone을 자동으로 시작하지 않는다.
 - 장기 Trail runtime Profiler에서 병목이 확인되면 해당 marker와
   `TerritoryTrailChunkRenderer`, `TerritorySystem`, `TerritoryTrailSession` 중 실제
   병목 파일만 다음 예약에 포함한다.

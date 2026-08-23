@@ -1,8 +1,8 @@
 # Territory
 
-Status: Migrating to chunk-based pipeline
+Status: Background authoritative polygon expansion active; chunk pipeline paused
 
-Last reviewed: 2026-08-22
+Last reviewed: 2026-08-23
 
 ## 책임
 
@@ -46,6 +46,10 @@ Last reviewed: 2026-08-22
 - 백그라운드 정밀 확장 기반: `TerritoryCompactExpansionWorkItem`,
   `TerritoryCompactExpansionWorker`, `TerritoryCompactExpansionWorkResult`,
   `TerritoryCompactExpansionShadow`
+- 현재 gameplay 확장 기반: `TerritoryBackgroundExpansionWorkItem`,
+  `TerritoryBackgroundExpansionWorker`, `TerritoryBackgroundExpansionResult`,
+  `TerritoryExpansionPresentationData`, `TerritoryExpansionResultPacketizer`,
+  `TerritoryExpansionResultReplica`, `TerritoryExpansionReplication`
 - State Authority adapter: `TerritoryTrailShadowRecorder`,
   `TerritoryTrailReplicationStream`, `TerritoryChunkReplicationStream`
 - `.agents/skills/build-chunk-territory/`
@@ -53,8 +57,10 @@ Last reviewed: 2026-08-22
 Input Authority owner는 local fixed Trail을 즉시 표시한다. State Authority는
 confirmed sample을 bounded Reliable packet으로 보내고 Proxy는 같은 ordered Chunk
 path와 Unreliable live head를 표시한다. 현재 확장 결과와 모든 consumer에는 계속
-Legacy polygon만 authoritative하며 prediction이나 transport mismatch가 게임 결과를
-결정하지 않는다.
+Legacy polygon이 authoritative하다. 단, 재진입 frame에서 동기 계산하지 않고 State
+Authority가 source polygon과 confirmed Trail snapshot을 단일 background CPU worker에
+넘긴다. worker가 polygon 확장·검증·triangulation·bounded packet 준비를 완료한 뒤
+main thread가 같은 결과를 Host와 Proxy에 원자 적용한다.
 
 장기 Trail sample, fragment, owner prediction과 renderer pool은 256개 단위 fixed block에
 append한다. 같은 Chunk에 계속 머무르는 경로도 fragment당 최대 256 point로 나누고
@@ -108,8 +114,16 @@ apply를 실행하며 완료 결과는 `Render`에서 한 건씩 stale source �
 worker는 Unity/Fusion API에 접근하지 않고 실패·취소·teardown은 마지막 compact
 revision과 Legacy gameplay를 보존한다. exact 도메인의 `decimal`과 persistent managed
 tree를 복제하는 Burst/GPU 이중 경로는 만들지 않았으며 profile 결과로 독립 배열 병목이
-확인될 때만 후속 가속 후보를 정한다. 아직 compact delta, Proxy 표시와 authoritative
-cutover에는 연결되지 않아 보이는 영역과 consumer는 계속 Legacy 경로다.
+확인될 때만 후속 가속 후보를 정한다. 이 compact shadow는 현재 gameplay 확장에서
+연결 해제됐으며 진단·연구 코드로만 남아 있다.
+
+현재 active 확장은 C013 단순 background polygon 경로 하나다. 계산이 진행되는 동안
+마지막 완료 Territory로 판정·표시하고 Runner와 Fusion simulation은 계속 진행한다.
+입력 Trail에는 prototype vertex budget이나 tolerance 단순화를 적용하지 않는다.
+완료 vertex의 float bit와 worker가 만든 triangle index를 최대 48-word Reliable packet,
+tick당 최대 2 data packet으로 Proxy에 보내며 terminal 이전에는 보이는 Territory를
+바꾸지 않는다. 계산 중에는 다음 획득 Trail을 시작하지 않고 완료 뒤 현재 위치에서 다시
+시작한다. Mesh upload와 consumer event만 Unity main thread에서 실행한다.
 
 ## 주요 소비자
 
@@ -145,6 +159,12 @@ Grid 표시, Fog of War, Resource 수집·Spawn, Track·World Monster, Sacred Zo
 - C011 worker는 State Authority에서만 session당 한 번 enqueue되는지, confirmed
   fragment drain이 이동 중 증분인지, queued source revision과 main-thread publish가
   같은 순서인지, teardown 뒤 완료 결과가 공개되지 않는지 확인한다.
+- C013 worker는 재진입 frame에서 polygon 검증·triangulation을 실행하지 않는지,
+  source revision당 한 결과만 적용되는지, 256개가 넘는 유효 Trail 꺾임이 그대로
+  유지되는지, packet당 48 word와 tick당 2 data packet 상한을 지키는지 확인한다.
+- C013 계산 실패는 마지막 완료 Territory를 보존하고 다음 정상 확장을 다시 예약할 수
+  있어야 한다. Host-local/Client Runner 양쪽에서 계산 중 이동·렌더링·Fusion tick과
+  terminal 동시 적용 체감을 실제 runtime과 Profiler로 확인한다.
 
 ## 외부 강제 이동 사선 중단
 
@@ -157,6 +177,8 @@ Grid 표시, Fog of War, Resource 수집·Spawn, Track·World Monster, Sacred Zo
 ## 기술 부채
 
 현재 기능 문서와 장기 milestone 문서가 분리되어 있지 않은 부분이 있다. Territory Skill은 장기 마이그레이션 절차를 계속 소유한다.
-Legacy polygon은 계속 authoritative다. 이번 성능 slice의 bounds index와 mesh
-data는 Chunk Territory cutover가 아니며, 공개 mutable `Vertices`를 직접 쓰는
-새 소비자를 추가하지 않는다.
+Legacy polygon은 계속 authoritative지만 확장 계산은 C013 background worker에서만
+실행된다. 현재 계산은 정확한 결과를 우선한 기존 polygon 알고리즘이므로 총 latency와
+메모리는 입력 vertex 수에 따라 증가한다. main-thread frame 중단을 제거하는 것과 총
+계산 시간을 0으로 만드는 것은 구분하며, 실제 병목이 확인될 때만 알고리즘 교체를 별도
+예약한다. 공개 mutable `Vertices`를 직접 쓰는 새 소비자를 추가하지 않는다.

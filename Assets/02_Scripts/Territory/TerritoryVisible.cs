@@ -16,32 +16,33 @@ namespace Dev.Local
 
         public void SetVertices(List<Vector2> vertices)
         {
-            SetMesh(Territory.GenerateMesh(vertices));
+            TrySetMesh(Territory.GenerateMesh(vertices));
         }
 
-        public void SetMeshData(TerritoryMeshData meshData)
+        public bool SetMeshData(TerritoryMeshData meshData)
         {
-            SetMesh(Territory.GenerateMesh(meshData));
+            return TrySetMesh(Territory.GenerateMesh(meshData));
         }
 
-        private void SetMesh(Mesh mesh)
+        private bool TrySetMesh(Mesh mesh)
         {
             if (_meshFilter == null && !TryGetComponent(out _meshFilter))
             {
                 Debug.LogError($"{nameof(TerritoryVisible)} requires a {nameof(MeshFilter)}.");
-                return;
+                return false;
             }
 
             if (mesh == null)
             {
                 Debug.LogError("Territory mesh update skipped because the polygon is invalid.");
-                return;
+                return false;
             }
 
             Mesh previousMesh = _meshFilter.mesh;
             _meshFilter.mesh = mesh;
             if (previousMesh != null)
                 Destroy(previousMesh);
+            return true;
         }
     }
 }

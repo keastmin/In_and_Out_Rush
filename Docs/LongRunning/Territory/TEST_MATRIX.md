@@ -41,6 +41,11 @@
 | C011 ordered background queue | 1000×1000 기반 100 request 선행 enqueue, revision 순서와 동기 reference 최종 state 일치 | Host·Client runtime |
 | C011 failure/teardown 원자성 | invalid geometry 뒤 worker fault와 후속 enqueue 거부, source revision 보존 통과 | PlayMode teardown |
 | C011 main-thread 경계 | 이동 중 fragment 증분 drain, frame당 최대 한 result publish와 Profiler marker 구현 | Unity Profiler |
+| C013 background polygon worker | 300개 이상 Trail 꺾임을 worker thread에서 계산하고 prototype 단순화 없이 결과 vertex 256 초과 확인 | Unity Profiler |
+| C013 실패 복구 | invalid 확장 실패 뒤 같은 worker의 다음 정상 확장 성공 직접 validation 통과 | Host·Client 실패 후 재시도 |
+| C013 결과 codec | 최대 48-word packet, 연속 sequence, float bit/triangle 전체 round-trip 직접 validation 통과 | Fusion traffic 확인 |
+| C013 원자 적용 | source revision 검증과 terminal 전 비공개 구현 | Host-local/Client Runner 연속 확장 |
+| C013 tick 전송 예산 | data packet 최대 2/tick 구현 | Fusion runtime/Profiler |
 
 Unity 6000.0.69f1 EditMode 25/25 passed다. 신규 packetizer/receiver/codec 7개와
 기존 fixed/traversal/session/shadow comparer 회귀를 포함한다. Client 걷기 거리
@@ -111,3 +116,12 @@ Unity generated reference warning 4개다. Unity batch import는 licensing/headl
 runtime/Profiler 검증이 남아 있었다. 작업자는 이후 Client Input Authority Runner의
 실제 플레이에서 선 연속성과 좋은 체감을 확인했다. Host-local 장기 실행과 Profiler
 수치 검증은 수행하지 않았다.
+
+W-20260823-002 C013 신규 worker/codec/replica 테스트 3개가 직접 실행으로 3/3 통과했다.
+Unity가 재생성한 `Assembly-CSharp`와 `Assembly-CSharp-Editor` build도 오류 0개다. 300개
+이상의 유효 지그재그 Trail을 main thread와 다른 worker thread에서 확장한 결과가 256
+vertex를 넘었고 packet 분할·재조립 뒤 모든 float vertex와 triangle index가 동일했다.
+invalid 작업 뒤 같은 worker의 다음 정상 작업도 성공했고 outbound drain은 tick당 data
+packet 2개 상한을 지켰다. 작업자가 Host-local/Client Runner 양방향 정상 확장, 계산 중
+플레이 연속성, 양쪽 Peer 결과 모양, 연속 확장과 compact 오류 미발생을 확인했다. 정량
+Profiler 수치는 측정하지 않았다.

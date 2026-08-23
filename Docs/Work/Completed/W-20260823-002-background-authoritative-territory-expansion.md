@@ -1,10 +1,10 @@
 # W-20260823-002 단순 백그라운드 권위 영역 확장 교체
 
-Status: Reserved
+Status: Complete
 
 ## 동기화 기준
 
-- Base Commit: 528de917e063cb1ecd837f99c9ff3b3cb2268c55
+- Reservation Commit: 1e4469621ed4ba7f28c6876b503640b4ac4eda55
 - 공용 Upstream: origin/rebuild-development-environment
 
 ## 담당자
@@ -135,12 +135,30 @@ Territory 영역 확장 계산의 전면 교체, 백그라운드 실행과 두 P
 
 ## 실제 변경
 
-이전 W-002 미커밋 구현은 작업자의 명시적 승인으로 모두 제거했다. 새 교체 구현 전.
+- 이전 W-002 compact 연결 미커밋 구현은 작업자의 명시적 승인으로 모두 제거했다.
+- `TerritorySystem` active 확장을 단일 State Authority background worker로 교체했다.
+- worker가 source/path snapshot으로 polygon 확장, 검증, triangulation과 packetization을
+  완료하고 main thread가 revision 확인 뒤 Mesh/Territory/event를 한 번 적용한다.
+- 기존 prototype 256 vertex budget과 tolerance 기반 RDP 단순화 경로를 제거했다.
+- 완료 vertex float bit와 triangle index를 48-word packet, tick당 최대 2 data packet으로
+  Proxy에 보내고 terminal에서만 동일 결과를 적용한다.
+- compact C008-C011 runtime 호출과 동기 확장/vertex RPC는 active 확장 경로에서 제거했다.
+- Scene, Prefab과 Inspector 변경은 없다.
 
 ## 검증 결과
 
-`CheckStart` 기준 local/upstream이 528de917e063cb1ecd837f99c9ff3b3cb2268c55에서
-동기화됐고 다른 Active 예약은 없다.
+- `VerifyReservation`이 reservation commit
+  `1e4469621ed4ba7f28c6876b503640b4ac4eda55`에서 통과했고 다른 Active 예약은 없다.
+- Unity가 재생성한 `Assembly-CSharp`와 `Assembly-CSharp-Editor` build는 모두 오류 0개다.
+  기존 runtime warning 13개와 Editor warning 8개가 남는다.
+- 300개 이상 유효 Trail 꺾임의 background 계산, 256 초과 결과 vertex, 최대 48-word
+  packet과 float/triangle exact round-trip 테스트가 통과했다.
+- invalid 작업 뒤 같은 worker에서 다음 정상 확장을 처리하는 복구 테스트가 통과했다.
+- tick당 최대 2 data packet outbound budget 테스트를 포함한 신규 테스트 3/3이 통과했다.
+- `git diff --check`는 통과했다.
+- 작업자가 Host-local/Client Runner 양방향 정상 확장, 계산 중 플레이 연속성, 양쪽 Peer
+  결과 모양, 연속 확장과 compact 오류 미발생을 수동 확인했다.
+- 정량 Profiler 수치는 측정하지 않았으며 후속 성능 회귀에서 필요할 때 확인한다.
 
 ## 남은 위험
 

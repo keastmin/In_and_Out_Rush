@@ -53,6 +53,9 @@ Territory 영역 확장 계산, 완료 결과의 State Authority 공개와 두 P
 - `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryCompactExpansionWorker.cs`
 - `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryCompactExpansionWorkResult.cs`
 - `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryCompactCommitResult.cs`
+- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryBoundaryLoopIndex.cs`
+- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryPersistentBoundaryTree.cs`
+- `Assets/02_Scripts/Territory Refactor/ChunkDomain/TerritoryChunkExpansionMaterializationSession.cs`
 - 신규 exact presentation data/builder 및 bounded replication packet/stream 파일과 대응 `.meta`
 - `Assets/02_Scripts/Territory Refactor/ChunkDomain.Tests/TerritoryCompactExpansionWorkerTests.cs`
 - 신규 presentation/replication 회귀 테스트 파일과 대응 `.meta`
@@ -126,12 +129,38 @@ Territory 영역 확장 계산, 완료 결과의 State Authority 공개와 두 P
 
 ## 실제 변경
 
-예약 단계. 구현 전.
+- `TerritoryCompactExpansionWorker`가 C008-C010 candidate 뒤 ordered exact fixed Boundary,
+  triangle index와 최대 48-word packet을 같은 background thread에서 준비하도록 확장했다.
+- `TerritoryExpansionPresentationData`, `TerritoryCompactPresentationBuilder`, result packet,
+  packetizer와 atomic replica를 ChunkDomain에 추가했다.
+- 청크 분할로 생긴 exact collinear Boundary point를 삭제하지 않고, terminal collinear
+  remainder에는 zero-area triangle을 허용해 모든 vertex를 보존한다.
+- `TerritoryExpansionReplication`을 완료 result의 source/revision/count/sequence 검증,
+  tick당 최대 2 data packet outbound와 terminal inbound apply 흐름으로 교체했다.
+- `TerritorySystem` 재진입은 동기 Legacy `TryExpand`, 확장 뒤 C006 전체 rebuild와 vertex
+  RPC를 실행하지 않고 background work만 예약한다.
+- State Authority는 frame당 한 완료 revision을 Legacy Territory/Mesh/consumer에 한 번
+  적용하고 Proxy는 전체 terminal 뒤 같은 vertex/triangle을 재삼각분할 없이 적용한다.
+- Scene·Prefab·Inspector와 Trail C012 경로는 변경하지 않았다.
+- C013 계약, Territory 기능 문서와 milestone/handoff/roadmap/test matrix를 갱신했다.
+- 기울어진 Boundary와 Trail의 수학적 교차점이 fixed 정수 좌표 사이에 있을 때 독립 축 반올림
+  결과가 원래 선분에서 벗어나는 runtime 결함이 확인되었다. 일반 tolerance나 임의 스냅이
+  아니라 기존 `FixedTerritoryPoint` 양자화 계약인 축별 최대 0.5 fixed unit만 접점으로
+  인정하도록 경계 면적·materialization 검증을 일치시킨다. 입력 Trail point는 이동·삭제하지
+  않고 이미 산출된 fixed 접점도 다시 이동하지 않는다.
 
 ## 검증 결과
 
-예약 단계. `CheckStart`에서 local/upstream이 base commit 기준 동기화됐고 다른 Active 예약이
-없음을 확인했다.
+- `VerifyReservation`: implementation base
+  `ad402ea031a940ba743b029be2cf5ea17970ba8d`, 원격 Active 예약과 동기화 확인.
+- 신규 presentation/replica assertion 3개와 변경 worker assertion 2개 직접 실행 5/5 통과.
+- ordered Boundary vertex 수·순서 보존, `(N-2)*3` triangle, 48-word 다중 packet exact
+  round-trip, terminal 전 revision 보존과 packet gap Abort 통과.
+- 신규 source를 validation target으로 명시한 `ProjectIO.Territory.ChunkDomain.Tests.csproj`
+  compile 오류 0개, warning 0개.
+- 같은 source를 포함한 `Assembly-CSharp.csproj` compile 오류 0개, 기존 warning 16개.
+- Unity import/Fusion Weaver와 실제 Host-local/Client Runner runtime/Profiler는 작업자 검증
+  전이므로 완료로 표현하지 않는다.
 
 ## 남은 위험
 
@@ -141,3 +170,10 @@ Territory 영역 확장 계산, 완료 결과의 State Authority 공개와 두 P
   독립된 작은 작업으로 다룬다.
 - exact 결과 크기와 계산 총 latency는 경계 정점 수에 비례한다. background 실행은 frame
   정지를 막지만 결과가 완성되는 실제 시간 자체를 0으로 만들지는 않는다.
+- 결과가 완성된 뒤 fixed vertex를 Legacy `Vector2`로 복사하고 Unity Mesh를 upload하며 기존
+  consumer callback을 호출하는 최종 경계는 main thread다. 이 중 실제 spike가 확인되면
+  해당 presentation 또는 consumer 하나만 후속 작업으로 분리한다.
+- 고정 2인 시작 동시 접속 계약만 지원하며 Late Join/reconnect result recovery는 없다.
+- 정수가 아닌 실제 교차점을 `FixedTerritoryPoint`로 공개하는 과정에는 축별 최대 0.5 fixed
+  unit(월드 단위 약 0.001953)의 표현 오차가 필연적으로 존재한다. 이 범위를 넘는 접점은
+  계속 거부하며 기존 Boundary나 Trail을 임의로 보정하지 않는다.

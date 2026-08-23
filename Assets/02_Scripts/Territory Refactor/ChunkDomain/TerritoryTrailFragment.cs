@@ -6,6 +6,8 @@ namespace ProjectIO.Territory
 {
     public sealed class TerritoryTrailFragment
     {
+        public const int MaximumPointCount = 256;
+
         private readonly ReadOnlyCollection<FixedTerritoryPoint> _points;
 
         public TerritoryTrailFragment(
@@ -24,6 +26,12 @@ namespace ProjectIO.Territory
                 throw new ArgumentNullException(nameof(points));
             if (points.Count < 2)
                 throw new ArgumentException("A trail fragment requires at least two points.", nameof(points));
+            if (points.Count > MaximumPointCount)
+            {
+                throw new ArgumentException(
+                    $"A Trail fragment cannot contain more than {MaximumPointCount} points.",
+                    nameof(points));
+            }
 
             var copy = new FixedTerritoryPoint[points.Count];
             for (int i = 0; i < points.Count; i++)

@@ -76,6 +76,73 @@ namespace ProjectIO.Territory.Tests
             Assert.That(session.Fragments.Count, Is.EqualTo(1));
         }
 
+        [Test]
+        public void HundredThousandPointsInOneChunkRemainExactAcrossBoundedFragments()
+        {
+            const int pointCount = 100_000;
+            int chunkSize = TerritoryChunkCoordinate.SizeInFixedUnits;
+            var expected = new List<FixedTerritoryPoint>(pointCount);
+            var session = new TerritoryTrailSession();
+
+            FixedTerritoryPoint first = PointInChunk(0, chunkSize);
+            expected.Add(first);
+            Assert.That(session.TryBegin(Sample(77, 0, 0, first.X, first.Y), out _), Is.True);
+
+            for (int index = 1; index < pointCount; index++)
+            {
+                FixedTerritoryPoint point = PointInChunk(index, chunkSize);
+                expected.Add(point);
+                Assert.That(
+                    session.TryAppendSample(Sample(77, (uint)index, index, point.X, point.Y), out string reason),
+                    Is.True,
+                    reason);
+            }
+
+            Assert.That(session.TryCommit(77, out string commitReason), Is.True, commitReason);
+            Assert.That(session.Fragments.Count, Is.GreaterThan(1));
+
+            for (int index = 0; index < session.Fragments.Count; index++)
+            {
+                TerritoryTrailFragment fragment = session.Fragments[index];
+                Assert.That(fragment.Points.Count, Is.InRange(2, TerritoryTrailFragment.MaximumPointCount));
+                Assert.That(fragment.Chunk, Is.EqualTo(new TerritoryChunkCoordinate(0, 0)));
+                if (index > 0)
+                {
+                    Assert.That(
+                        session.Fragments[index - 1].Points[^1],
+                        Is.EqualTo(fragment.Points[0]));
+                }
+            }
+
+            var reconstructed = new List<FixedTerritoryPoint>(pointCount);
+            session.CopyFragmentPathTo(reconstructed);
+            Assert.That(reconstructed, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void FragmentRejectsMoreThanTheApprovedPointLimit()
+        {
+            var points = new FixedTerritoryPoint[TerritoryTrailFragment.MaximumPointCount + 1];
+            for (int index = 0; index < points.Length; index++)
+                points[index] = new FixedTerritoryPoint(index, 0);
+
+            Assert.That(
+                () => new TerritoryTrailFragment(
+                    91,
+                    0,
+                    new TerritoryChunkCoordinate(0, 0),
+                    0,
+                    (uint)(points.Length - 1),
+                    points),
+                Throws.ArgumentException);
+        }
+
+        private static FixedTerritoryPoint PointInChunk(int index, int chunkSize)
+        {
+            int width = chunkSize - 1;
+            return new FixedTerritoryPoint(index % width, (index / width) % width);
+        }
+
         private static TerritoryTrailSample Sample(
             ulong sessionId,
             uint sequence,

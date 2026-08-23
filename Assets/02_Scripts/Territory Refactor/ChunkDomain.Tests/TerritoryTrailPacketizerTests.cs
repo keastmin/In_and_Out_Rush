@@ -92,6 +92,69 @@ namespace ProjectIO.Territory.Tests
             Assert.That(decoded.Samples[1].Point, Is.EqualTo(new FixedTerritoryPoint(17, -33)));
         }
 
+        [Test]
+        public void HundredThousandPendingSamplesDrainAsBoundedExactPackets()
+        {
+            const int sampleCount = 100_000;
+            var packetizer = new TerritoryTrailPacketizer();
+            Assert.That(packetizer.TryBegin(101, out _), Is.True);
+
+            for (uint sequence = 0; sequence < sampleCount; sequence++)
+            {
+                Assert.That(
+                    packetizer.TryAppendSample(Sample(101, sequence, (int)sequence), out string reason),
+                    Is.True,
+                    reason);
+            }
+
+            uint expectedSequence = 0;
+            while (packetizer.PendingSampleCount > 0)
+            {
+                Assert.That(
+                    packetizer.TryTakePacket(
+                        TerritoryTrailPacket.MaximumSampleCount,
+                        out TerritoryTrailPacket packet,
+                        out string reason),
+                    Is.True,
+                    reason);
+                Assert.That(packet.Samples.Count, Is.InRange(1, TerritoryTrailPacket.MaximumSampleCount));
+                for (int index = 0; index < packet.Samples.Count; index++)
+                {
+                    Assert.That(packet.Samples[index].Sequence, Is.EqualTo(expectedSequence));
+                    expectedSequence++;
+                }
+            }
+
+            Assert.That(expectedSequence, Is.EqualTo((uint)sampleCount));
+            Assert.That(packetizer.TryCommit(out string commitReason), Is.True, commitReason);
+        }
+
+        [Test]
+        public void AppendingAfterPartialDrainPreservesTheUnreadSequence()
+        {
+            var packetizer = new TerritoryTrailPacketizer();
+            Assert.That(packetizer.TryBegin(102, out _), Is.True);
+
+            for (uint sequence = 0; sequence < 30; sequence++)
+                Assert.That(packetizer.TryAppendSample(Sample(102, sequence, (int)sequence), out _), Is.True);
+
+            Assert.That(packetizer.TryTakePacket(24, out TerritoryTrailPacket first, out _), Is.True);
+            Assert.That(first.FirstSampleSequence, Is.Zero);
+            Assert.That(packetizer.PendingSampleCount, Is.EqualTo(6));
+
+            for (uint sequence = 30; sequence < 36; sequence++)
+                Assert.That(packetizer.TryAppendSample(Sample(102, sequence, (int)sequence), out _), Is.True);
+
+            Assert.That(packetizer.TryTakePacket(24, out TerritoryTrailPacket second, out _), Is.True);
+            Assert.That(second.FirstSampleSequence, Is.EqualTo(24));
+            Assert.That(second.Samples.Count, Is.EqualTo(12));
+            for (int index = 0; index < second.Samples.Count; index++)
+                Assert.That(second.Samples[index].Sequence, Is.EqualTo((uint)(24 + index)));
+
+            Assert.That(packetizer.PendingSampleCount, Is.Zero);
+            Assert.That(packetizer.TryCommit(out _), Is.True);
+        }
+
         private static TerritoryTrailSample Sample(ulong sessionId, uint sequence, int tick)
             => new(
                 sessionId,

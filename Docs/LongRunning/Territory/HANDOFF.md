@@ -2,6 +2,12 @@
 
 ## Completed outcome
 
+W-20260823-001 C012 구현과 Client Input Authority runtime 체감 검증을 완료했다.
+Trail sample, fragment, owner prediction과 renderer pool은 fixed-size block에 append하며,
+같은 Chunk의 매우 긴 경로도 최대 256 point fragment로 exact endpoint를 공유해 나눈다.
+confirmed packet은 최대 24 sample을 유지하고 앞 packet 추출 때 남은 backlog 전체를
+이동하지 않는다. 영역 확장 계산과 결과는 변경하지 않았다.
+
 C011 background compact expansion shadow를 구현하고 작업자 runtime 검증을 완료했다.
 State Authority가 confirmed Trail fragment를 이동 중 증분 수집하고, 재진입 성공 뒤
 collection 소유권을 단일 background CPU queue에 넘긴다. worker는 C008-C010을 immutable
@@ -29,6 +35,12 @@ Trail part를 검증한 뒤 `TryStep(maxWorkUnits)`로 적용한다. terminal �
 renderer, Scene과 Inspector는 변경하지 않았다.
 
 ## Main changed files
+
+- `TerritoryAppendOnlyBlockList`
+- `TerritoryTrailSession`, `TerritoryTrailFragment`, `TerritoryTrailPacketizer`
+- `TerritoryTrailShadowRecorder`, `TerritoryTrailChunkRenderer`, `TerritorySystem`
+- block storage, 100,000 point fragment와 packet stress tests
+- C012/milestone/roadmap/test 문서
 
 - `TerritoryBoundarySegmentId`, `TerritoryCompactBoundarySegment`
 - `TerritoryPersistentAvlMap`, `TerritoryPersistentBoundaryTree`
@@ -64,6 +76,15 @@ renderer, Scene과 Inspector는 변경하지 않았다.
 
 ## Verification evidence
 
+- W-20260823-001 신규 parameterless NUnit assertion 직접 실행 74/74 통과
+- 같은 Chunk의 100,000 point를 최대 256 point fragment로 분할하고 point별 exact
+  round-trip 및 인접 endpoint 일치 확인
+- 100,000 pending sample을 최대 24 sample packet으로 연속 drain 확인
+- 신규 source 포함 ChunkDomain/tests compile error 0, generated reference warning 4
+- Unity batch import는 licensing/headless package 오류로 완료하지 못했으며 작업자
+  Client Input Authority 실제 플레이에서 선 연속성과 좋은 체감을 확인함
+- Host-local Runner 장기 실행과 Profiler 수치 검증은 수행하지 않음
+
 - 신규 source를 포함한 순수 ChunkDomain compile: warning 0, error 0
 - 신규 persistent compact 테스트 7개 포함 직접 회귀: 73/73 통과
 - 기존 exact Trail/교체 arc, invalid Trail, Abort/stale와 1000×1000 C008/C009 회귀 통과
@@ -89,6 +110,12 @@ renderer, Scene과 Inspector는 변경하지 않았다.
 Scene·Prefab·Inspector 연결 변경은 없다. W-007에 이어 작업자가 W-008의 다음 검증도
 완료했다.
 
+C012는 추가 Inspector 설정이 없다. 작업자는 Unity import/Console compile 후 Territory
+EditMode 전체를 실행하고, Host-local/Client Runner 각각에서 장시간 걷기·달리기·속도
+전환, 다른 Peer의 confirmed 선 연속성, 자기 교차 Abort와 정상 종료 정리를 확인한다.
+Profiler에서는 point 수가 늘어날수록 append frame 비용이 계속 증가하거나 닫힌
+LineRenderer 구간이 매 frame Rebuild되지 않는지 확인한다.
+
 1. 신규 script와 `.meta` import 및 Console compile error 없음
 2. EditMode `ProjectIO.Territory.Tests` 전체 통과
 3. 신규 `TerritoryCompactSnapshotTests`, `TerritoryPersistentBoundaryTreeTests`,
@@ -103,6 +130,15 @@ W-008은 visible 결과를 바꾸지 않으므로 양쪽 Peer의 Trail/영역 �
 회귀다. Scene 설정과 GPU 토글 검증은 필요하지 않다.
 
 ## Known risks and failures
+
+- exact 전체 경로를 삭제하지 않으므로 총 메모리는 point 수에 선형 비례한다. C012는
+  큰 연속 배열 재할당과 단일 거대 fragment를 제거하지만 유한 메모리에서 무한 경로를
+  보장하지 않는다.
+- 표시 구간은 LineRenderer당 256 point로 제한되지만 활성 renderer 총수는 경로 길이에
+  따라 증가한다. 실제 장기 Profiler에서 draw/culling 비용이 병목으로 확인될 때만
+  정확한 point storage와 분리된 presentation virtualization을 다음 작은 작업으로 다룬다.
+- suspension reconciliation과 Runner Item·Slash가 요청 시 전체 경로를 읽는 기존 경계는
+  이동 hot path가 아니다. 해당 동작에서 실제 spike가 재현되면 별도 범위로 측정·수정한다.
 
 - C008-C010 exact 계산은 background로 이동했지만 Legacy polygon 확장, C006 전체 shadow
   rebuild, mesh와 vertex RPC는 아직 main thread다. 전체 gameplay frame 비용 개선은
@@ -125,9 +161,8 @@ Grid, Fog, Resource, Monster, vertex RPC와 presentation은 모두 Legacy/C006 s
 
 ## Next starting files
 
-- `TerritoryCompactCommitResult`
-- `TerritoryCompactSnapshot`
-- `TerritoryCompactExpansionWorkResult`
-- `TerritoryChunkReplicationStream`
-- `TerritorySystem`의 compact publish seam
-- `Docs/LongRunning/Territory/CONTRACTS.md`의 C010-C011
+- 추가 milestone을 자동으로 시작하지 않는다.
+- 장기 Trail runtime Profiler에서 병목이 확인되면 해당 marker와
+  `TerritoryTrailChunkRenderer`, `TerritorySystem`, `TerritoryTrailSession` 중 실제
+  병목 파일만 다음 예약에 포함한다.
+- 영역 확장 C010-C011 후속은 작업자가 목표를 다시 지정할 때까지 paused다.

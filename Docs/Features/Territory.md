@@ -25,6 +25,7 @@ Last reviewed: 2026-08-22
 - `TerritoryBoundsIndex`, `TerritoryMeshData`
 - 신규 순수 기반: `ProjectIO.Territory.ChunkDomain` assembly의
   `FixedTerritoryPoint`, `TerritoryChunkCoordinate`,
+  `TerritoryAppendOnlyBlockList`,
   `TerritorySegmentChunkTraversal`, `TerritoryTrailSession`,
   `TerritoryTrailPacket`, `TerritoryTrailPacketizer`,
   `TerritoryTrailReceiver`, `TerritoryTrailShadowComparer`
@@ -54,6 +55,12 @@ confirmed sample을 bounded Reliable packet으로 보내고 Proxy는 같은 orde
 path와 Unreliable live head를 표시한다. 현재 확장 결과와 모든 consumer에는 계속
 Legacy polygon만 authoritative하며 prediction이나 transport mismatch가 게임 결과를
 결정하지 않는다.
+
+장기 Trail sample, fragment, owner prediction과 renderer pool은 256개 단위 fixed block에
+append한다. 같은 Chunk에 계속 머무르는 경로도 fragment당 최대 256 point로 나누고
+인접 fragment가 exact endpoint를 공유하므로 기록된 모양은 바뀌지 않는다. confirmed
+packet은 최대 24 sample이며 이미 전송한 앞부분을 제거하기 위해 남은 전체 backlog를
+이동하지 않는다. 이 경계는 Trail 이동 hot path만 다루며 영역 확장 계산은 변경하지 않는다.
 
 State Authority는 초기 Territory와 Legacy 정상 확장 결과를 revisioned sparse
 Chunk shadow snapshot으로도 Commit한다. snapshot은 전역 polygon을 보관하지 않고

@@ -227,6 +227,29 @@ Status: Approved
 - 이번 계약은 runtime shadow와 profile까지만 소유한다. Legacy polygon, C006/C007
   replication, vertex RPC, mesh와 consumer가 계속 gameplay 및 Peer 표시를 소유한다.
 
+## C012 Bounded exact long Trail runtime
+
+Status: Approved
+
+- fixed 변환 뒤 accepted sample은 단순화, 병합, 이동 또는 삭제하지 않는다.
+- 장기 sample·fragment와 local owner presentation index는 fixed-size block에 append한다.
+  새 block 할당은 이전 point payload를 복사하지 않으며 이미 닫힌 block은 append 중
+  다시 작성하지 않는다.
+- 같은 Chunk의 연속 fragment도 point 수가 256에 도달하면 분할한다. 인접 fragment는
+  마지막/첫 fixed point 하나를 정확히 공유하고 재조립 path가 원본 sample path와 같다.
+- `TerritoryTrailFragment`는 2..256 point만 허용한다. Chunk closed bounds, 연속 중복,
+  session/fragment/sample sequence 검증은 C003/C004와 동일하다.
+- confirmed packet은 C005의 최대 24 sample을 유지한다. packet 추출은 이미 전송한
+  sample 뒤의 전체 pending payload를 이동·복사하지 않는다.
+- local owner는 Input Authority에서 즉시 append하고 State Authority는 별도의 exact
+  confirmed session을 authoritative 계산 입력으로 소유한다. Host-local 역할 중첩으로
+  같은 renderer 또는 권위 session에 중복 append하지 않는다.
+- LineRenderer 하나의 최대 256 point와 Chunk 경계 분할을 유지한다. 이번 계약은
+  renderer virtualization, GPU 표시와 영역 확장 계산을 추가하지 않는다.
+- 정확한 전체 이력을 유지하므로 총 메모리는 point 수에 선형 비례한다. 계약의 목표는
+  유한 메모리에서 무한 이력을 약속하는 것이 아니라 append·packetize·표시 hot path에서
+  누적 전체 이력 재할당과 재구축을 제거하는 것이다.
+
 ## Future contracts not approved here
 
 - compact changed-state delta replication

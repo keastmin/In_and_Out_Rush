@@ -12,10 +12,10 @@ namespace ProjectIO.Territory
             FragmentReceiver
         }
 
-        private readonly List<TerritoryTrailSample> _samples = new();
-        private readonly List<TerritoryTrailFragment> _fragments = new();
+        private readonly TerritoryAppendOnlyBlockList<TerritoryTrailSample> _samples = new();
+        private readonly TerritoryAppendOnlyBlockList<TerritoryTrailFragment> _fragments = new();
         private readonly List<TerritorySegmentChunkTraversal.SegmentPart> _segmentParts = new();
-        private readonly List<FixedTerritoryPoint> _openFragmentPoints = new();
+        private readonly TerritoryAppendOnlyBlockList<FixedTerritoryPoint> _openFragmentPoints = new();
 
         private SessionMode _mode;
         private TerritoryChunkCoordinate _openFragmentChunk;
@@ -265,14 +265,34 @@ namespace ProjectIO.Territory
                 }
                 else if (_openFragmentPoints[^1] != part.Start)
                 {
-                    _openFragmentPoints.Add(part.Start);
+                    AppendOpenFragmentPoint(part.Start, firstSampleSequence);
                 }
 
                 if (_openFragmentPoints[^1] != part.End)
-                    _openFragmentPoints.Add(part.End);
+                    AppendOpenFragmentPoint(part.End, firstSampleSequence);
 
                 _openFragmentLastSampleSequence = lastSampleSequence;
             }
+        }
+
+        private void AppendOpenFragmentPoint(
+            FixedTerritoryPoint point,
+            uint continuationFirstSampleSequence)
+        {
+            if (_openFragmentPoints.Count >= TerritoryTrailFragment.MaximumPointCount)
+            {
+                FixedTerritoryPoint continuationPoint = _openFragmentPoints[^1];
+                TerritoryChunkCoordinate continuationChunk = _openFragmentChunk;
+                FinalizeOpenFragment();
+
+                _openFragmentChunk = continuationChunk;
+                _openFragmentFirstSampleSequence = continuationFirstSampleSequence;
+                _openFragmentPoints.Add(continuationPoint);
+                _hasOpenFragment = true;
+            }
+
+            if (_openFragmentPoints[^1] != point)
+                _openFragmentPoints.Add(point);
         }
 
         private void FinalizeOpenFragment()

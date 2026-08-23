@@ -1,6 +1,6 @@
 # W-20260823-001 정밀 장거리 Trail 비용 상한
 
-Status: Reserved
+Status: Complete
 
 ## 동기화 기준
 
@@ -164,14 +164,47 @@ ProjectSettings와 Inspector 참조를 변경하지 않는다. Unity가 자동 �
 
 ## 실제 변경
 
-구현 전.
+- `TerritoryAppendOnlyBlockList<T>`를 추가해 장기 sample, fragment, owner prediction과
+  renderer pool을 256개 단위 block에 append하고 기존 point payload를 큰 새 배열로
+  복사하지 않게 했다. Clear 뒤 할당 block을 재사용한다.
+- `TerritoryTrailSession`의 sample, fragment와 열린 fragment 저장을 block list로
+  바꿨다. 같은 Chunk에서도 256 point에 도달하면 마지막 point를 다음 fragment의 첫
+  point로 exact 공유하며 분할한다.
+- `TerritoryTrailFragment`가 2..256 point만 수용하도록 hard limit을 추가했다.
+- `TerritoryTrailPacketizer`가 packet을 꺼낼 때 `RemoveRange`로 남은 backlog 전체를
+  이동하지 않고 read cursor만 전진하도록 바꿨다. wire payload와 최대 24 sample 계약은
+  변경하지 않았다.
+- local owner prediction, State Authority shadow 비교와 segmented renderer pool의
+  append storage를 같은 block list로 연결했다.
+- block 재사용, same-Chunk 100,000 point exact round-trip/fragment 상한과 100,000
+  pending sample packet 상한을 검증하는 테스트를 추가했다.
+- C012 계약과 현재 milestone, handoff, roadmap, test matrix를 Trail 전용 목표로 갱신하고
+  영역 확장 후속 milestone을 paused 처리했다.
 
 ## 검증 결과
 
-구현 전.
+- 신규 source를 명시한 `ProjectIO.Territory.ChunkDomain.Tests.csproj` compile은 오류 0,
+  Unity generated reference warning 4개로 통과했다.
+- parameterless NUnit assertion 직접 실행 74/74 통과.
+- 같은 Chunk의 100,000 point를 최대 256 point fragment로 나눈 뒤 재조립 결과가 입력과
+  point별로 같고 모든 인접 endpoint가 일치했다.
+- 100,000 pending sample이 최대 24 sample packet으로 연속 sequence를 유지했다.
+- Unity batch import는 licensing 재연결과 `com.unity.editor.headless` 오류로 완료하지
+  못했다. 이후 전체 CLI build도 생성 Fusion UI reference가 불완전해 실패했으며, 이는
+  변경 Domain compile 오류와 분리해 기록했다.
+- Unity import/Console compile, Territory EditMode와 실제 Host·Client runtime/Profiler는
+  작업자 검증 항목이었다. 작업자는 Client Input Authority Runner 실제 플레이에서
+  선 연속성과 좋은 체감을 확인했다. Host-local 장기 실행과 Profiler 수치 검증은
+  수행하지 않았다.
 
 ## 남은 위험
 
 정밀 전체 경로를 삭제하지 않는 요구 때문에 총 메모리는 point 수에 비례해 증가한다.
 이번 작업은 그 데이터를 블록 단위로 보관해 큰 재할당과 frame별 전체 작업을 없애는
 것이지, 유한한 메모리에서 문자 그대로 무한한 경로를 저장한다고 약속하지 않는다.
+
+LineRenderer 하나는 256 point를 넘지 않지만 활성 renderer의 총수는 경로 길이에 따라
+증가한다. 실제 장기 runtime에서 draw/culling 비용이 병목으로 확인될 때만 exact storage와
+분리된 presentation virtualization을 별도 최소 작업으로 다룬다. suspension reconciliation과
+Runner Item·Slash의 요청 시 전체 경로 읽기도 이동 hot path 밖에 유지했으며, 실제 spike가
+재현되면 해당 경계만 별도 측정한다.

@@ -7,7 +7,7 @@ namespace ProjectIO.Territory
     {
         private const int MaximumPointsPerSegment = 256;
 
-        private readonly List<LineRenderer> _segments = new();
+        private readonly TerritoryAppendOnlyBlockList<LineRenderer> _segments = new();
         private readonly List<TerritorySegmentChunkTraversal.SegmentPart> _segmentParts = new();
 
         private LineRenderer _template;

@@ -5,16 +5,17 @@ namespace ProjectIO.Territory
 {
     public sealed class TerritoryTrailPacketizer
     {
-        private readonly List<TerritoryTrailSample> _pendingSamples = new();
+        private readonly TerritoryAppendOnlyBlockList<TerritoryTrailSample> _pendingSamples = new();
 
         private ulong _lastSessionId;
         private ulong _sessionId;
         private uint _nextSampleSequence;
         private uint _nextPacketSequence;
         private int _lastSimulationTick;
+        private int _pendingStartIndex;
 
         public bool IsActive { get; private set; }
-        public int PendingSampleCount => _pendingSamples.Count;
+        public int PendingSampleCount => _pendingSamples.Count - _pendingStartIndex;
         public ulong SessionId => _sessionId;
 
         public bool TryBegin(ulong sessionId, out string reason)
@@ -36,6 +37,7 @@ namespace ProjectIO.Territory
             _nextSampleSequence = 0;
             _nextPacketSequence = 0;
             _lastSimulationTick = int.MinValue;
+            _pendingStartIndex = 0;
             IsActive = true;
             reason = null;
             return true;
@@ -82,7 +84,7 @@ namespace ProjectIO.Territory
                 reason = "The outbound Trail stream is not active.";
                 return false;
             }
-            if (_pendingSamples.Count == 0)
+            if (PendingSampleCount == 0)
             {
                 reason = "The outbound Trail stream has no pending samples.";
                 return false;
@@ -98,16 +100,22 @@ namespace ProjectIO.Territory
                 return false;
             }
 
-            int sampleCount = Math.Min(maximumSampleCount, _pendingSamples.Count);
+            int sampleCount = Math.Min(maximumSampleCount, PendingSampleCount);
             var samples = new TerritoryTrailSample[sampleCount];
-            _pendingSamples.CopyTo(0, samples, 0, sampleCount);
+            for (int index = 0; index < sampleCount; index++)
+                samples[index] = _pendingSamples[_pendingStartIndex + index];
             packet = new TerritoryTrailPacket(
                 _sessionId,
                 _nextPacketSequence,
                 samples[0].Sequence,
                 samples);
 
-            _pendingSamples.RemoveRange(0, sampleCount);
+            _pendingStartIndex += sampleCount;
+            if (_pendingStartIndex == _pendingSamples.Count)
+            {
+                _pendingSamples.Clear();
+                _pendingStartIndex = 0;
+            }
             _nextPacketSequence++;
             reason = null;
             return true;
@@ -120,7 +128,7 @@ namespace ProjectIO.Territory
                 reason = "The outbound Trail stream is not active.";
                 return false;
             }
-            if (_pendingSamples.Count > 0)
+            if (PendingSampleCount > 0)
             {
                 reason = "Pending samples must be packetized before committing the Trail stream.";
                 return false;
@@ -140,6 +148,7 @@ namespace ProjectIO.Territory
             }
 
             _pendingSamples.Clear();
+            _pendingStartIndex = 0;
             IsActive = false;
             reason = null;
             return true;

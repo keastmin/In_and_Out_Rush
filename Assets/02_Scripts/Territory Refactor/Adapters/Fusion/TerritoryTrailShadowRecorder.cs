@@ -7,7 +7,7 @@ namespace ProjectIO.Territory
     public sealed class TerritoryTrailShadowRecorder
     {
         private readonly TerritoryTrailSession _session = new();
-        private readonly List<FixedTerritoryPoint> _legacyFixedPoints = new();
+        private readonly TerritoryAppendOnlyBlockList<FixedTerritoryPoint> _legacyFixedPoints = new();
 
         private ulong _nextSessionId = 1;
         private ulong _currentSessionId;

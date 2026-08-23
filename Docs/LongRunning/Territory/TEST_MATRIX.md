@@ -7,6 +7,9 @@
 | 정확한 모서리 통과 | EditMode 통과 | Host Runner shadow 로그 |
 | 같은 Chunk 재방문 | EditMode, receiver 및 Host/Client runtime 통과 | 장기 부하 회귀 |
 | bounded packet/codec | 최대 24개, 24/24/2와 round-trip 통과 | Fusion traffic 확인 |
+| 100,000 point same-Chunk Trail | 최대 256 point fragment, exact endpoint와 point별 round-trip 직접 validation 통과 | Unity EditMode/Profiler |
+| append-only block storage | 100,000 value, fixed block 수와 Clear 후 block 재사용 통과 | 장기 Host·Client memory profile |
+| 100,000 pending confirmed sample | 최대 24 sample packet, 연속 sequence와 전체 drain 통과 | Fusion traffic/Profiler |
 | packet/sample/fragment gap | EditMode 통과 | packet delay runtime |
 | Abort stale payload | EditMode, receiver와 자기 교차·Lifeline runtime 통과 | 지연·손실 회귀 |
 | Commit 순서 복원 | receiver 재구성과 정상 재진입 runtime 통과 | 장기 부하 회귀 |
@@ -98,3 +101,13 @@ candidate를 publish하지 않고 worker를 fault 처리해 후속 request를 �
 명시적으로 포함한 project compile은 오류 0개, 기존 warning 25개다. 작업자가 Unity
 import/Console compile, Territory EditMode, Host-local/Client Runner 걷기·달리기·긴
 Trail·연속 확장·자기 교차 Abort·teardown과 Profiler runtime 검증을 완료했다.
+
+W-20260823-001 신규 block storage, same-Chunk 100,000 point exact fragment와 100,000
+pending sample packet stress를 포함한 parameterless NUnit assertion 직접 실행은 74/74
+통과했다. 모든 fragment는 2..256 point, 모든 packet은 1..24 sample이며 재조립 path와
+sequence가 입력과 일치했다. 신규 source를 명시한 ChunkDomain/tests compile은 오류 0개,
+Unity generated reference warning 4개다. Unity batch import는 licensing/headless package
+오류로 완료하지 못했고 작업자의 Unity import/compile, Territory EditMode와 Host·Client
+runtime/Profiler 검증이 남아 있었다. 작업자는 이후 Client Input Authority Runner의
+실제 플레이에서 선 연속성과 좋은 체감을 확인했다. Host-local 장기 실행과 Profiler
+수치 검증은 수행하지 않았다.

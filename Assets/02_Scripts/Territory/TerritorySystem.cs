@@ -50,7 +50,7 @@ public class TerritorySystem : Dev.Network.System
     TerritoryChunkStore territoryChunkShadowStore = new();
     TerritoryCompactExpansionShadow compactExpansionShadow;
     readonly List<Vector2> shadowLegacyPath = new();
-    readonly List<FixedTerritoryPoint> ownerPredictedTrail = new();
+    readonly TerritoryAppendOnlyBlockList<FixedTerritoryPoint> ownerPredictedTrail = new();
     readonly List<FixedTerritoryPoint> replicatedTrailPath = new();
     readonly List<FixedTerritoryPoint> territoryChunkPolygon = new();
     TerritoryTrailChunkRenderer trailChunkRenderer;

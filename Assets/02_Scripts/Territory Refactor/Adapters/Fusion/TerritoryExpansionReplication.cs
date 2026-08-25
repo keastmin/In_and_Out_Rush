@@ -1,10 +1,12 @@
 using System.Collections.Generic;
+using Fusion;
 
 namespace ProjectIO.Territory
 {
     public sealed class TerritoryExpansionReplication
     {
         private readonly Queue<OutboundTransfer> _outbound = new();
+        private readonly Queue<OutboundTransfer> _recoveryOutbound = new();
         private readonly TerritoryExpansionResultReplica _replica = new();
         private ulong _nextOutboundSourceRevision;
 
@@ -16,6 +18,7 @@ namespace ProjectIO.Territory
         public void Reset(ulong initialRevision)
         {
             _outbound.Clear();
+            _recoveryOutbound.Clear();
             _replica.Reset(initialRevision);
             _nextOutboundSourceRevision = initialRevision;
         }
@@ -85,6 +88,55 @@ namespace ProjectIO.Territory
             return true;
         }
 
+        public bool TryEnqueueRecovery(
+            PlayerRef target,
+            TerritoryExpansionPresentationData presentation,
+            IReadOnlyList<TerritoryExpansionResultPacket> packets,
+            out string reason)
+        {
+            if (target == PlayerRef.None || presentation == null || packets == null ||
+                packets.Count == 0)
+            {
+                reason = "Expansion recovery requires a target and completed packet data.";
+                return false;
+            }
+
+            _recoveryOutbound.Enqueue(new OutboundTransfer(presentation, packets, target));
+            reason = null;
+            return true;
+        }
+
+        public bool TryTakeRecoveryOutbound(
+            int remainingDataPacketBudget,
+            out OutboundMessage message)
+        {
+            message = null;
+            if (_recoveryOutbound.Count == 0)
+                return false;
+
+            OutboundTransfer transfer = _recoveryOutbound.Peek();
+            if (!transfer.BeginSent)
+            {
+                transfer.BeginSent = true;
+                message = OutboundMessage.Begin(transfer);
+                return true;
+            }
+            if (transfer.NextPacketIndex < transfer.Packets.Count)
+            {
+                if (remainingDataPacketBudget <= 0)
+                    return false;
+
+                TerritoryExpansionResultPacket packet =
+                    transfer.Packets[transfer.NextPacketIndex++];
+                message = OutboundMessage.Data(transfer, packet);
+                return true;
+            }
+
+            _recoveryOutbound.Dequeue();
+            message = OutboundMessage.Complete(transfer);
+            return true;
+        }
+
         public bool TryBeginInbound(
             ulong sourceRevision,
             ulong revision,
@@ -146,6 +198,7 @@ namespace ProjectIO.Territory
                 PacketCount = transfer.Packets.Count;
                 PacketSequence = packet?.Sequence ?? 0U;
                 Words = packet?.CopyWords();
+                Target = transfer.Target;
             }
 
             public OutboundMessageType Type { get; }
@@ -156,6 +209,7 @@ namespace ProjectIO.Territory
             public int PacketCount { get; }
             public uint PacketSequence { get; }
             public int[] Words { get; }
+            public PlayerRef Target { get; }
 
             internal static OutboundMessage Begin(OutboundTransfer transfer)
                 => new(OutboundMessageType.Begin, transfer, null);
@@ -173,16 +227,19 @@ namespace ProjectIO.Territory
         {
             public OutboundTransfer(
                 TerritoryExpansionPresentationData presentation,
-                IReadOnlyList<TerritoryExpansionResultPacket> packets)
+                IReadOnlyList<TerritoryExpansionResultPacket> packets,
+                PlayerRef target = default)
             {
                 Presentation = presentation;
                 Packets = packets;
+                Target = target;
             }
 
             public TerritoryExpansionPresentationData Presentation { get; }
             public IReadOnlyList<TerritoryExpansionResultPacket> Packets { get; }
             public bool BeginSent { get; set; }
             public int NextPacketIndex { get; set; }
+            public PlayerRef Target { get; }
         }
     }
 }

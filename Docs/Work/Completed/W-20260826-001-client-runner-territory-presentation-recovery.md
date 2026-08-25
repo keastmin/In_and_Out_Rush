@@ -1,6 +1,6 @@
 # W-20260826-001 Client Runner Territory presentation recovery
 
-Status: Reserved
+Status: Complete
 
 ## 동기화 기준
 
@@ -107,7 +107,20 @@ Territory Legacy polygon 완료 결과의 Fusion 복제 복구와 Client Input A
 
 ## 실제 변경
 
-예약 단계에서는 이 Active 문서만 추가한다. 구현은 예약 문서가 upstream에 검증된 뒤에만 시작한다.
+- `TerritoryExpansionResultReplica`가 현재 client revision보다 최신인 검증 full snapshot을
+  fast-forward로 원자 적용하고, applied replay no-op, duplicate Begin/Data idempotency,
+  malformed/out-of-order의 inbound 보존을 제공한다.
+- `TerritoryExpansionReplication`에 State Authority의 targeted recovery transfer queue를
+  추가했다. normal과 recovery는 같은 tick당 최대 2 data packet 예산을 공유한다.
+- `TerritorySystem`에 Networked advertised revision/pending, Client의 2초 bounded retry,
+  State Authority의 requester-validated targeted latest full snapshot resend와 pending
+  cleanup을 추가했다. Host consumer event 경로는 변경하지 않았다.
+- `GameWorld.unity`의 Scene Territory NetworkObject만 `ObjectInterest: 1`(AOI)에서
+  `ObjectInterest: 0`(global)으로 변경했다.
+- `TerritoryBackgroundExpansionWorkerTests`에 fast-forward, replay, duplicate Begin/Data,
+  out-of-order/malformed 뒤 정상 완료 검증을 추가했다.
+- `Docs/Features/Territory.md`에 persistent presentation recovery와 global interest 계약을
+  기록했다.
 
 ## 검증 결과
 
@@ -121,8 +134,24 @@ Territory Legacy polygon 완료 결과의 Fusion 복제 복구와 Client Input A
 
 구현·집중 테스트·compile·Host/Client runtime은 예약 진행 뒤 수행한다.
 
+구현 검증:
+
+- `dotnet build ProjectIO.slnx`: 오류 0개, 기존 경고 25개.
+- Unity 6000.0.69f1 batch import/compile: 정상 종료(return code 0), 변경한 script와
+  `GameWorld.unity`를 import했다.
+- Unity batch `-runTests`는 종료 0이지만 test result XML을 만들지 않아 Test Runner 실행
+  증거로 인정하지 않는다. 추가한 EditMode 집중 테스트와 실제 Host/Client runtime은 아래
+  수동 절차로 미검증이다.
+- `git diff --check`: 통과.
+
 ## 남은 위험
 
 - Fusion 2.0.6의 RPC resimulation 동작은 package 변경 없이 runtime에서 재현·검증해야 한다.
 - full polygon snapshot의 worst-case payload/전송 시간과 global interest의 실제 bandwidth는 Unity/Fusion Profiler에서 측정해야 한다.
 - 최신 full snapshot fast-forward와 Networked advertised revision의 정확한 Fusion Weaver serialization/OnChangedRender 사용법이 현재 package API와 맞는지는 구현 전 package source와 기존 Networked pattern을 다시 대조한다.
+- 수동 Host/Client 절차: Host로 `GameWorld`를 시작하고 Client를 접속한다. Client Input
+  Authority Runner로 첫 확장과 연속 확장을 수행해 Trail/terminal mesh/다음 Trail을
+  확인한다. packet 하나를 의도적으로 누락·replay해 advertised revision recovery를
+  확인하고 AOI 반경 128 밖으로 이동·복귀한다. Host와 Client의 final vertex float bit 및
+  triangle index를 비교하고 Host의 consumer event가 한 번인지 확인한다. Unity Test Runner
+  창에서 `TerritoryBackgroundExpansionWorkerTests`를 실행해 result XML을 남긴다.

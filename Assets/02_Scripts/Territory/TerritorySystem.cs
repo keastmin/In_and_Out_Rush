@@ -31,6 +31,7 @@ public class TerritorySystem : Dev.Network.System
     const float ConfirmedTrailFlushInterval = 0.05f;
     const float TrailLiveHeadSyncInterval = 1f / 30f;
     const float MinExpansionMoveDistanceSqr = 0.01f;
+    const float ExpansionRecoveryRetryInterval = 2f;
 
     [Header("Initial Territory")]
     [SerializeField] int circlePointCount;
@@ -52,6 +53,7 @@ public class TerritorySystem : Dev.Network.System
     TerritoryTrailChunkRenderer trailChunkRenderer;
     TickTimer confirmedTrailFlushTimer;
     TickTimer trailLiveHeadSyncTimer;
+    TickTimer expansionRecoveryRetryTimer;
     bool expansionPathSuspended;
     bool ownerPredictionActive;
     bool ownerPredictionSuspended;
@@ -62,6 +64,9 @@ public class TerritorySystem : Dev.Network.System
     ulong backgroundExpansionPendingSessionId;
     ulong territoryExpansionRevision;
     bool expansionCalculationPending;
+    bool expansionRecoveryRequested;
+    TerritoryExpansionPresentationData latestExpansionPresentation;
+    IReadOnlyList<TerritoryExpansionResultPacket> latestExpansionPackets;
     bool territoryRuntimeCleanedUp;
     FixedTerritoryPoint ownerPredictionPreviousPosition;
 
@@ -72,6 +77,9 @@ public class TerritorySystem : Dev.Network.System
     private string ShadowLogOwnerName => Runner != null ? Runner.name : name;
 
     public event Action<Territory, TerritorySystem> OnTerritoryExpandedEvent;
+
+    [Networked] private ulong AdvertisedTerritoryExpansionRevision { get; set; }
+    [Networked] private NetworkBool AdvertisedTerritoryExpansionPending { get; set; }
 
     void OnDrawGizmos()
     {
@@ -96,6 +104,15 @@ public class TerritorySystem : Dev.Network.System
             chunkReplicationStream.Reset();
         territoryExpansionRevision = 1UL;
         expansionCalculationPending = false;
+        expansionRecoveryRequested = false;
+        expansionRecoveryRetryTimer = TickTimer.None;
+        latestExpansionPresentation = null;
+        latestExpansionPackets = null;
+        if (Object != null && Object.HasStateAuthority)
+        {
+            AdvertisedTerritoryExpansionRevision = territoryExpansionRevision;
+            AdvertisedTerritoryExpansionPending = false;
+        }
         expansionReplication.Reset(territoryExpansionRevision);
         TerritoryVisible = Dev.Network.StageBootstrapper.Instance.TerritoryVisible;
         trailChunkRenderer = gameObject.GetComponent<TerritoryTrailChunkRenderer>();
@@ -131,6 +148,10 @@ public class TerritorySystem : Dev.Network.System
         chunkReplicationStream.Reset();
         expansionReplication.Reset(1UL);
         expansionCalculationPending = false;
+        expansionRecoveryRequested = false;
+        expansionRecoveryRetryTimer = TickTimer.None;
+        latestExpansionPresentation = null;
+        latestExpansionPackets = null;
         backgroundExpansionWorker?.Dispose();
         backgroundExpansionWorker = null;
 
@@ -156,7 +177,16 @@ public class TerritorySystem : Dev.Network.System
     public override void Render()
     {
         base.Render();
-        if (territoryRuntimeCleanedUp || Object == null || !Object.HasStateAuthority ||
+        if (territoryRuntimeCleanedUp || Object == null)
+            return;
+
+        if (!Object.HasStateAuthority)
+        {
+            SynchronizeProxyExpansionPresentationState();
+            return;
+        }
+
+        if (
             backgroundExpansionWorker == null)
         {
             return;
@@ -170,8 +200,7 @@ public class TerritorySystem : Dev.Network.System
 
             if (!result.IsSuccess)
             {
-                expansionCalculationPending = false;
-                RPC_SetTerritoryExpansionPending(false);
+                SetExpansionCalculationPending(false);
                 Debug.LogWarning(
                     $"{ShadowLogOwnerName} - background Territory expansion rejected: " +
                     result.FailureReason);
@@ -182,8 +211,7 @@ public class TerritorySystem : Dev.Network.System
             if (result.SourceRevision != territoryExpansionRevision ||
                 !TryApplyCompletedExpansion(result.Presentation, true, out applyReason))
             {
-                expansionCalculationPending = false;
-                RPC_SetTerritoryExpansionPending(false);
+                SetExpansionCalculationPending(false);
                 Debug.LogWarning(
                     $"{ShadowLogOwnerName} - completed Territory expansion was discarded: " +
                     (applyReason ?? "stale source revision"));
@@ -191,13 +219,15 @@ public class TerritorySystem : Dev.Network.System
             }
 
             territoryExpansionRevision = result.Presentation.Revision;
-            expansionCalculationPending = false;
+            AdvertisedTerritoryExpansionRevision = territoryExpansionRevision;
+            latestExpansionPresentation = result.Presentation;
+            latestExpansionPackets = result.Packets;
+            SetExpansionCalculationPending(false);
             if (!expansionReplication.TryEnqueue(
                     result.Presentation,
                     result.Packets,
                     out string replicationReason))
             {
-                RPC_SetTerritoryExpansionPending(false);
                 Debug.LogWarning(
                     $"{ShadowLogOwnerName} - Territory expansion replication rejected: " +
                     replicationReason);
@@ -1022,8 +1052,7 @@ public class TerritorySystem : Dev.Network.System
                 }
             }
 
-            expansionCalculationPending = true;
-            RPC_SetTerritoryExpansionPending(true);
+            SetExpansionCalculationPending(true);
             if (Debug.isDebugBuild)
             {
                 Debug.Log(
@@ -1062,7 +1091,8 @@ public class TerritorySystem : Dev.Network.System
         }
 
         Territory.ReplaceVertices(vertices);
-        expansionCalculationPending = false;
+        if (Object == null || Object.HasStateAuthority)
+            SetExpansionCalculationPending(false);
         if (notifyConsumers)
         {
             using (NotifyExpansionConsumersMarker.Auto())
@@ -1220,6 +1250,7 @@ public class TerritorySystem : Dev.Network.System
                 packetCount,
                 out string reason))
         {
+            SetExpansionCalculationPending(false);
             Debug.LogWarning(
                 $"{ShadowLogOwnerName} - Chunk Territory transfer begin rejected. " +
                 $"Revision: {revision}, Reason: {reason}");
@@ -1303,14 +1334,77 @@ public class TerritorySystem : Dev.Network.System
                     break;
             }
         }
+
+        while (expansionReplication.TryTakeRecoveryOutbound(
+                   TerritoryExpansionReplication.MaximumDataPacketsPerTick - dataPacketsSent,
+                   out TerritoryExpansionReplication.OutboundMessage recovery))
+        {
+            switch (recovery.Type)
+            {
+                case TerritoryExpansionReplication.OutboundMessageType.Begin:
+                    RPC_BeginTerritoryExpansionRecoveryResult(
+                        recovery.SourceRevision,
+                        recovery.Revision,
+                        recovery.VertexCount,
+                        recovery.TriangleCount,
+                        recovery.PacketCount,
+                        recovery.Target);
+                    break;
+                case TerritoryExpansionReplication.OutboundMessageType.Data:
+                    RPC_AppendTerritoryExpansionRecoveryResult(
+                        recovery.SourceRevision,
+                        recovery.Revision,
+                        recovery.PacketSequence,
+                        recovery.Words,
+                        recovery.Target);
+                    dataPacketsSent++;
+                    break;
+                case TerritoryExpansionReplication.OutboundMessageType.Complete:
+                    RPC_CompleteTerritoryExpansionRecoveryResult(
+                        recovery.SourceRevision,
+                        recovery.Revision,
+                        recovery.Target);
+                    break;
+            }
+        }
     }
 
-    [Rpc(RpcSources.StateAuthority, RpcTargets.Proxies, Channel = RpcChannel.Reliable)]
-    private void RPC_SetTerritoryExpansionPending(bool pending)
+    private void SetExpansionCalculationPending(bool pending)
     {
         expansionCalculationPending = pending;
+        if (Object != null && Object.HasStateAuthority)
+            AdvertisedTerritoryExpansionPending = pending;
         if (pending)
             ClearTrailPresentation();
+    }
+
+    private void SynchronizeProxyExpansionPresentationState()
+    {
+        bool pending = AdvertisedTerritoryExpansionPending;
+        if (expansionCalculationPending != pending)
+        {
+            expansionCalculationPending = pending;
+            if (pending)
+                ClearTrailPresentation();
+        }
+
+        ulong replicaRevision = expansionReplication.ReplicaRevision;
+        if (replicaRevision >= AdvertisedTerritoryExpansionRevision)
+        {
+            expansionRecoveryRequested = false;
+            return;
+        }
+        if (AdvertisedTerritoryExpansionRevision == 0UL)
+            return;
+
+        if (expansionRecoveryRequested && !expansionRecoveryRetryTimer.Expired(Runner))
+            return;
+
+        expansionRecoveryRequested = true;
+        expansionRecoveryRetryTimer = TickTimer.CreateFromSeconds(
+            Runner,
+            ExpansionRecoveryRetryInterval);
+        RPC_RequestTerritoryExpansionRecovery(AdvertisedTerritoryExpansionRevision);
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.Proxies, Channel = RpcChannel.Reliable)]
@@ -1341,12 +1435,17 @@ public class TerritorySystem : Dev.Network.System
         uint packetSequence,
         int[] words)
     {
-        expansionReplication.TryAppendInbound(
-            sourceRevision,
-            revision,
-            packetSequence,
-            words,
-            out _);
+        if (!expansionReplication.TryAppendInbound(
+                sourceRevision,
+                revision,
+                packetSequence,
+                words,
+                out string reason))
+        {
+            SetExpansionCalculationPending(false);
+            Debug.LogWarning(
+                $"{ShadowLogOwnerName} - Territory expansion receive data failed: {reason}");
+        }
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.Proxies, Channel = RpcChannel.Reliable)]
@@ -1360,22 +1459,87 @@ public class TerritorySystem : Dev.Network.System
                 out TerritoryExpansionPresentationData presentation,
                 out string reason))
         {
-            expansionCalculationPending = false;
+            SetExpansionCalculationPending(false);
             Debug.LogWarning(
                 $"{ShadowLogOwnerName} - Territory expansion receive terminal failed: {reason}");
             return;
         }
 
+        if (presentation == null)
+            return;
+
         if (!TryApplyCompletedExpansion(presentation, false, out string applyReason))
         {
-            expansionCalculationPending = false;
+            SetExpansionCalculationPending(false);
             Debug.LogWarning(
                 $"{ShadowLogOwnerName} - replicated Territory expansion apply failed: {applyReason}");
             return;
         }
 
         territoryExpansionRevision = presentation.Revision;
-        expansionCalculationPending = false;
+        expansionRecoveryRequested = false;
+        expansionRecoveryRetryTimer = TickTimer.None;
+        SetExpansionCalculationPending(false);
+    }
+
+    [Rpc(RpcSources.Proxies, RpcTargets.StateAuthority, Channel = RpcChannel.Reliable)]
+    private void RPC_RequestTerritoryExpansionRecovery(
+        ulong advertisedRevision,
+        RpcInfo info = default)
+    {
+        if (!Object.HasStateAuthority || info.Source == PlayerRef.None ||
+            latestExpansionPresentation == null || latestExpansionPackets == null ||
+            advertisedRevision != territoryExpansionRevision)
+        {
+            return;
+        }
+
+        if (!expansionReplication.TryEnqueueRecovery(
+                info.Source,
+                latestExpansionPresentation,
+                latestExpansionPackets,
+                out string reason))
+        {
+            Debug.LogWarning(
+                $"{ShadowLogOwnerName} - Territory expansion recovery enqueue failed: {reason}");
+        }
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All, Channel = RpcChannel.Reliable)]
+    private void RPC_BeginTerritoryExpansionRecoveryResult(
+        ulong sourceRevision,
+        ulong revision,
+        int vertexCount,
+        int triangleCount,
+        int packetCount,
+        [RpcTarget] PlayerRef target)
+    {
+        RPC_BeginTerritoryExpansionResult(
+            sourceRevision,
+            revision,
+            vertexCount,
+            triangleCount,
+            packetCount);
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All, Channel = RpcChannel.Reliable)]
+    private void RPC_AppendTerritoryExpansionRecoveryResult(
+        ulong sourceRevision,
+        ulong revision,
+        uint packetSequence,
+        int[] words,
+        [RpcTarget] PlayerRef target)
+    {
+        RPC_AppendTerritoryExpansionResult(sourceRevision, revision, packetSequence, words);
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All, Channel = RpcChannel.Reliable)]
+    private void RPC_CompleteTerritoryExpansionRecoveryResult(
+        ulong sourceRevision,
+        ulong revision,
+        [RpcTarget] PlayerRef target)
+    {
+        RPC_CompleteTerritoryExpansionResult(sourceRevision, revision);
     }
 
     // 플레이어 러너가 이전 경로를 밟았는지 확인하고 밟았다면 게임 오버 처리

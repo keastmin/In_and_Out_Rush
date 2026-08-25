@@ -32,15 +32,15 @@ namespace ProjectIO.Territory
             int packetCount,
             out string reason)
         {
-            if (IsReceiving)
+            if (sourceRevision == 0UL || revision != sourceRevision + 1UL)
             {
-                reason = "An expansion result is already being received.";
+                reason = "Expansion result revision is invalid.";
                 return false;
             }
-            if (sourceRevision != CurrentRevision || revision != sourceRevision + 1UL)
+            if (revision <= CurrentRevision)
             {
-                reason = "Expansion result revision is stale or out of order.";
-                return false;
+                reason = null;
+                return true;
             }
             long triangleCountLong = ((long)vertexCount - 2L) * 3L;
             long wordCountLong = (long)vertexCount * 2L + triangleCount;
@@ -57,6 +57,25 @@ namespace ProjectIO.Territory
             {
                 reason = "Expansion result packet count is invalid.";
                 return false;
+            }
+
+            if (IsReceiving)
+            {
+                if (sourceRevision == _sourceRevision && revision == _revision &&
+                    vertexCount == _vertexCount && triangleCount == _triangleCount &&
+                    packetCount == _packetCount)
+                {
+                    reason = null;
+                    return true;
+                }
+
+                if (revision <= _revision)
+                {
+                    reason = "Expansion result conflicts with the current inbound transfer.";
+                    return false;
+                }
+
+                ResetInbound();
             }
 
             _sourceRevision = sourceRevision;
@@ -78,22 +97,63 @@ namespace ProjectIO.Territory
             int[] words,
             out string reason)
         {
-            if (!IsReceiving || sourceRevision != _sourceRevision || revision != _revision ||
-                sequence != _nextPacketSequence || words == null)
+            if (!IsReceiving)
             {
-                reason = "Expansion result packet is stale, missing or out of order.";
-                ResetInbound();
+                if (revision <= CurrentRevision)
+                {
+                    reason = null;
+                    return true;
+                }
+
+                reason = "Expansion result packet arrived without an inbound transfer.";
+                return false;
+            }
+            if (sourceRevision != _sourceRevision || revision != _revision || words == null)
+            {
+                if (revision <= CurrentRevision)
+                {
+                    reason = null;
+                    return true;
+                }
+
+                reason = "Expansion result packet does not match the inbound transfer.";
                 return false;
             }
 
-            int remaining = _words.Length - _wordOffset;
+            if (sequence >= (uint)_packetCount)
+            {
+                reason = "Expansion result packet sequence exceeds the transfer length.";
+                return false;
+            }
+
+            int packetOffset = checked((int)sequence *
+                TerritoryExpansionResultPacketizer.MaximumWordsPerPacket);
             int expectedLength = Math.Min(
                 TerritoryExpansionResultPacketizer.MaximumWordsPerPacket,
-                remaining);
+                _words.Length - packetOffset);
             if (words.Length != expectedLength)
             {
                 reason = "Expansion result packet payload length is invalid.";
-                ResetInbound();
+                return false;
+            }
+
+            if (sequence < _nextPacketSequence)
+            {
+                for (int i = 0; i < words.Length; i++)
+                {
+                    if (_words[packetOffset + i] != words[i])
+                    {
+                        reason = "Expansion result replay packet conflicts with received data.";
+                        return false;
+                    }
+                }
+
+                reason = null;
+                return true;
+            }
+            if (sequence != _nextPacketSequence)
+            {
+                reason = "Expansion result packet sequence is out of order.";
                 return false;
             }
 
@@ -111,11 +171,21 @@ namespace ProjectIO.Territory
             out string reason)
         {
             presentation = null;
-            if (!IsReceiving || sourceRevision != _sourceRevision || revision != _revision ||
+            if (!IsReceiving)
+            {
+                if (revision <= CurrentRevision)
+                {
+                    reason = null;
+                    return true;
+                }
+
+                reason = "Expansion result terminal arrived without an inbound transfer.";
+                return false;
+            }
+            if (sourceRevision != _sourceRevision || revision != _revision ||
                 _nextPacketSequence != (uint)_packetCount || _wordOffset != _words.Length)
             {
                 reason = "Expansion result terminal arrived before the complete payload.";
-                ResetInbound();
                 return false;
             }
 
@@ -128,7 +198,6 @@ namespace ProjectIO.Territory
                 if (!IsFinite(x.Float) || !IsFinite(y.Float))
                 {
                     reason = "Expansion result contains a non-finite vertex.";
-                    ResetInbound();
                     return false;
                 }
                 vertices[i] = new Vector2(x.Float, y.Float);
@@ -141,7 +210,6 @@ namespace ProjectIO.Territory
                 if (index < 0 || index >= vertices.Length)
                 {
                     reason = "Expansion result contains an invalid triangle index.";
-                    ResetInbound();
                     return false;
                 }
                 triangles[i] = index;

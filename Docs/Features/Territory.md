@@ -2,7 +2,7 @@
 
 Status: Background authoritative polygon expansion active; chunk pipeline paused
 
-Last reviewed: 2026-08-23
+Last reviewed: 2026-08-26
 
 ## 책임
 
@@ -124,6 +124,24 @@ tree를 복제하는 Burst/GPU 이중 경로는 만들지 않았으며 profile �
 tick당 최대 2 data packet으로 Proxy에 보내며 terminal 이전에는 보이는 Territory를
 바꾸지 않는다. 계산 중에는 다음 획득 Trail을 시작하지 않고 완료 뒤 현재 위치에서 다시
 시작한다. Mesh upload와 consumer event만 Unity main thread에서 실행한다.
+
+완료 result packet은 이전 polygon patch가 아니라 전체 vertex float bit와 triangle index
+snapshot이다. State Authority는 현재 완료 revision과 pending을 Networked 지속 상태로
+advertise하고 마지막 완료 snapshot을 보관한다. Client replica는 현재 revision보다 앞선
+검증된 전체 result를 원자 적용할 수 있으며, 이미 적용한 replay는 no-op이고 같은 inbound
+transfer의 Begin/Data/Complete replay는 progress를 손상하지 않는다. sequence gap,
+conflicting future transfer와 malformed payload는 공개 상태를 바꾸지 않는다. Client가
+advertised revision보다 뒤처지면 한 번의 outstanding targeted Reliable recovery request를
+보내며, 2초 뒤에도 수렴하지 않으면 다시 요청한다. State Authority는 요청 peer에 최신
+완료 full snapshot을 packet당 48 word, simulation tick당 전체 normal/recovery 합산 최대
+2 data packet으로 재전송한다. 이 계약은 2인 세션의 presentation 복구만 다루고 Late
+Join/reconnect 일반 지원은 추가하지 않는다.
+
+`GameWorld`의 Scene Territory NetworkObject는 AOI 대상이 아니라 global interest다.
+Territory는 월드 전역 판정·표시 상태이고 stage world boundary 1000이 player AOI 반경
+128보다 크므로, global 지속 상태 하나의 작은 Networked revision/pending과 recovery
+packet 비용을 감수해 AOI 밖 Client의 revision 고착을 막는다. AOI grid, 다른 object의
+interest, Chunk shadow의 presentation/consumer 전환은 이 경로에 포함하지 않는다.
 
 ## 주요 소비자
 

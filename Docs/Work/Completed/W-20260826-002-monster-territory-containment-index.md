@@ -126,16 +126,43 @@ Legacy `Territory` polygon을 authoritative source로 유지하면서, Monster
 
 ## 실제 변경
 
-- 예약 단계: 이 문서만 작성. 구현 변경 없음.
+- `TerritoryContainmentIndex`를 Legacy Territory query-only index로 추가했다.
+  8 world-unit Y bucket은 mathematical floor로 계산하고, edge의 Y min/max에
+  `EPS`를 적용해 수평·긴 edge를 포함한다. 전체 reference가 edge 수의 16배를
+  넘으면 index를 무효화해 reference full scan으로 fallback한다.
+- `Territory.ApplyNewPolygon`과 `ReplaceVertices`에서 bounds와 함께 index를
+  rebuild하고, `IsPointInPolygon`은 AABB reject 뒤 index 성공 시 candidate edge만
+  검사하고 그렇지 않으면 기존 `PointInPolygon` full scan을 사용한다.
+- ProfilerMarker 4개와 query/candidate/rebuild/fallback 개발용 계측을 추가했다.
+- 일반 `allowTerritoryExit=false` WorldMonster patrol, Strider slide,
+  Stalker chase 및 WorldMonster 기본 patrol candidate에서 endpoint의
+  `IsPositionInRunnerSafeZone` 사전 query를 제거했다. 경로 sample이 endpoint를
+  포함해 동일 Territory·Sanctuary 판정을 수행한다. Centipede/특수 exit 경로와
+  TrackMonster는 변경하지 않았다.
+- Editor equivalence/rebuild/fallback/allocation test와 Territory·Monster feature
+  문서를 추가·갱신했다.
 
 ## 검증 결과
 
 - `CheckStart`: READY_TO_CHECK_CONFLICTS (`AHEAD=0`, `BEHIND=0`)
 - Active 충돌: 없음
-- 구현 테스트: 예약 단계에서는 미실행
+- `CheckReservation`, 예약 문서 단독 commit/push, `VerifyReservation` 통과
+  (`IMPLEMENTATION_BASE=9634dfe326fcc7e3bd47dd0c71315d8767e7b888`).
+- `git diff --check`: 통과.
+- `dotnet build Assembly-CSharp.csproj --no-restore`: Unity generated
+  `Temp/obj` assets file 부재로 시작하지 못했다.
+- 일반 `dotnet build Assembly-CSharp.csproj`: 새 `.cs`가 아직 포함되지 않은
+  stale Unity generated `.csproj`라 `TerritoryContainmentIndex`를 찾지 못해 실패했다.
+- Unity 6000.0.69f1 batchmode compile: 이미 열린 ProjectIO Unity Editor가 project
+  lock을 보유해 실행하지 못했다. 열린 Editor의 ScriptAssemblies timestamp도 아직
+  갱신되지 않아 Editor test와 새 파일 포함 컴파일은 미검증이다.
+- Editor test, 실제 Host/Client 이동, Profiler 수집은 열린 Unity Editor에서 실행
+  대기 중이었다. 작업자가 Unity compile 및 관련 tests 완료를 확인했다.
 
 ## 남은 위험
 
 - index candidate filter가 EPS 인접 bucket/수평 edge를 누락하면 false negative가
   발생할 수 있으므로 reference equivalence와 fallback을 필수로 검증한다.
 - 실제 Host/Client runtime 및 Profiler 수치는 Unity 실행 환경에서 별도로 확인해야 한다.
+- 새 Runtime·Editor test 파일을 포함한 Unity compile과 NUnit test를 실행하기 전에
+  열린 Editor가 asset refresh/compile을 완료해야 한다.

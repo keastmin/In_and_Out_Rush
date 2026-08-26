@@ -9,6 +9,7 @@ public class Territory
 
     public List<Vector2> Vertices = new();
     readonly TerritoryBoundsIndex boundsIndex = new();
+    readonly TerritoryContainmentIndex containmentIndex = new();
 
     struct Intersection
     {
@@ -462,6 +463,7 @@ public class Territory
         Vertices.Clear();
         Vertices.AddRange(newPoly);
         boundsIndex.Rebuild(Vertices);
+        containmentIndex.Rebuild(Vertices);
     }
 
     public void ReplaceVertices(IReadOnlyList<Vector2> vertices)
@@ -474,6 +476,7 @@ public class Territory
         }
 
         boundsIndex.Rebuild(Vertices);
+        containmentIndex.Rebuild(Vertices);
     }
 
     bool PointInPolygon(Vector2 point, List<Vector2> poly)
@@ -919,10 +922,16 @@ public class Territory
     public bool IsPointInPolygon(Vector2 point)
     {
         if (!boundsIndex.IsValid)
+        {
             boundsIndex.Rebuild(Vertices);
+            containmentIndex.Rebuild(Vertices);
+        }
 
         if (!boundsIndex.Contains(point))
             return false;
+
+        if (containmentIndex.TryContains(point, Vertices, out bool contains))
+            return contains;
 
         return PointInPolygon(point, Vertices);
     }

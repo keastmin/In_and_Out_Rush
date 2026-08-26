@@ -115,13 +115,6 @@ public class WorldMonster : Monster
         }
 
         Vector3 nextPosition = currentPosition + direction * moveDistance;
-        if (IsPositionInRunnerSafeZone(nextPosition))
-        {
-            isPatrolling = false;
-            StopMovement();
-            return;
-        }
-
         if (IsMovementPathBlocked(currentPosition, nextPosition))
         {
             isPatrolling = false;
@@ -146,7 +139,7 @@ public class WorldMonster : Monster
         for (int attempt = 0; attempt < MaxPatrolTargetAttempts; attempt++)
         {
             Vector2 candidatePosition2d = patrolPivotPosition2d + Random.insideUnitCircle * patrolRadius;
-            if (IsPositionInRunnerSafeZone(candidatePosition2d))
+            if (allowTerritoryExit && IsPositionInRunnerSafeZone(candidatePosition2d))
                 continue;
 
             Vector3 candidatePosition = new(candidatePosition2d.x, RigidbodyPosition.y, candidatePosition2d.y);

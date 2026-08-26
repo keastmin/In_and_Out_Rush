@@ -222,13 +222,6 @@ public class Stalker : WorldMonster
 
         Vector3 direction = toTarget / distance;
         Vector3 nextPosition = currentPosition + direction * moveDistance;
-        if (IsPositionInRunnerSafeZone(nextPosition))
-        {
-            LogChaseStatus("stopped: next position enters runner safe zone");
-            StopChasing();
-            return;
-        }
-
         if (IsMovementPathBlocked(currentPosition, nextPosition))
         {
             LogChaseStatus("stopped: movement path is blocked");

@@ -94,9 +94,6 @@ public sealed class Strider : WorldMonster
             Vector3 targetPosition = RigidbodyPosition + direction * slideDistance;
             targetPosition.y = RigidbodyPosition.y;
 
-            if (IsPositionInRunnerSafeZone(targetPosition))
-                continue;
-
             if (IsMovementPathBlocked(RigidbodyPosition, targetPosition))
                 continue;
 
@@ -142,12 +139,6 @@ public sealed class Strider : WorldMonster
             currentPosition,
             SlideTarget,
             slideSpeed * speedFactor * deltaTime);
-
-        if (IsPositionInRunnerSafeZone(nextPosition))
-        {
-            BeginRest();
-            return;
-        }
 
         if (IsMovementPathBlocked(currentPosition, nextPosition))
         {

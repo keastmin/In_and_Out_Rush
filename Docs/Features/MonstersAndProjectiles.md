@@ -58,6 +58,11 @@ AI tick cadence와 전투 규칙은 Legacy Network Monster가 계속 소유한�
 
 World Monster의 이동 안전성 판정은 Legacy `WorldMonster`가 State Authority에서 수행한다. 바위는 `WorldObstacleBoundsIndex`, 자원은 Physics query로 생성된 `ResourceVisible` Collider를 확인하며, Territory·Sanctuary는 일정 간격의 경로 표본으로 통과를 막는다. Client는 기존 NetworkObject Transform 복제만 관찰한다.
 
+일반 `allowTerritoryExit=false` WorldMonster patrol, Strider slide, Stalker chase는
+`IsMovementPathBlocked`의 endpoint sample이 Territory와 Sanctuary를 모두 판정하므로,
+직전 endpoint safe-zone 중복 query를 수행하지 않는다. `allowTerritoryExit` 특수 규칙을
+쓰는 Centipede와 patrol candidate 경로는 이 통합 범위 밖이며 기존 판정을 유지한다.
+
 ## SandTomb range presentation
 
 SandTomb presents the activation radius as an inner transparent disk and the sucked-into radius as a transparent outer annulus. Both layers reuse the existing 64-segment runtime mesh approach, while the existing activation, suction, damage, timer, and Despawn rules remain unchanged.

@@ -200,3 +200,23 @@ Legacy polygon은 계속 authoritative지만 확장 계산은 C013 background wo
 메모리는 입력 vertex 수에 따라 증가한다. main-thread frame 중단을 제거하는 것과 총
 계산 시간을 0으로 만드는 것은 구분하며, 실제 병목이 확인될 때만 알고리즘 교체를 별도
 예약한다. 공개 mutable `Vertices`를 직접 쓰는 새 소비자를 추가하지 않는다.
+
+## Legacy containment query index
+
+`Territory.IsPointInPolygon`은 계속 Legacy polygon을 authoritative source로 사용한다.
+전체 AABB reject 뒤 `TerritoryContainmentIndex`가 point Y의 8 world-unit uniform
+bucket에 등록된 edge만 boundary와 ray-crossing에 사용한다. 8은 현재 Chunk 좌표 단위와
+같아 Territory 규모가 커져도 일반적인 local Y query가 적은 후보 edge를 보도록 하면서,
+rebuild reference 수가 과도하게 늘어나는 긴 edge는 빠르게 감지하기 위한 선택이다.
+
+index는 `ApplyNewPolygon`과 `ReplaceVertices`의 정상 mutation seam에서만 rebuild한다.
+음수 좌표는 mathematical floor를 사용하고, edge Y 범위는 `EPS = 0.0001f` padding을
+포함하며 수평 edge와 여러 bucket을 가로지르는 edge도 등록한다. index가 무효이거나
+edge당 bucket reference가 평균 16개를 넘는 병적 polygon이면 기존 full-scan 판정으로
+fallback한다. 이 경로는 Chunk state, 확장 결과, Fusion state와 consumer authoritative
+source를 바꾸지 않는다.
+
+`TerritoryContainmentIndex.Rebuild`, `.Query`, `.CandidateEdges`, `.ReferenceFallback`
+ProfilerMarker와 `QueryCount`, `EdgeCount`, `CandidateEdgeCount`,
+`CandidateEdgeInspectionCount`, `LastRebuildEdgeReferenceCount` 개발용 계측으로 query
+횟수, full polygon edge 기준, candidate 검사 수와 rebuild 규모를 확인할 수 있다.

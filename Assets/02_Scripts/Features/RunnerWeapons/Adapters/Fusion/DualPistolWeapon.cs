@@ -7,6 +7,11 @@ public sealed class DualPistolWeapon : RunnerProjectileWeapon
     [SerializeField] private Transform _leftMuzzle;
     [SerializeField] private Transform _rightMuzzle;
 
+    protected override RunnerWeaponHand ResolveShotHand(int shotSequence)
+    {
+        return RunnerWeaponRules.GetAlternatingHand(shotSequence);
+    }
+
     protected override Transform ResolveMuzzle(RunnerWeaponHand hand)
     {
         Transform muzzle = hand == RunnerWeaponHand.Left

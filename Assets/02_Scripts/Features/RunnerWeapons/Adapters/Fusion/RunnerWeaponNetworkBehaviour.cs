@@ -67,7 +67,7 @@ public abstract class RunnerWeaponNetworkBehaviour : NetworkBehaviour, IRunnerWe
         if (ShotSequence != _lastPresentedShotSequence)
         {
             _lastPresentedShotSequence = ShotSequence;
-            ShotPresented?.Invoke(RunnerWeaponRules.GetHand(ShotSequence), LastShotDirection);
+            ShotPresented?.Invoke(ResolveShotHand(ShotSequence), LastShotDirection);
         }
 
         bool reloadActive = ReloadActive;
@@ -88,7 +88,7 @@ public abstract class RunnerWeaponNetworkBehaviour : NetworkBehaviour, IRunnerWe
         base.Despawned(runner, hasState);
     }
 
-    public void TryFire(PlayerRunner owner, Vector3 targetPosition)
+    public void TryFire(PlayerRunner owner, Vector3 targetPosition, bool isRunning)
     {
         if (!CanMutateFor(owner))
             return;
@@ -113,13 +113,14 @@ public abstract class RunnerWeaponNetworkBehaviour : NetworkBehaviour, IRunnerWe
         int shotSequence = ShotSequence;
         if (!RunnerWeaponRules.TryConsumeShot(
                 ref ammunition,
-                ref shotSequence,
-                out RunnerWeaponHand hand))
+                ref shotSequence))
             return;
 
+        RunnerWeaponHand hand = ResolveShotHand(shotSequence);
         if (!TryExecuteShot(
                 owner,
                 targetPosition,
+                isRunning,
                 hand,
                 out Vector3 shotDirection))
             return;
@@ -144,8 +145,14 @@ public abstract class RunnerWeaponNetworkBehaviour : NetworkBehaviour, IRunnerWe
     protected abstract bool TryExecuteShot(
         PlayerRunner owner,
         Vector3 targetPosition,
+        bool isRunning,
         RunnerWeaponHand hand,
         out Vector3 shotDirection);
+
+    protected virtual RunnerWeaponHand ResolveShotHand(int shotSequence)
+    {
+        return RunnerWeaponHand.Primary;
+    }
 
     private bool CanMutateFor(PlayerRunner owner)
     {

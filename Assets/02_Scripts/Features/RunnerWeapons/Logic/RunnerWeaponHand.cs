@@ -4,5 +4,6 @@ namespace ProjectIO.RunnerWeapons
     {
         Left,
         Right,
+        Primary,
     }
 }

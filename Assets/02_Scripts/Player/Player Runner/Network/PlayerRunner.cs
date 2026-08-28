@@ -247,12 +247,14 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
 
         if (!GetInput(out NetworkInputData data)) return;
 
-        HandleMovementInput(data);
+        bool isRunning = HandleMovementInput(data);
         HandleSlideInput(data);
         HandleItemInput(data);
         HandleSkillInput(data);
         HandleInteractInput(data);
-        HandleWeaponInput(data);
+        HandleWeaponInput(
+            data,
+            isRunning && !_slideHandler.IsSliding && !_tumbleHandler.IsTumbling);
     }
 
     public override void Render()
@@ -304,13 +306,14 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
             .SetElapsedTimeText($"{minutes:D2}:{seconds:D2}");
     }
 
-    private void HandleMovementInput(NetworkInputData data)
+    private bool HandleMovementInput(NetworkInputData data)
     {
-        if (_slideHandler.IsSliding || _tumbleHandler.IsTumbling) return;
+        if (_slideHandler.IsSliding || _tumbleHandler.IsTumbling) return false;
         bool isDashing = data.DashInput.IsSet(NetworkInputData.DASH_INPUT);
         Vector3 direction = data.PlayerRunnerDirection.normalized;
         isDashing = TryConsumeDashStamina(isDashing, direction, Runner.DeltaTime);
         _movement.UpdateMovement(EffectiveMovementSpeed, isDashing, direction);
+        return isDashing;
     }
 
     private bool TryConsumeDashStamina(bool isDashing, Vector3 direction, float deltaTime)
@@ -368,7 +371,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
         Debug.Log("상호작용 사용");
     }
 
-    private void HandleWeaponInput(NetworkInputData data)
+    private void HandleWeaponInput(NetworkInputData data, bool isRunning)
     {
         if (!HasStateAuthority) return;
 
@@ -378,7 +381,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
         if (_slideHandler.IsSliding) return;
         if (!data.WeaponInput.IsSet(NetworkInputData.WEAPON_INPUT)) return;
 
-        _weapon?.TryFire(this, data.WeaponAimPosition);
+        _weapon?.TryFire(this, data.WeaponAimPosition, isRunning);
     }
 
     private void UpdateSkillIcon(int skillIndex)

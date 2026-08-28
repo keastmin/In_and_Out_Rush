@@ -25,18 +25,13 @@ namespace ProjectIO.RunnerWeapons
 
         public static bool TryConsumeShot(
             ref int ammunition,
-            ref int shotSequence,
-            out RunnerWeaponHand hand)
+            ref int shotSequence)
         {
             if (ammunition <= 0)
-            {
-                hand = GetHand(shotSequence + 1);
                 return false;
-            }
 
             ammunition--;
             shotSequence++;
-            hand = GetHand(shotSequence);
             return true;
         }
 
@@ -59,11 +54,31 @@ namespace ProjectIO.RunnerWeapons
             return safeDuration / safeScaler;
         }
 
-        public static RunnerWeaponHand GetHand(int shotSequence)
+        public static RunnerWeaponHand GetAlternatingHand(int shotSequence)
         {
             return (shotSequence & 1) == 1
                 ? RunnerWeaponHand.Left
                 : RunnerWeaponHand.Right;
+        }
+
+        public static float GetRunningSpreadDegrees(
+            bool isRunning,
+            float firstSample,
+            float secondSample,
+            float maximumSpreadDegrees)
+        {
+            if (!isRunning)
+                return 0f;
+
+            float safeMaximumSpread = Math.Max(0f, maximumSpreadDegrees);
+            float centeredTriangularSample =
+                Clamp01(firstSample) + Clamp01(secondSample) - 1f;
+            return centeredTriangularSample * safeMaximumSpread;
+        }
+
+        private static float Clamp01(float value)
+        {
+            return Math.Max(0f, Math.Min(1f, value));
         }
     }
 }

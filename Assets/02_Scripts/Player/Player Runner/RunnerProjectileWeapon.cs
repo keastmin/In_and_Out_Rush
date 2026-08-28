@@ -18,6 +18,7 @@ public abstract class RunnerProjectileWeapon : RunnerWeaponNetworkBehaviour
     protected override bool TryExecuteShot(
         PlayerRunner owner,
         Vector3 targetPosition,
+        bool isRunning,
         RunnerWeaponHand hand,
         out Vector3 shotDirection)
     {
@@ -36,7 +37,13 @@ public abstract class RunnerProjectileWeapon : RunnerWeaponNetworkBehaviour
             return false;
         }
 
-        shotDirection = GetFireDirection(owner, muzzle, targetPosition);
+        Vector3 directShotDirection = GetFireDirection(owner, muzzle, targetPosition);
+        shotDirection = ModifyShotDirection(owner, directShotDirection, isRunning);
+        shotDirection.y = 0f;
+        if (!IsFinite(shotDirection) || shotDirection.sqrMagnitude <= 0.0001f)
+            shotDirection = directShotDirection;
+        else
+            shotDirection.Normalize();
 
         RunnerProjectile projectile = owner.Runner.Spawn(
             _projectilePrefab,
@@ -61,6 +68,14 @@ public abstract class RunnerProjectileWeapon : RunnerWeaponNetworkBehaviour
     protected virtual Transform ResolveMuzzle(RunnerWeaponHand hand)
     {
         return _muzzle;
+    }
+
+    protected virtual Vector3 ModifyShotDirection(
+        PlayerRunner owner,
+        Vector3 directShotDirection,
+        bool isRunning)
+    {
+        return directShotDirection;
     }
 
     private static Vector3 GetFireDirection(

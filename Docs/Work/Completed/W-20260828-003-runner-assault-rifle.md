@@ -1,6 +1,6 @@
 # W-20260828-003 Runner assault rifle
 
-Status: Reserved
+Status: Completed
 
 ## 동기화 기준
 
@@ -102,13 +102,39 @@ Scene, ScriptableObject, ProjectSettings, Package와 Runner Projectile prefab은
 
 ## 실제 변경
 
-예약 후 기록한다.
+- `RunnerWeaponHand.Primary`를 추가하고 공용 탄약 소비와 쌍권총 Left/Right 선택을 분리했다. `DualPistolWeapon`은 기존 홀짝 sequence 교대를 override해 보존한다.
+- `IRunnerWeapon.TryFire`와 공용 NetworkBehaviour·Projectile 기반에 실제 달리기 여부와 무기별 사격점/방향 보정 hook을 연결했다.
+- `PlayerRunner`가 이동 처리 결과와 현재 slide/tumble 상태로 실제 달리기 여부를 계산해 State Authority 무기 호출에 전달하도록 변경했다. 기존 Fusion input wire shape은 바꾸지 않았다.
+- `AssaultRifleWeapon`을 추가해 State Authority가 PlayerRef·spawn tick 기반 seed의 Networked `NetworkRNG`를 소유하고, 달리기 사격에만 두 표본 평균의 `[-8도, +8도]` 수평 탄퍼짐을 적용하도록 했다. 실제 발사 방향은 기존 `LastShotDirection`과 Projectile에 기록한다.
+- Player Runner prefab의 같은 weapon component fileID를 돌격소총 script로 전환하고 30/8/3/6/10/8도 설정, 공용 Muzzle, Runner Projectile, `_weaponBehaviour`, NetworkedBehaviour 등록을 유지했다. Pistol Anchor와 쌍권총 코드는 보존했다.
+- 순수 규칙 테스트를 30발 sequence, 쌍권총 교대 보존, 0.125초 발사 간격, 3초 재장전과 삼각 분포 경계/비달리기 0도 검증으로 확장했다.
+- Player Runner 기능 문서에 현재 기본 돌격소총 계약, 피해식, 탄퍼짐 의미, Primary presentation과 쌍권총 보존 상태를 기록했다.
 
 ## 검증 결과
 
-예약 후 기록한다.
+- 예약 Commit·Push·원격 검증: `8b0291fc0b186e9dc5687715e8341f66fc716e51`, `READY_TO_IMPLEMENT`, `AHEAD=0`, `BEHIND=0`.
+- `dotnet build ProjectIO.RunnerWeapons.Tests.csproj --no-restore`: 경고 0, 오류 0. Unity Test Runner 실행은 별도 미검증이다.
+- 임시 .NET 실행 harness: PASS. 30발 소비·빈 탄창 거부·sequence, 쌍권총 Left/Right 보존, 0.125초·3초, 삼각 분포 -8/0/+8도와 비달리기 0도를 실제 실행했다. harness 소스는 검증 뒤 삭제했다.
+- Unity refresh 전 생성형 `.csproj`가 앞선 Territory 정리에서 삭제된 소스를 참조해 최초 전체 build가 실패했다. 임시 ignored targets로 이번 코드와 새 AssaultRifleWeapon 집중 build를 실행해 오류 0, 기존 warning 13을 확인했고 targets는 즉시 삭제했다.
+- Unity Editor 강제 synchronous refresh: 새 AssaultRifleWeapon import, `Fusion.CodeGen.ILWeaverBindings`, Tundra build (`1176 evaluated`, success), assembly reload와 Player Runner prefab import 성공. Unity가 자동 정렬한 예약 외 `ProjectIO.slnx` 변경은 시작 시 내용으로 최소 복원해 diff에서 제외했다.
+- Unity가 `.csproj`를 재생성한 뒤 `dotnet build Assembly-CSharp.csproj --no-restore`: 오류 0, 기존 warning 13.
+- Player Runner prefab 정적 검증: AssaultRifle script GUID, weapon component, `_weaponBehaviour`, NetworkedBehaviour 등록, Runner Projectile, 공용 Muzzle, 30/8/3/6/10/8도 설정이 각각 정확히 존재하며 활성 DualPistol GUID는 없고 두 Pistol Anchor는 보존됨. 전 항목 PASS.
+- 새 Asset meta: 존재하며 GUID `60b137193b5046a8b1fb292a8b81b669`는 meta와 Player Runner prefab에서만 참조됨.
+- `git diff --check`: 통과. staged 파일은 없고 `git status`에는 예약된 구현·문서·Prefab과 새 AssaultRifle script/meta만 존재한다.
+- 실제 Host·Client, Late Join runtime: 미실행·미검증이다.
+
+### 미검증 수동 절차
+
+1. Unity Test Runner에서 EditMode `ProjectIO.RunnerWeapons.Tests`를 실행한다.
+2. Host Runner에서 정지와 일반 이동 중 커서 방향으로 편차 없이 발사되는지 확인한다.
+3. Host Runner가 LeftShift·이동·스태미나 조건을 만족한 상태로 연사할 때 공용 Muzzle의 실제 방향이 좌우 8도 안에서 중앙 집중형으로 분산되는지 확인한다. 스태미나가 없거나 이동 방향이 0이면 편차가 없어야 한다.
+4. 30발을 초당 8발로 소비하고, 부분 탄창 R이 3초 뒤 30발로 복원되며, full magazine R은 무시되고 빈 탄창 발사 시 자동 재장전되는지 확인한다.
+5. 슬라이드 중 새 발사가 차단되고 진행 중 재장전은 계속되는지 확인한다.
+6. 별도 Client Input Authority Runner에서 2~5를 반복하고 Host와 Client의 ammo/reload snapshot, `Primary` presentation 방향, Projectile 수가 같은지와 Host-local 중복 Spawn이 없는지 확인한다.
+7. 기본 upgrade 상태에서 첫 WorldMonster에 피해 6을 한 번 적용하고, TrackMonster는 통과하며 빈 방향 Projectile이 정확히 10m에서 Despawn하는지 확인한다.
+8. 부분 탄창과 재장전 중 Late Join해 ammo/reload 진행률이 복원되는지, 이후 달리기 사격 방향을 Host와 Client가 같게 보는지, Runner Despawn 뒤 event가 더 호출되지 않는지 확인한다.
 
 ## 남은 위험
 
 - 66% 명중률은 사용자가 선택한 탄퍼짐 표현으로 대체되므로 실제 충돌 확률은 대상 크기와 거리에 따라 달라진다.
-- 실제 Host·Client runtime과 Late Join 증거는 Unity 다중 Peer 환경에서 별도로 확인해야 한다.
+- Unity Test Runner와 실제 Host·Client runtime, Late Join 증거는 별도로 수집해야 한다. 컴파일과 정적 권위 검토만으로 Peer 동등성을 완료 처리하지 않았다.

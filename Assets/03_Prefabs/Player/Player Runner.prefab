@@ -5532,20 +5532,19 @@ MonoBehaviour:
   m_GameObject: {fileID: 9008013758366610681}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 95827fa7c7864facbe13872755d519d0, type: 3}
+  m_Script: {fileID: 11500000, guid: 60b137193b5046a8b1fb292a8b81b669, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _magazineCapacity: 16
-  _shotsPerSecond: 4
-  _reloadDuration: 2.5
+  _magazineCapacity: 30
+  _shotsPerSecond: 8
+  _reloadDuration: 3
   _projectilePrefab: {fileID: 2082090766327459836, guid: 65b489919c650d84c8b159cacd9c949a, type: 3}
   _muzzle: {fileID: 5455947531722268542}
   _damageableMask:
     serializedVersion: 2
     m_Bits: 64
-  _damage: 1
+  _damage: 6
   _projectileSpeed: 18
   _projectileLifetime: 3
   _maximumRange: 10
-  _leftMuzzle: {fileID: 8645579627188254611}
-  _rightMuzzle: {fileID: 3503190511484473734}
+  _runningSpreadDegrees: 8

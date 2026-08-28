@@ -2,7 +2,7 @@
 
 Status: Current
 
-Last reviewed: 2026-08-27
+Last reviewed: 2026-08-28
 
 ## 책임
 
@@ -13,13 +13,13 @@ Runner의 이동, 체력·스태미나, 전투, 회피, 버프, 순간이동과 
 - `Assets/02_Scripts/Player/Player Runner/Network/PlayerRunner.cs`
 - `PlayerRunnerMovement`, Combat·Slide·Tumble·Buff handler
 - `NetworkInputSystem`, `NetworkInputData`
-- `RunnerWeaponNetworkBehaviour`, `DualPistolWeapon`, `RunnerProjectile`
+- `RunnerWeaponNetworkBehaviour`, `AssaultRifleWeapon`, `DualPistolWeapon`, `RunnerProjectile`
 
 ## 상태와 권한
 
 Networked 플레이어 상태는 Fusion Authority 규칙을 따른다. 로컬 Camera·HUD 표현은 네트워크 상태와 분리한다.
 
-쌍권총은 Input Authority의 좌클릭 유지, R 재장전과 커서 조준점을 Fusion Input으로 전달한다. State Authority만 탄약, 발사 간격, 재장전, Projectile Spawn과 WorldMonster 피해를 변경한다. 탄약, 재장전 timer, 사격 sequence는 `DualPistolWeapon`의 Networked 상태이므로 Host와 Client 및 Late Join이 같은 결과를 읽는다.
+무기는 Input Authority의 좌클릭 유지, R 재장전, 커서 조준점과 기존 이동 입력을 Fusion Input으로 전달한다. State Authority만 실제 달리기 여부를 판정하고 탄약, 발사 간격, 재장전, 탄퍼짐 RNG, Projectile Spawn과 WorldMonster 피해를 변경한다. 탄약, 재장전 timer, 사격 sequence와 활성 무기의 추가 상태는 Networked 상태이므로 Host와 Client 및 Late Join이 같은 결과를 읽는다. 현재 Player Runner prefab의 기본 무기는 `AssaultRifleWeapon`이다.
 
 ## 주요 연결
 
@@ -30,7 +30,19 @@ Input Authority peer는 이 이벤트로 local fixed Trail을 즉시 예측 표�
 State Authority는 같은 이동을 검증해 confirmed stream을 만든다. PlayerRunner가
 Territory 결과나 Trail network state를 직접 소유하지는 않는다.
 
+## 돌격소총 계약
+
+- 기본 피해 6, 초당 8발, 사거리 10m, 30발 탄창, 3초 재장전이며 예비탄은 무제한이다.
+- 좌클릭을 유지하면 cooldown마다 공용 `Muzzle`에서 Projectile 한 개를 발사한다. R은 부분 탄창에서도 재장전을 시작하고, 0발에서 발사를 시도하면 자동 재장전한다.
+- 공격속도와 재장전 시간은 각각 `WeaponAttackSpeedScaler`, `WeaponReloadSpeedScaler`를 적용한다. 최종 피해는 `6 × WeaponDamage × WeaponDamageScaler`이다.
+- 정지와 일반 이동 중에는 커서 조준 방향을 그대로 사용한다. LeftShift, 이동 방향과 스태미나 조건을 모두 만족한 실제 달리기 중에는 State Authority의 Networked RNG에서 균등 표본 두 개를 소비하고, 평균한 삼각 분포로 좌우 최대 8도의 수평 탄퍼짐을 적용한다.
+- 명중률 66% 설계 의도는 확률적 hit 판정이 아니라 탄퍼짐으로 표현하므로 실제 명중률은 대상 크기와 거리에 따라 달라진다.
+- `ShotPresented`는 `RunnerWeaponHand.Primary`와 실제 탄퍼짐이 적용된 방향을 전달한다. 슬라이드 중에는 발사만 차단하고 재장전은 계속된다.
+- Projectile은 최대 10m에서 Despawn하고 첫 WorldMonster에만 피해를 한 번 적용하며 TrackMonster는 통과한다.
+
 ## 쌍권총 계약
+
+쌍권총 코드는 보존하지만 현재 Player Runner prefab의 활성 무기는 아니다.
 
 - 기본 피해 1, 초당 4발, 사거리 10m, 16발 탄창, 2.5초 재장전이며 예비탄은 무제한이다.
 - 좌클릭을 유지하면 cooldown마다 발사한다. R은 부분 탄창에서도 재장전을 시작하고, 0발에서 발사를 시도하면 자동 재장전한다.
@@ -41,10 +53,11 @@ Territory 결과나 Trail network state를 직접 소유하지는 않는다.
 
 ## HUD·모델 연결
 
-실제 권총 모델, 애니메이션, HUD, VFX와 SFX는 이 기능이 소유하지 않는다. 연결 코드는 로컬 Input Authority의 `PlayerRunner.Weapon`을 사용한다.
+실제 무기 모델, 애니메이션, HUD, VFX와 SFX는 이 기능이 소유하지 않는다. 연결 코드는 로컬 Input Authority의 `PlayerRunner.Weapon`을 사용한다.
 
 - HUD는 `IRunnerWeapon.Status`를 초기 표시하고 `StatusChanged`를 구독해 탄약과 재장전 시작·완료를 갱신한다. 재장전 바는 `Status.IsReloading` 동안 매 frame `Status.ReloadProgress01`을 읽는다.
-- 탄약 표시는 `Status.Ammunition / Status.MagazineCapacity`를 사용한다. 현재 쌍권총 기본 표시는 `현재 탄약 / 16`이다.
+- 탄약 표시는 `Status.Ammunition / Status.MagazineCapacity`를 사용한다. 현재 기본 돌격소총 표시는 `현재 탄약 / 30`이다.
+- 돌격소총 Presenter는 `ShotPresented(RunnerWeaponHand.Primary, direction)`을 구독해 단일 총구 반동, VFX와 SFX를 재생한다. 현재 Player Runner prefab의 공용 `Muzzle`이 논리 Projectile Spawn 위치다.
 - 두 권총 모델은 Player Runner prefab의 `Root` 아래 `Left Pistol Anchor`, `Right Pistol Anchor`에 배치한다. 이 Anchor가 논리 Projectile Spawn 위치이므로 실제 총구 위치에 맞춘다. 별도 총구 child Transform을 만들면 `DualPistolWeapon`의 Left/Right Muzzle 참조를 그 child로 교체한다.
 - 모델 Presenter는 `ShotPresented(RunnerWeaponHand hand, Vector3 direction)`을 구독하고 전달된 손에만 반동, 총구 VFX와 SFX를 재생한다. 이 event에서는 게임 상태나 피해를 변경하지 않는다.
 - 구독자는 PlayerRunner 또는 무기 Despawn 전에 event 구독을 해제해야 한다. 무기 component도 Despawn 시 남은 로컬 구독을 정리한다.
@@ -58,9 +71,10 @@ Territory 결과나 Trail network state를 직접 소유하지는 않는다.
 
 - Input Authority와 State Authority 구분
 - Host·Client 이동과 피해 결과
-- Host·Client의 좌클릭/R 입력, 탄약·재장전 상태와 좌우 presentation 동등성
-- 슬라이드 발사 거부, 달리기 사격, WorldMonster 피해와 TrackMonster 무시
-- Late Join 탄약·reload timer 복원과 Host-local 중복 Spawn 방지
+- Host·Client의 좌클릭/R 입력, 탄약·재장전 상태와 Primary/Left/Right presentation 동등성
+- 정지·일반 이동 무편차, 달리기 최대 8도 탄퍼짐, 슬라이드 발사 거부
+- WorldMonster 피해와 TrackMonster 무시, 10m 사거리
+- Late Join 탄약·reload timer·돌격소총 RNG 복원과 Host-local 중복 Spawn 방지
 - Spawn 시 StageBootstrapper 준비 상태
 - 사망·Despawn 후 이벤트와 registry 정리
 - Host/Client Input Authority에서 owner Trail의 즉시 표시와 State Authority

@@ -1,6 +1,6 @@
 # W-20260828-002 Territory Skill UI metadata 정합화
 
-Status: Reserved
+Status: Completed
 
 ## 동기화 기준
 
@@ -80,16 +80,30 @@ Bootstrapper 계약은 변경하지 않는다.
 
 ## 실제 변경
 
-예약 진행과 원격 검증 뒤 기록한다.
+- `display_name`을 `Territory 구조 작업`으로 바꿨다.
+- `short_description`을 Territory 설계·이식·교체·정리를 현재 계약에 따라 수행하는
+  35자 설명으로 바꿨다.
+- `default_prompt`가 현재 Territory 계약을 먼저 확인하고 예약된 설계, migration,
+  replacement 또는 retirement phase를 적절히 검증하도록 수정했다.
+- 기존 `interface` 구조만 유지했으며 policy, dependency, icon, brand metadata는
+  추가하지 않았다.
 
 ## 검증 결과
 
 - `CheckStart`: `READY_TO_CHECK_CONFLICTS` (`AHEAD=0`, `BEHIND=0`)
 - 기존 Active 의미 충돌: 없음. Player Runner 예약 파일과 Asset을 제외했다.
-- metadata 검증: 예약 진행 뒤 수행한다.
+- 예약 Commit `6824786` Push 뒤
+  `VerifyReservation=READY_TO_IMPLEMENT`를 확인했다.
+- `skill-creator/scripts/quick_validate.py`: `Skill is valid!`.
+- PyYAML parse와 schema assertion: `YAML=VALID`.
+- `short_description` 길이 35자, 모든 interface 값 string, top-level/interface key
+  보존, `default_prompt`의 `$build-chunk-territory` 포함과 폐기된
+  `approved chunk-territory milestone` 부재를 확인했다.
+- PyYAML은 `ProjectIO/Temp`에만 임시 설치해 검증 후 삭제했다.
+- runtime, Scene, Prefab, Territory 문서와 Player Runner 예약 파일은 변경하지 않았다.
 
 ## 남은 위험
 
 - UI가 metadata를 cache하면 변경 반영 시점은 Codex app의 Skill 재탐색 주기에 좌우될 수
   있다. 저장소 파일 정합성 검증과 app cache 갱신은 구분한다.
-
+- 실제 Codex app UI cache 재탐색은 이 저장소 검증에서 강제로 수행하지 않았다.

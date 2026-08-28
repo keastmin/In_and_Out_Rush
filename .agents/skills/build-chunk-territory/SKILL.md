@@ -1,51 +1,75 @@
 ---
 name: build-chunk-territory
-description: Design, implement, verify, and incrementally cut over ProjectIO from the legacy polygon territory pipeline to the chunk-based territory and trail pipeline. Use for chunk storage, territory expansion, trail processing, revision contracts, Fusion replication, shadow validation, consumer migration, legacy cutover, rollback, or long-running Territory handoff work.
+description: Design, implement, verify, migrate, or retire ProjectIO Territory domain, query, expansion, trail, replication, presentation, and consumer paths, including chunk-based work and legacy cutover.
 ---
 
 # Build Chunk Territory
 
 Begin only after `manage-feature-work` verifies the pushed Active reservation and finds no overlap.
 
-Complete one approved Territory milestone per task. Keep the legacy pipeline authoritative until an approved cutover milestone changes it.
+This Skill does not prescribe Chunk as the final Territory representation. It governs bounded
+Territory work that may introduce, migrate, replace, or retire Chunk-based elements while keeping
+the current gameplay contract explicit.
 
-## Load minimal context
+## Establish current truth
 
 1. Read root `AGENTS.md`.
 2. Read `Docs/PROJECT_MAP.md`, `Docs/Features/Territory.md`, and conflicting active work files.
-3. Read `references/work-session-protocol.md`.
-4. For a long-running migration, read only its `CURRENT_MILESTONE.md`, `HANDOFF.md`, and files listed under `Read first`.
-5. Inspect actual code and serialized references when they disagree with a document.
+3. Read the current Active reservation and any design or decision document explicitly named by it.
+4. Inspect actual code, callers, tests, Fusion state, and serialized references.
 
-Apply `photon-fusion-feature` for authority, replication, Late Join, Spawn, RPC, or Fusion lifecycle changes. Use this Skill's consumer migration rules instead of also loading the general migration Skill.
+Code and serialized references are authoritative when they disagree with a document. Completed work
+records are historical evidence, not an active implementation contract. Do not recreate a retired
+prototype merely because an older record mentions it.
 
-## Code boundary
+Apply `photon-fusion-feature` when authority, replication, recovery, RPC, or Fusion lifecycle can
+change. Apply `replace-existing-feature` for a full replacement and
+`migrate-feature-slice` for a coexistence migration.
 
-- Add new Chunk Territory runtime code and tests under `Assets/02_Scripts/Territory Refactor/` until an approved decision changes the location.
-- Use `ProjectIO.Territory` and `ProjectIO.Territory.Tests` by default.
-- Separate domain state, Trail processing, networking, presentation, consumers, and integration.
-- Create only the domain subfolders required by the milestone.
+## Preserve useful boundaries
+
+- Separate logical Territory state and queries, expansion rules, Trail rules, networking,
+  presentation, consumers, and composition.
+- Treat logical data and visual data as separate responsibilities even when a temporary adapter
+  still updates both.
+- Follow the repository domain structure in `AGENTS.md`; this Skill does not reserve a permanent
+  `Territory Refactor` directory or namespace.
+- Create only folders and abstractions required by the current reserved phase.
 - Put one top-level class, struct, enum, or interface in each file.
-- Introduce an asmdef only in a milestone that maps dependencies and proves no backward dependency on `Assembly-CSharp`.
+- Introduce or change an asmdef only after mapping dependencies and serialized impact.
+- Keep active gameplay behavior authoritative until the current reservation explicitly defines a
+  cutover.
 
-## Execute a milestone
+## Execute a reserved phase
 
-1. Confirm status, objective, prerequisite, allowed files, prohibited changes, acceptance criteria, and rollback.
-2. Reserve shared code and assets in `Docs/Work/Active/`.
-3. Keep approved coordinate, revision, ownership, and network contracts fixed.
-4. Implement the smallest coherent stage.
-5. Migrate one consumer or one composition-root seam at a time.
-6. Prevent legacy and Chunk paths from producing the same state change, Spawn, event, or presentation twice.
-7. Run focused tests, compilation, serialized checks, and relevant Host·Client verification.
-8. Update the roadmap status, long-running handoff, current milestone, Territory feature document, and active work evidence as applicable.
+1. Classify each touched path as active authority, active presentation, compatibility seam,
+   disconnected prototype, or historical test/document.
+2. Audit code references, serialized references, and Fusion messages before removing or replacing a
+   path.
+3. A disconnected prototype may be deleted without a gameplay cutover when it owns no consumer,
+   serialized setup, required authority state, or externally used contract. Remove its tests and
+   documentation in the same phase.
+4. For behavior changes, define coordinate precision, ownership, revision, publication, recovery,
+   and rollback contracts in the current design or Active work file before implementation.
+5. Implement the smallest coherent phase. Prefer one consumer seam at a time, but keep tightly
+   coupled callers together when splitting them would create duplicate or invalid behavior.
+6. Ensure old and new paths cannot produce the same mutation, Spawn, event, network publication, or
+   presentation twice.
+7. Keep Unity and Fusion APIs out of pure calculation code where practical. Publish background
+   results on the owning main-thread/authority seam.
+8. Verify focused domain tests, Unity/Fusion compilation, serialized references, Host·Client
+   behavior, teardown, failure, and recovery to the extent affected.
+9. Update the Territory feature document, project map, current decision/design documents, and
+   Active work evidence only where responsibilities or verification actually changed.
 
-Do not remove legacy code without an approved cutover milestone. Stop when an approved contract is insufficient and record a decision request instead of inventing a replacement.
+Stop and request a decision when the current reservation or design leaves a behavior-changing
+contract ambiguous. Do not treat speculative or retired documents as approval.
 
 ## Completion gate
 
-- acceptance criteria passed or exact failure recorded;
-- authority and Late Join restoration documented for affected state;
-- duplicate legacy/new execution excluded;
-- changed code and serialized setup listed;
-- rollback and remaining consumers recorded;
-- next milestone prepared without being implemented.
+- acceptance criteria passed or the exact unverified item is recorded;
+- remaining authority, query, Trail, presentation, and consumer owners are named;
+- duplicate old/new execution is excluded;
+- code, tests, RPCs, serialized setup, and matching Unity `.meta` files are consistent;
+- rollback and remaining migration seams are recorded when behavior changed;
+- no future phase is implemented or documented as approved unless the user requested it.

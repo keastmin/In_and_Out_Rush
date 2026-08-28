@@ -1,6 +1,6 @@
 # W-20260828-001 Territory 미사용 프로토타입 정리
 
-Status: Reserved
+Status: Completed
 
 ## 동기화 기준
 
@@ -198,19 +198,60 @@ exact expansion plan/materialization, persistent compact store와 background com
 
 ## 실제 변경
 
-예약 진행과 원격 검증 뒤 기록한다.
+- `TerritorySystem`에서 초기 C006 shadow store commit, delta packet queue,
+  `FlushTerritoryChunkTransfers`와 Begin/Data/Complete Chunk delta RPC·receiver를
+  제거했다. C013 expansion result/recovery와 C001-C005/C012 Trail 경로는 유지했다.
+- gameplay·직렬화·consumer에 연결되지 않은 C006-C011 runtime 36개, 전용 테스트 13개,
+  Fusion/Unity adapter 2개와 대응 Unity `.meta`를 제거했다.
+- fixed Trail에서 실제로 사용하는 `TerritoryChunkCoordinate`,
+  `TerritorySegmentChunkTraversal`, Trail session/packet/receiver/comparer와 테스트는
+  유지했다.
+- 폐기된 `Docs/LongRunning/Territory/` 계획 5개와
+  `work-session-protocol.md`를 제거했다. 과거 `Docs/Work/Completed/` 기록은
+  변경하지 않았다.
+- `Docs/Features/Territory.md`를 현재 Polygon authority, containment Y-bucket,
+  background expansion, Trail/Fusion 복제와 실제 consumer 기준으로 다시 맞췄다.
+  `Docs/PROJECT_MAP.md`도 같은 진입점과 책임으로 갱신했다.
+- `AGENTS.md`와 `build-chunk-territory` Skill은 분리된 prototype 제거를 허용하고,
+  폐기된 milestone·고정 코드 위치 대신 현재 예약·설계·실제 참조를 기준으로 판단하도록
+  수정했다.
+- Scene, Prefab, ScriptableObject, ProjectSettings, Package, Player Runner 예약 파일,
+  `ProjectIO.slnx`와 Skill `agents/openai.yaml`은 변경하지 않았다.
+- rollback이 필요하면 이 작업 변경 세트 전체를 되돌려 C006-C011 파일과
+  `TerritorySystem`의 shadow RPC seam을 함께 복원해야 한다. 일부만 복원하면 삭제된
+  타입 참조 또는 소비되지 않는 network traffic이 다시 생긴다.
 
 ## 검증 결과
 
 - `CheckStart`: `READY_TO_CHECK_CONFLICTS` (`AHEAD=0`, `BEHIND=0`)
 - 기존 Active 의미 충돌: 없음. Runner weapon 예약 파일과 Asset을 제외했다.
-- 구현·compile·runtime: 예약 진행 뒤 수행한다.
+- 예약 Commit `aa6f09d` Push 뒤 `VerifyReservation=READY_TO_IMPLEMENT`를 확인했다.
+- 삭제한 C006-C011 타입, Chunk shadow field/method와 Chunk delta RPC 활성 참조:
+  `rg` 0건. 폐기한 long-running/protocol 참조도 현재 문서·Skill에서 0건이다.
+- C013 `AdvertisedTerritoryExpansionRevision/Pending`, 정상·recovery RPC,
+  `TerritoryTrailShadowRecorder`, `TerritoryTrailReplicationStream`,
+  `TerritoryTrailChunkRenderer`, `OnTerritoryExpandedEvent`가 남아 있음을 정적
+  확인했다.
+- 삭제된 C# 51개 모두 동일 경로 `.cs.meta` 삭제와 짝이 맞는다.
+- Unity 6000.0.69f1 EditMode
+  `-testFilter ProjectIO.Territory.Tests`: 43 passed, 0 failed, 0 skipped.
+  정상 UPM 로드에서 전체 script compile과 Fusion Weaver를 통과했다.
+- `skill-creator/scripts/quick_validate.py`: `Skill is valid!`.
+  PyYAML은 `ProjectIO/Temp`에만 임시 설치해 검증 후 삭제했다.
+- `git diff --check`: 오류 없음. `ProjectIO.slnx`와
+  `.agents/skills/build-chunk-territory/agents/openai.yaml` diff 0건이다.
+- 실제 Host·Client 다중 Peer runtime은 이 환경에서 수행하지 않았다.
 
 ## 남은 위험
 
-- C006/C007 RPC 제거는 gameplay 결과를 바꾸지 않아야 하지만 Fusion Weaver가 생성하는
-  RPC surface가 달라지므로 Unity compile과 실제 Host/Client 연결 회귀 확인이 필요하다.
-- Unity가 생성한 project file이 삭제 source를 계속 가리키면 Unity import/regeneration 후
-  compile해야 한다.
+- Host에서 Client를 참가시킨 뒤 양쪽 Runner 각각 영역 이탈→Trail 시작→재진입 확장,
+  자기 교차/Abort, 연속 확장과 Scene teardown을 실행해야 한다. owner의 즉시 Trail,
+  상대 Peer의 confirmed Trail, 양쪽 최종 Polygon·Mesh 일치, Host 중복 event 부재와
+  teardown 오류 부재를 각각 확인한다.
+- Client result packet 누락을 재현할 수 있으면 advertised revision보다 뒤처진 Client가
+  recovery request/retry로 최신 전체 결과에 수렴하는지도 확인한다.
 - 미래 설계가 확정되기 전에는 현재 Legacy polygon과 C013 full result replication이 계속
   유일한 authoritative Territory 결과다.
+- Skill UI metadata `agents/openai.yaml`의 오래된 display/default prompt 정리는 현재
+  Cleanup 최종 Push 뒤 별도 소규모 예약으로 수행한다. 중간 예약 갱신은 기존 구현 diff를
+  허용하지 않는 `CheckReservation` 계약 때문에 이 작업에서 분리했다.

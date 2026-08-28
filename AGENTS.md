@@ -80,10 +80,11 @@
 
 - 기존 기능을 완전히 교체하면 `replace-existing-feature` Skill을 적용한다.
 - 기존 기능을 유지하면서 일부 흐름을 단계적으로 옮기면 `migrate-feature-slice` Skill을 적용한다.
-- Chunk Territory 작업은 `build-chunk-territory` Skill을 적용한다.
-- 기존 호출자, 이벤트, Scene·Prefab 참조, ScriptableObject, 네트워크 상태를 조사하지 않고 새 구현을 병렬로 추가하지 않는다.
+- Territory의 Chunk·Grid·Trail·영역 판정·확장 구조를 변경하면 `build-chunk-territory` Skill을 적용한다.
+- 기존 호출자, 이벤트, Scene·Prefab 참조, ScriptableObject, 네트워크 상태를 조사하지 않고 새 구현을 병렬로 추가하거나 기존 구현을 제거하지 않는다.
 - Legacy와 새 경로가 같은 Spawn, 상태 변경, 이벤트 또는 표현을 동시에 실행하지 않게 한다.
-- 삭제 전 전환 완료 조건과 롤백 방법을 기록한다.
+- 소비자, 직렬화 참조와 필수 네트워크 계약이 없는 분리된 프로토타입은 범위를 예약하고 참조를 검증한 뒤 관련 테스트·문서와 함께 제거할 수 있다.
+- 실제 동작을 교체하거나 소비자를 전환하는 경우에는 현재 작업 문서에 전환 완료 조건과 롤백 방법을 기록한다. 과거 완료 문서나 폐기된 장기 계획을 현재 구현 계약으로 간주하지 않는다.
 
 ## Scene과 Prefab
 

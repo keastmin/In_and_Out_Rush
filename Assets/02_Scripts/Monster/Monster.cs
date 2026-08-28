@@ -13,6 +13,8 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
 
     [Networked] protected float Health { get; private set; }
     [Networked] private TickTimer StunTimer { get; set; }
+    [Networked] private TickTimer KnockbackTimer { get; set; }
+    [Networked] private Vector3 KnockbackVelocity { get; set; }
     protected float maxHealth;
 
     protected Territory territory;
@@ -47,6 +49,8 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
         {
             maxHealth = health;
             Health = maxHealth;
+            KnockbackTimer = TickTimer.None;
+            KnockbackVelocity = Vector3.zero;
             Initialize();
         }
     }
@@ -129,6 +133,9 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
         {
             if (!CanAccessNetworkState || !Object.HasStateAuthority) { return; }
 
+            if (UpdateKnockback())
+                return;
+
             if (IsStunned)
             {
                 StopByStun();
@@ -155,6 +162,65 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
 
         rigidBody.linearVelocity = Vector3.zero;
         rigidBody.angularVelocity = Vector3.zero;
+    }
+
+    protected bool BeginKnockback(Vector3 direction, float distance, float duration)
+    {
+        if (!CanAccessNetworkState ||
+            !Object.HasStateAuthority ||
+            distance <= 0f ||
+            duration <= 0f)
+        {
+            return false;
+        }
+
+        direction.y = 0f;
+        if (direction.sqrMagnitude <= 0.0001f)
+            return false;
+
+        KnockbackVelocity = direction.normalized * (distance / duration);
+        KnockbackTimer = TickTimer.CreateFromSeconds(Runner, duration);
+        return true;
+    }
+
+    protected virtual bool IsKnockbackPathBlocked(
+        Vector3 startPosition,
+        Vector3 endPosition)
+    {
+        return false;
+    }
+
+    private bool UpdateKnockback()
+    {
+        if (!KnockbackTimer.IsRunning)
+            return false;
+
+        if (KnockbackTimer.Expired(Runner))
+        {
+            ClearKnockback();
+            StopMovement();
+            return true;
+        }
+
+        float deltaTime = Runner.DeltaTime;
+        Vector3 currentPosition = RigidbodyPosition;
+        Vector3 nextPosition = currentPosition + KnockbackVelocity * deltaTime;
+        if (deltaTime <= Mathf.Epsilon ||
+            IsKnockbackPathBlocked(currentPosition, nextPosition))
+        {
+            ClearKnockback();
+            StopMovement();
+            return true;
+        }
+
+        SetMovementVelocity(KnockbackVelocity);
+        return true;
+    }
+
+    private void ClearKnockback()
+    {
+        KnockbackTimer = TickTimer.None;
+        KnockbackVelocity = Vector3.zero;
     }
 
     protected Vector3 RigidbodyPosition

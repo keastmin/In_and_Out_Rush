@@ -30,6 +30,7 @@ public class WorldMonster : Monster
     private float obstaclePathClearance = -1f;
 
     protected override bool ShouldDestroyInsideTerritory => true;
+    protected virtual bool CanReceiveKnockback => true;
 
 #if UNITY_EDITOR
     void OnDrawGizmosSelected()
@@ -60,6 +61,11 @@ public class WorldMonster : Monster
     public void SetWorldObstacleIndex(WorldObstacleBoundsIndex obstacleBoundsIndex)
     {
         worldObstacleBoundsIndex = obstacleBoundsIndex;
+    }
+
+    public bool TryApplyKnockback(Vector3 direction, float distance, float duration)
+    {
+        return CanReceiveKnockback && BeginKnockback(direction, distance, duration);
     }
 
     public override void Initialize()
@@ -186,6 +192,13 @@ public class WorldMonster : Monster
         float clearance = ResolveObstaclePathClearance();
         return IsWorldObstaclePathBlocked(startPosition, endPosition) ||
                IsResourcePathBlocked(startPosition, endPosition, clearance);
+    }
+
+    protected override bool IsKnockbackPathBlocked(
+        Vector3 startPosition,
+        Vector3 endPosition)
+    {
+        return IsMovementPathBlocked(startPosition, endPosition);
     }
 
     private bool IsSafeZonePathBlocked(

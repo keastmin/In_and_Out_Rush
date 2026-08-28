@@ -1,6 +1,6 @@
 # W-20260828-004 Runner shotgun
 
-Status: Reserved
+Status: Completed
 
 ## 동기화 기준
 
@@ -62,7 +62,7 @@ Player Runner 기본 네트워크 산탄총과 WorldMonster 근접 넉백
 
 - `Assets/03_Prefabs/Player/Player Runner.prefab`
   - 기존 무기 component fileID, PlayerRunner `_weaponBehaviour`, NetworkObject `NetworkedBehaviours`와 공용 `Muzzle` 참조를 유지한 채 script를 `ShotgunWeapon`으로 전환한다.
-  - 5발, 초당 1.25회, shell당 1초, 3/5/7m, 피해 36/18/9, 전체 원뿔 24도, 달리기 명중률 50%, 8펠릿, 1m/0.2초 넉백을 설정한다.
+  - 5발, 초당 1.25회, shell당 1초, 3/5/7m, 피해 36/18/9, 전체 원뿔 24도, 달리기 명중률 50%, 8펠릿, 1m/0.2초 넉백과 7m/0.1초 기본 tracer를 설정한다.
 
 Scene, ScriptableObject, ProjectSettings, Package, Monster prefab과 Runner Projectile prefab은 변경하지 않는다.
 
@@ -80,7 +80,7 @@ Scene, ScriptableObject, ProjectSettings, Package, Monster prefab과 Runner Proj
 - 입력 원점: Host-local과 Client Input Authority의 기존 `NetworkInputSystem`이 좌클릭 유지, R key-down, 커서 조준점, LeftShift와 이동 입력을 `NetworkInputData`로 전달한다.
 - 검증·변경 owner: 해당 PlayerRunner의 State Authority가 실제 달리기와 슬라이드 상태를 결정한다. 무기 State Authority만 cooldown, shell 장전, 탄약, shot sequence, RNG, 원뿔/가시성/MISS 판정, WorldMonster 피해와 넉백을 한 번 수행한다.
 - 지속 반환 경로: Networked 탄약, 현재 shell timer와 진행률, reload 상태, shot sequence, 명중 RNG와 pellet seed가 Host·Client HUD 및 Late Join의 원본이다. WorldMonster 위치는 기존 NetworkRigidbody로 복제한다.
-- 일회성 반환 경로: 복제 shot sequence와 pellet seed로 모든 Peer가 같은 `ShotgunShotPresentation`을 만들고, State Authority RPC는 해당 Input Authority에 대상별 hit/MISS·피해·넉백 결과를 전달한다. Host-local도 같은 결과 계약을 정확히 한 번 사용한다.
+- 일회성 반환 경로: 복제 shot sequence와 pellet seed로 모든 Peer가 같은 `ShotgunShotPresentation`과 8개 기본 tracer를 만들고, State Authority RPC는 해당 Input Authority에 대상별 hit/MISS·피해·넉백 결과를 전달한다. Host-local도 같은 결과 계약을 정확히 한 번 사용한다.
 - 권위 없는 Client는 탄약, RNG, 피해, 넉백을 직접 변경하지 않는다. 정지·일반 이동은 대상별 100%, 실제 달리기는 안정 대상 순서의 Networked RNG로 대상별 독립 50%를 판정한다.
 - 한 발은 Collider를 WorldMonster별로 dedupe하고 공용 Muzzle 기준 전체 24도·최대 7m 안에서 3/5/7m 피해 36/18/9를 적용한다. 첫 가시 Collider가 대상이 아니면 제외하여 비관통을 보장하고 TrackMonster는 무시한다.
 - 3m 이내 성공 적중은 이동형 WorldMonster를 0.2초 동안 1m 밀며 기존 바위·자원·Territory·Sanctuary 경계 판정에서 중단한다. 새 넉백은 진행 중 값을 교체하고 면역형은 피해만 받는다.
@@ -96,7 +96,7 @@ Scene, ScriptableObject, ProjectSettings, Package, Monster prefab과 Runner Proj
 
 - 무기 선택·구매·런타임 교체와 예비탄 제한
 - 치명타, 스킬·아이템 상호작용과 TrackMonster 피해
-- MISS 텍스트, 총기 모델, 애니메이션, 실제 tracer/muzzle VFX와 SFX
+- MISS 텍스트, 총기 모델, 애니메이션, 정식 tracer/muzzle VFX와 SFX. 발사 확인용 0.1초 기본 LineRenderer tracer는 포함한다.
 - HUD layout, Scene, Bootstrapper, ProjectSettings, Package와 AOI 변경
 - 기존 돌격소총·쌍권총 코드 제거
 
@@ -104,7 +104,7 @@ Scene, ScriptableObject, ProjectSettings, Package, Monster prefab과 Runner Proj
 
 - 기본 산탄총이 5발을 0.8초 기본 간격으로 소비하고, 1초마다 1발을 채우며, 탄약이 있으면 사격으로 장전을 중단하고 공격·재장전 속도 scaler를 적용한다.
 - 한 발이 최대 7m·전체 24도 원뿔에서 WorldMonster를 한 번씩 판정하고, 3/5/7m 경계의 최종 피해가 `36/18/9 × WeaponDamage × WeaponDamageScaler`이며 가시성 차단과 TrackMonster 무시를 지킨다.
-- 정지·일반 이동은 100%, 달리기는 대상별 독립 50%이며 Host·Client가 같은 8펠릿 presentation과 요청자 hit/MISS 결과를 받는다.
+- 정지·일반 이동은 100%, 달리기는 대상별 독립 50%이며 Host·Client가 같은 8펠릿 presentation·0.1초 기본 tracer와 요청자 hit/MISS 결과를 받는다.
 - 3m 이내 이동형은 1m/0.2초 넉백되고 경계에서 중단하며 SandTomb, Rafflesia, Gigantia는 밀리지 않는다.
 - Host-local 중복 실행이 없고 권위 없는 Client mutation이 없으며 Late Join, Despawn과 delayed readiness에서 stale 상태·event가 없다.
 - 기존 돌격소총과 쌍권총 회귀, 집중 EditMode 테스트, Unity/Fusion Weaver compile, prefab GUID·fileID·수치, `.meta` pairing, `git diff --check`와 예약 외 변경 부재를 검증한다.
@@ -113,13 +113,34 @@ Scene, ScriptableObject, ProjectSettings, Package, Monster prefab과 Runner Proj
 
 ## 실제 변경
 
-예약 단계. 구현 후 기록한다.
+- `RunnerWeaponNetworkBehaviour`에 기존 무기의 전체 탄창 장전을 기본값으로 유지하는 incremental reload, reload fire-interrupt와 weapon-specific presentation hook을 추가했다. `RunnerProjectileWeapon`은 새 shot sequence 인자를 받되 기존 AR·쌍권총 발사 동작은 바꾸지 않았다.
+- `ShotgunRules`와 테스트를 추가해 3/5/7m 피해 경계, ±12도 원뿔, 달리기 hit/MISS, seed·sequence 기반 펠릿 각도와 5발 적립 장전 규칙을 순수 Logic으로 분리했다.
+- `ShotgunWeapon`은 State Authority에서 7m overlap, WorldMonster Collider dedupe, 24도 원뿔, 첫 Collider 가시성, NetworkId 안정 순서와 대상별 RNG를 판정하고 거리 피해·근거리 넉백을 한 번 적용한다. TrackMonster는 `WorldMonster` 후보가 아니므로 제외된다.
+- `ShotgunWeapon`은 Networked hit RNG와 pellet seed를 소유한다. 복제 sequence/seed를 소비하는 `ShotgunShotPresented`와 State Authority→Input Authority reliable target result RPC의 `TargetResultPresented`를 추가했다. Despawn에서 두 event와 로컬 후보 cache를 정리한다.
+- 사용자 확인 요청에 따라 `ShotgunShotPresented`의 8개 방향을 사용하는 7m 황백색 LineRenderer tracer를 추가했다. 모든 Peer에서 0.1초 동안 페이드하며 별도 Asset이나 network state 없이 동작하고 Despawn에서 coroutine, line object와 runtime material을 정리한다.
+- `Monster`에 권위 전용 Networked knockback timer·velocity와 AI보다 먼저 실행하는 이동 tick을 추가했다. `WorldMonster.TryApplyKnockback`은 기존 `IsMovementPathBlocked`를 사용하며 SandTomb, `ShooterWorldMonster`, `Centipede`는 면역 override다.
+- Player Runner prefab의 fileID `-3321396743853381275`, `_weaponBehaviour`, NetworkObject behaviour 등록과 Muzzle fileID `5455947531722268542`를 유지하고 script GUID와 산탄총 수치만 전환했다. Runner Projectile prefab과 Scene은 변경하지 않았다.
+- `PlayerRunner.md`와 `MonstersAndProjectiles.md`에 산탄총, 적립 장전, presentation/result, Late Join과 권위 넉백·면역 계약을 기록했다.
 
 ## 검증 결과
 
-예약 단계. 구현 후 기록한다.
+- 예약 commit `8f1569e978422531bacc55fece029c75492eec83`을 upstream에서 `VerifyReservation`으로 확인해 `READY_TO_IMPLEMENT`를 받은 뒤 구현했다.
+- 최종 handoff 직전 `dotnet build ProjectIO.RunnerWeapons.Tests.csproj --no-restore --nologo`와 `dotnet build Assembly-CSharp.csproj --no-restore --nologo`를 다시 실행해 두 빌드 모두 경고 0, 오류 0을 확인했다.
+- 새 `ShotgunRules.cs`를 임시 source include한 `dotnet build ProjectIO.RunnerWeapons.csproj --no-restore --nologo`: 경고 0, 오류 0.
+- 새 `ShotgunRulesTests.cs`를 임시 source include한 `dotnet build ProjectIO.RunnerWeapons.Tests.csproj --no-restore --nologo`: 경고 0, 오류 0. NUnit source와 기존 회귀 테스트는 컴파일됐지만 이 Unity 생성 csproj에는 standalone test adapter가 없어 `dotnet test`로 실제 case 실행 결과를 얻지 못했다.
+- 새 Shotgun adapter 3개를 임시 source include한 `dotnet build Assembly-CSharp.csproj --no-restore --nologo`: 오류 0. 기존 코드의 미사용/deprecated/Unity message signature 경고 13개만 확인됐다. 임시 csproj include는 검증 직후 모두 원복했으며 csproj는 Git 비추적 생성 파일이다.
+- 기본 tracer 추가 후 Unity가 갱신한 `Assembly-CSharp.csproj`로 같은 전체 build를 다시 실행해 오류 0, 기존 경고 13개를 확인했고 `git diff --check`도 통과했다. Prefab에는 enabled, 황백색, 0.1초, 시작 0.035m/끝 0.008m 굵기가 직렬화됐다.
+- 최신 tracer source는 열린 Unity Editor의 `Library/ScriptAssemblies/Assembly-CSharp.dll`보다 새로워 Editor import·Fusion Weaver 반영은 아직 수동 Assets Refresh 후 확인해야 한다. CLI `dotnet build` 컴파일과 Unity runtime import 검증을 구분한다.
+- Prefab 정적 검증에서 Shotgun script GUID는 1회, 기존 weapon component fileID는 component·GameObject·PlayerRunner·NetworkObject 연결의 4회이며 Muzzle과 `5 / 1.25 / 1 / 36·18·9 / 3·5·7 / 24 / 50 / 8 / 1 / 0.2` 값이 확인됐다.
+- 새 script 5개와 `.meta` 5개 pairing, 예약 범위 안 변경만 존재함과 `git diff --check` 통과를 확인했다.
+- 열린 Unity Editor가 자동 csproj refresh를 수행하지 않았고 `computer-use`의 세션 CLI `orca-ide`도 없어 Unity Test Runner, Asset import, Fusion IL Weaver와 실제 Host·Client 실행은 수행하지 않았다.
 
 ## 남은 위험
 
-- 실제 Host·Client 및 Late Join 런타임 증거는 구현 후 별도 확인이 필요하다.
-- 원뿔 가시성·다중 Collider·NetworkRigidbody 넉백은 순수 규칙 테스트 외에 Unity Physics 런타임 검증이 필요하다.
+- Unity에서 Assets Refresh 후 RunnerWeapons EditMode test를 실행해 3/5/7m, ±12도, 대상별 50%, 8펠릿, 적립 장전·사격 중단과 AR/쌍권총 회귀 case가 실제 통과하는지 확인해야 한다.
+- 게임 화면에서 Host와 Client 각각 사격할 때 공용 Muzzle에서 8개 tracer가 7m까지 한 번만 나타나고 약 0.1초에 페이드하며, 사격 sequence가 없는 Late Join에는 과거 tracer가 나타나지 않고 Despawn 후 child object가 남지 않는지 확인해야 한다.
+- Unity compile과 Fusion IL Weaver 완료 후 Player Runner prefab에 Missing Script가 없고 NetworkedBehaviour 등록·Muzzle 참조가 유지되는지 확인해야 한다.
+- Host 시작 → Client 참가 → 양쪽 Runner로 정지/이동/달리기 다중 대상 사격 → 대상별 MISS/result event → R·빈 탄창 적립 장전과 1발 뒤 사격 중단 → 슬라이드 발사 거부 → 일렬 대상 비관통과 3/5/7m 피해 → 이동형 1m/0.2초 넉백 → SandTomb/Rafflesia/Gigantia 면역 → 바위·자원·Territory·Sanctuary 경계 중단 → 빈 공간 7m pellet presentation → Host 중복 event/피해 없음 순서로 확인해야 한다.
+- 부분 장전 도중 새 Client를 참가시켜 ammo, 현재 shell 진행률, reload, sequence, RNG와 pellet seed의 현재 상태만 복원되고 과거 event가 재생되지 않는지 확인한 뒤 Runner/Monster Despawn 후 stale event·knockback이 없는지 확인해야 한다.
+- 별도 fresh Critic context를 사용할 수 없어 Gauntlet 독립 검토는 수행하지 못했다. 현재 self-review와 정적·컴파일 증거만 기록했으며 Unity Physics/Fusion Peer 검증 전에는 런타임 완료로 간주하지 않는다.
+- Unity가 자동 재정렬한 `ProjectIO.slnx` 변경이 예약 밖에 별도로 나타났으며 산탄총 구현에 포함하거나 stage하지 않는다.

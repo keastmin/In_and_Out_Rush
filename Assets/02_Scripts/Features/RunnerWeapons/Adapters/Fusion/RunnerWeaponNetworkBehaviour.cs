@@ -67,7 +67,9 @@ public abstract class RunnerWeaponNetworkBehaviour : NetworkBehaviour, IRunnerWe
         if (ShotSequence != _lastPresentedShotSequence)
         {
             _lastPresentedShotSequence = ShotSequence;
-            ShotPresented?.Invoke(ResolveShotHand(ShotSequence), LastShotDirection);
+            RunnerWeaponHand hand = ResolveShotHand(ShotSequence);
+            OnShotPresented(ShotSequence, hand, LastShotDirection);
+            ShotPresented?.Invoke(hand, LastShotDirection);
         }
 
         bool reloadActive = ReloadActive;
@@ -95,7 +97,15 @@ public abstract class RunnerWeaponNetworkBehaviour : NetworkBehaviour, IRunnerWe
 
         CompleteReloadIfExpired();
         if (ReloadActive)
-            return;
+        {
+            if (!CanInterruptReloadWithFire ||
+                !RunnerWeaponRules.CanInterruptReloadToFire(Ammunition, ReloadActive))
+            {
+                return;
+            }
+
+            CancelReload();
+        }
 
         if (RunnerWeaponRules.ShouldStartAutomaticReload(
                 Ammunition,
@@ -122,6 +132,7 @@ public abstract class RunnerWeaponNetworkBehaviour : NetworkBehaviour, IRunnerWe
                 targetPosition,
                 isRunning,
                 hand,
+                shotSequence,
                 out Vector3 shotDirection))
             return;
 
@@ -147,7 +158,19 @@ public abstract class RunnerWeaponNetworkBehaviour : NetworkBehaviour, IRunnerWe
         Vector3 targetPosition,
         bool isRunning,
         RunnerWeaponHand hand,
+        int shotSequence,
         out Vector3 shotDirection);
+
+    protected virtual bool UsesIncrementalReload => false;
+
+    protected virtual bool CanInterruptReloadWithFire => false;
+
+    protected virtual void OnShotPresented(
+        int shotSequence,
+        RunnerWeaponHand hand,
+        Vector3 shotDirection)
+    {
+    }
 
     protected virtual RunnerWeaponHand ResolveShotHand(int shotSequence)
     {
@@ -178,9 +201,7 @@ public abstract class RunnerWeaponNetworkBehaviour : NetworkBehaviour, IRunnerWe
         if (duration <= 0f)
         {
             Ammunition = RunnerWeaponRules.CompleteReload(MagazineCapacity);
-            ReloadTimer = TickTimer.None;
-            ReloadActive = false;
-            ActiveReloadDuration = 0f;
+            CancelReload();
             return;
         }
 
@@ -194,7 +215,25 @@ public abstract class RunnerWeaponNetworkBehaviour : NetworkBehaviour, IRunnerWe
         if (!ReloadActive || !ReloadTimer.Expired(Runner))
             return;
 
-        Ammunition = RunnerWeaponRules.CompleteReload(MagazineCapacity);
+        if (!UsesIncrementalReload)
+        {
+            Ammunition = RunnerWeaponRules.CompleteReload(MagazineCapacity);
+            CancelReload();
+            return;
+        }
+
+        Ammunition = RunnerWeaponRules.LoadNextRound(Ammunition, MagazineCapacity);
+        if (!RunnerWeaponRules.ShouldContinueIncrementalReload(Ammunition, MagazineCapacity))
+        {
+            CancelReload();
+            return;
+        }
+
+        ReloadTimer = TickTimer.CreateFromSeconds(Runner, ActiveReloadDuration);
+    }
+
+    private void CancelReload()
+    {
         ReloadTimer = TickTimer.None;
         ReloadActive = false;
         ActiveReloadDuration = 0f;

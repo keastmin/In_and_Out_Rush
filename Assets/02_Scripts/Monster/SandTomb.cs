@@ -41,6 +41,8 @@ public class SandTomb : WorldMonster
     private MaterialPropertyBlock _activationRangePropertyBlock;
     private MaterialPropertyBlock _suckedIntoRangePropertyBlock;
 
+    protected override bool CanReceiveKnockback => false;
+
     private void Awake()
     {
         ApplyRangeVisuals();

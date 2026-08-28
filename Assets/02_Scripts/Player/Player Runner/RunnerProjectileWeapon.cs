@@ -20,6 +20,7 @@ public abstract class RunnerProjectileWeapon : RunnerWeaponNetworkBehaviour
         Vector3 targetPosition,
         bool isRunning,
         RunnerWeaponHand hand,
+        int shotSequence,
         out Vector3 shotDirection)
     {
         shotDirection = owner != null ? owner.transform.forward : Vector3.forward;

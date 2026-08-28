@@ -5532,19 +5532,29 @@ MonoBehaviour:
   m_GameObject: {fileID: 9008013758366610681}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 60b137193b5046a8b1fb292a8b81b669, type: 3}
+  m_Script: {fileID: 11500000, guid: 8bc4d92e16a74853a9f1730c6dbe2541, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _magazineCapacity: 30
-  _shotsPerSecond: 8
-  _reloadDuration: 3
-  _projectilePrefab: {fileID: 2082090766327459836, guid: 65b489919c650d84c8b159cacd9c949a, type: 3}
+  _magazineCapacity: 5
+  _shotsPerSecond: 1.25
+  _reloadDuration: 1
   _muzzle: {fileID: 5455947531722268542}
   _damageableMask:
     serializedVersion: 2
     m_Bits: 64
-  _damage: 6
-  _projectileSpeed: 18
-  _projectileLifetime: 3
-  _maximumRange: 10
-  _runningSpreadDegrees: 8
+  _nearDamage: 36
+  _middleDamage: 18
+  _farDamage: 9
+  _nearRange: 3
+  _middleRange: 5
+  _maximumRange: 7
+  _fullConeDegrees: 24
+  _runningAccuracyPercent: 50
+  _presentationPelletCount: 8
+  _showTracers: 1
+  _tracerColor: {r: 1, g: 0.8, b: 0.25, a: 1}
+  _tracerDuration: 0.1
+  _tracerStartWidth: 0.035
+  _tracerEndWidth: 0.008
+  _knockbackDistance: 1
+  _knockbackDuration: 0.2

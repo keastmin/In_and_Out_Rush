@@ -56,6 +56,38 @@ namespace ProjectIO.RunnerWeapons.Tests
         }
 
         [Test]
+        public void IncrementalReload_LoadsOneRoundAndCanBeInterruptedAfterFirstShell()
+        {
+            int ammunition = 0;
+
+            Assert.That(
+                RunnerWeaponRules.ShouldContinueIncrementalReload(ammunition, 5),
+                Is.True);
+            Assert.That(
+                RunnerWeaponRules.CanInterruptReloadToFire(ammunition, true),
+                Is.False);
+
+            ammunition = RunnerWeaponRules.LoadNextRound(ammunition, 5);
+
+            Assert.That(ammunition, Is.EqualTo(1));
+            Assert.That(
+                RunnerWeaponRules.ShouldContinueIncrementalReload(ammunition, 5),
+                Is.True);
+            Assert.That(
+                RunnerWeaponRules.CanInterruptReloadToFire(ammunition, true),
+                Is.True);
+
+            for (int shellIndex = 1; shellIndex < 5; shellIndex++)
+                ammunition = RunnerWeaponRules.LoadNextRound(ammunition, 5);
+
+            Assert.That(ammunition, Is.EqualTo(5));
+            Assert.That(
+                RunnerWeaponRules.ShouldContinueIncrementalReload(ammunition, 5),
+                Is.False);
+            Assert.That(RunnerWeaponRules.LoadNextRound(ammunition, 5), Is.EqualTo(5));
+        }
+
+        [Test]
         public void AutomaticReload_StartsOnlyForAnEmptyInactiveMagazine()
         {
             Assert.That(

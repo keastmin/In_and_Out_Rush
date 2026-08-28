@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class Centipede : WorldMonster
 {
+    protected override bool CanReceiveKnockback => false;
+
     [Header("Centipede Settings")]
     public Transform head;
     public GameObject segmentPrefab;

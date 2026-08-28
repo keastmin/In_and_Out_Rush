@@ -40,6 +40,26 @@ namespace ProjectIO.RunnerWeapons
             return Math.Max(1, magazineCapacity);
         }
 
+        public static int LoadNextRound(int ammunition, int magazineCapacity)
+        {
+            int safeCapacity = Math.Max(1, magazineCapacity);
+            return Math.Min(safeCapacity, Math.Max(0, ammunition) + 1);
+        }
+
+        public static bool ShouldContinueIncrementalReload(
+            int ammunition,
+            int magazineCapacity)
+        {
+            return ammunition >= 0 &&
+                   magazineCapacity > 0 &&
+                   ammunition < magazineCapacity;
+        }
+
+        public static bool CanInterruptReloadToFire(int ammunition, bool isReloading)
+        {
+            return isReloading && ammunition > 0;
+        }
+
         public static float GetShotInterval(float shotsPerSecond, float attackSpeedScaler)
         {
             float safeShotsPerSecond = Math.Max(MinimumSpeedScaler, shotsPerSecond);

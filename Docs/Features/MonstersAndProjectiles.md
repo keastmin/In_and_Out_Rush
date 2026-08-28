@@ -2,7 +2,7 @@
 
 Status: Current
 
-Last reviewed: 2026-08-21
+Last reviewed: 2026-08-28
 
 ## 책임
 
@@ -72,6 +72,14 @@ SandTomb presents the activation radius as an inner transparent disk and the suc
 `Stalker` keeps its serialized sensing and attack-entry ranges, chase state, and three-attacks-per-second timer. It enters attack at `Attack Range` and remains in attack until the target exceeds the larger `Chase Resume Range`; the Stalker prefab uses 5m and 5.5m respectively to avoid range-boundary state chatter. On each attack tick, its State Authority spawns the shared `MonsterProjectile` from the optional `Stalker.prefab` `Muzzle` child, or the equivalent local `(0, 1, 0.5)` fallback position when that reference is absent, with 1 damage, 8m/s speed, and a 5-second lifetime; it no longer calls `IDamageable.TakeDamage` directly.
 
 `MonsterProjectile.Initialize` accepts a `Monster` owner, so both Stalker and `ShooterWorldMonster` use the same network projectile. State Authority ignores only the firing monster's colliders, resolves Runner damage and despawn, while other peers observe the replicated NetworkObject and NetworkTransform. Host/Client runtime and Late Join evidence remain a required manual check.
+
+## WorldMonster 권위 넉백
+
+- `WorldMonster.TryApplyKnockback`은 State Authority에서만 성공하는 진입점이다. 방향, 총 거리와 지속시간을 Networked timer·velocity로 저장하고 기존 NetworkRigidbody 이동을 사용하므로 다른 Peer는 복제 위치만 관찰한다.
+- 새 넉백은 진행 중 넉백을 교체한다. 넉백 tick은 일반 AI 이동보다 먼저 실행하며 바위, 생성 자원 Collider, Territory와 활성 Sanctuary를 검사하는 기존 `IsMovementPathBlocked`에서 경로가 막히면 즉시 중단한다.
+- 기본 이동형 WorldMonster는 넉백을 허용한다. SandTomb, Rafflesia 구현 타입인 `ShooterWorldMonster`, Gigantia 구현 타입인 `Centipede`는 넉백에 면역이지만 피해는 정상 적용된다.
+- Runner 산탄총의 3m 이내 성공 적중은 1m/0.2초 넉백을 요청한다. 권위 없는 Peer 호출, 0 이하 거리·지속시간과 유효하지 않은 방향은 상태를 바꾸지 않는다.
+- Knockback timer와 velocity는 현재 상태로만 Late Join에 복원되며 Monster Despawn과 함께 제거된다. 일회성 target result는 Runner 소유자의 presentation event이며 Monster가 저장하지 않는다.
 
 ## World Monster Spawn 후보 선택 slice
 

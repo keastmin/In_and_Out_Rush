@@ -103,6 +103,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
 
     // 러너의 핑 가이드
     public PlayerRunnerPingGuide PingGuide => _pingGuide;
+    public IRunnerWeapon Weapon => _weapon;
 
     #endregion 
 
@@ -370,9 +371,14 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     private void HandleWeaponInput(NetworkInputData data)
     {
         if (!HasStateAuthority) return;
+
+        if (data.ReloadInput.IsSet(NetworkInputData.RELOAD_INPUT))
+            _weapon?.TryReload(this);
+
+        if (_slideHandler.IsSliding) return;
         if (!data.WeaponInput.IsSet(NetworkInputData.WEAPON_INPUT)) return;
 
-        _weapon?.TryFire(this, data.MousePosition);
+        _weapon?.TryFire(this, data.WeaponAimPosition);
     }
 
     private void UpdateSkillIcon(int skillIndex)

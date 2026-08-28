@@ -1,0 +1,14 @@
+{
+  "name": "ProjectIO.RunnerWeapons",
+  "rootNamespace": "ProjectIO.RunnerWeapons",
+  "references": [],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": true
+}

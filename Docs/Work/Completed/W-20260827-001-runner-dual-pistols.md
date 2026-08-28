@@ -1,6 +1,6 @@
 # W-20260827-001 Runner dual pistols
 
-Status: Reserved
+Status: Completed
 
 ## 동기화 기준
 
@@ -69,7 +69,7 @@ Player Runner의 공용 네트워크 무기 계약과 첫 구현인 쌍권총
 
 - `Assets/03_Prefabs/Player/Player Runner.prefab`
   - 기존 투사체 무기 component를 `DualPistolWeapon`으로 전환하고 NetworkObject의 NetworkedBehaviours에 정확히 한 번 등록한다.
-  - 기존 공용 Muzzle과 Runner Projectile 참조를 유지한다. 권총 모델, HUD, VFX, SFX는 추가하지 않는다.
+  - 기존 공용 Muzzle은 fallback으로 유지하고 `Left Pistol Anchor`, `Right Pistol Anchor`를 실제 교대 Spawn 위치로 연결한다. Runner Projectile 참조를 유지하며 권총 모델, HUD, VFX, SFX는 추가하지 않는다.
 - `Assets/03_Prefabs/Player/Runner Projectile.prefab`
   - 10m authoritative 이동 거리 제한과 기존 Fusion Spawn/NetworkTransform 구성을 검증한다.
 
@@ -79,7 +79,7 @@ Scene, ScriptableObject, ProjectSettings, Package는 변경하지 않는다.
 
 - `IRunnerWeapon`은 State Authority 발사와 재장전 명령, 읽기 전용 `RunnerWeaponStatus`, `StatusChanged`, `ShotPresented`를 제공한다.
 - `RunnerWeaponNetworkBehaviour`가 Networked 탄약, 재장전 timer, 발사 cooldown, 사격 sequence를 소유하고 Late Join에 복원한다.
-- `RunnerProjectileWeapon`은 공용 Muzzle·projectile Spawn과 평면 조준 정규화를 제공하는 기반으로 축소하고, 활성 Player Runner prefab은 `DualPistolWeapon`만 사용한다.
+- `RunnerProjectileWeapon`은 선택된 hand의 Muzzle·projectile Spawn과 평면 조준 정규화를 제공하는 기반으로 축소하고, 활성 Player Runner prefab은 좌우 Muzzle을 선택하는 `DualPistolWeapon`만 사용한다.
 - `PlayerRunner`는 현재 무기 상태 원본을 공개하고 R 입력을 발사보다 먼저 처리한다. 슬라이드 중 발사만 차단하며 재장전과 달리기 사격은 허용한다.
 - Project Map의 책임·라우팅은 바꾸지 않으며 StageBootstrapper와 Stage UI를 변경하지 않는다.
 
@@ -99,7 +99,7 @@ Scene, ScriptableObject, ProjectSettings, Package는 변경하지 않는다.
 
 ## 범위 밖
 
-- 권총 모델, 손 Anchor, 애니메이션, HUD layout, VFX, SFX Asset 제작 또는 Scene/UI Prefab 연결
+- 권총 모델, 애니메이션, HUD layout, VFX, SFX Asset 제작 또는 Scene/UI Prefab 연결
 - 치명타, 확률적 miss, 유한 예비탄, 개별 권총별 독립 탄창
 - TrackMonster 피해, 관통, knockback, 다른 무기 구현과 무기 교체 UI
 - 스킬·아이템 사용 중 발사/재장전 상호작용
@@ -107,7 +107,7 @@ Scene, ScriptableObject, ProjectSettings, Package는 변경하지 않는다.
 
 ## 완료 조건
 
-- 16발이 0.25초 기본 간격으로 소비되고 좌우 hand가 엄격히 교대한다.
+- 16발이 0.25초 기본 간격으로 소비되고 좌우 hand와 실제 Left/Right Muzzle Spawn 위치가 엄격히 교대한다.
 - R은 부분 탄창에서 발사보다 우선해 2.5초 reload를 시작하고, 빈 탄창 발사 시 자동 reload하며 완료 뒤 16발로 채운다.
 - 공격속도와 reload 속도 scaler가 duration에 적용되고 reload 중 발사, full magazine reload, slide 중 발사가 상태를 잘못 변경하지 않는다.
 - 달리기 중에는 발사 패널티가 없고 계속 누른 발사 입력은 reload 완료 뒤 다음 허용 tick부터 재개된다.
@@ -118,16 +118,40 @@ Scene, ScriptableObject, ProjectSettings, Package는 변경하지 않는다.
 
 ## 실제 변경
 
-예약 진행과 원격 검증 뒤 기록한다.
+- 순수 규칙 assembly에 탄약 소비, 좌우 교대, 수동·자동 재장전 조건, 공격속도·재장전 속도 계산을 추가하고 EditMode 테스트를 작성했다.
+- `RunnerWeaponNetworkBehaviour`가 탄약, cooldown, reload timer·진행률, 사격 sequence·방향을 State Authority에서 관리하고 `RunnerWeaponStatus`, `StatusChanged`, `ShotPresented`를 공개하도록 구현했다.
+- `RunnerProjectileWeapon`을 hand-aware authoritative Spawn 기반으로 전환하고 `DualPistolWeapon`이 Left/Right Muzzle을 선택하도록 구현했다. Player Runner prefab은 기존 공용 Muzzle을 fallback으로 유지하면서 `Left Pistol Anchor`, `Right Pistol Anchor`를 실제 교대 Spawn 위치로 연결하고 새 NetworkBehaviour를 정확히 한 번 등록한다.
+- R key-down, 좌클릭 유지와 환경 Raycast·수평면 fallback 조준점을 Fusion Input에 추가했다. `PlayerRunner`는 R을 발사보다 먼저 처리하고 슬라이드 중 발사만 차단한다.
+- Runner Projectile은 마지막 이동 tick을 한 번만 예약하고 다음 tick에 위치를 정확히 10m로 보정한 뒤 Despawn한다. 부동소수점 오차로 미세 속도를 반복 계산하며 정지하는 경로를 제거했고, 범위 안 첫 `WorldMonster`에만 한 번 피해를 준다.
+- PlayerRunner 기능 문서에 HUD snapshot/event, 재장전 진행률, 좌우 모델 Presenter와 손 Anchor 연결 절차를 기록했다.
 
 ## 검증 결과
 
 - `CheckStart`: `READY_TO_CHECK_CONFLICTS` (`AHEAD=0`, `BEHIND=0`)
 - Active 충돌: 없음
-- 구현·테스트·Host/Client runtime: 예약 진행 뒤 수행
+- 예약 Commit·Push·원격 검증: `3a52c457523b2dfbfa93b13822041562aba96c28`, `READY_TO_IMPLEMENT`, `AHEAD=0`, `BEHIND=0`
+- 순수 규칙 임시 .NET harness: PASS. 16발 소비·좌우 교대, 빈 탄창 자동 재장전 조건, 부분·full magazine 재장전 조건, sequence 유지, 공격속도·재장전 속도 배율을 실행했다. 임시 harness는 검증 뒤 삭제했다.
+- 생성된 `Assembly-CSharp.csproj`에 새 소스만 임시 Include한 C# 전체 build: 오류 0, 기존 코드 warning 13. 임시 Include는 검증 직후 원복했다.
+- 사거리 정지 수정 후 Unity가 갱신한 실제 `ProjectIO.RunnerWeapons.csproj` 참조를 사용한 `dotnet build Assembly-CSharp.csproj --no-restore`: 오류 0, 기존 코드 warning 13.
+- Left/Right Muzzle 전달과 Prefab 연결 후 같은 전체 build 재실행: 오류 0, warning 16 (`Assembly-CSharp` 기존 warning 13과 Fusion Editor warning 3).
+- `dotnet build ProjectIO.RunnerWeapons.Tests.csproj --no-restore`: 경고 0, 오류 0. Test assembly 컴파일은 통과했으며 Unity Test Runner 실행은 별도 미검증이다.
+- Player Runner prefab 정적 검증: `DualPistolWeapon` component, `_weaponBehaviour`, `NetworkedBehaviours`, 공용 fallback·Left·Right Muzzle, Runner Projectile, 16/4/2.5/10 설정이 각각 정확히 한 번 존재한다.
+- 새 Asset·폴더 meta 검증: 누락 없음, 새 GUID 중복 없음.
+- 초기 Unity batchmode compile은 당시 동일 프로젝트를 연 PID 11460의 `Temp/UnityLockfile` 때문에 실행하지 못했다. 이후 Unity PID 45320의 강제 동기 recompile에서 `Fusion.CodeGen.ILWeaverBindings`를 포함한 Tundra build와 assembly reload가 성공했다. Unity Test Runner는 미실행이다.
+- Host·Client, Late Join runtime: 미실행·미검증이다.
+- `git diff --check`: 통과. Unity가 새 asmdef를 인식하며 자동 갱신한 예약 외 `ProjectIO.slnx` 변경은 이번 수정에서 건드리거나 포함하지 않고 별도 보존한다.
+
+### 미검증 수동 절차
+
+1. Unity Test Runner에서 EditMode `ProjectIO.RunnerWeapons.Tests`를 실행한다. Unity/Fusion compile과 assembly reload는 성공 확인됐다.
+2. Host Runner에서 좌클릭을 유지해 초당 4발, 총 16발 소비와 Left/Right `ShotPresented` 및 실제 Pistol Anchor Spawn 위치 교대를 확인한다.
+3. 부분 탄창에서 R을 눌러 2.5초 뒤 16발 복원, full magazine R 거부, 빈 탄창 발사 시 자동 재장전, 좌클릭 유지 시 완료 다음 허용 tick 발사 재개를 확인한다.
+4. 달리기 연사에 패널티가 없는지, 슬라이드 중 새 발사만 차단되고 진행 중 재장전은 계속되는지 확인한다.
+5. 별도 Client Input Authority Runner에서 2~4를 반복하고 Host와 Client의 ammo/reload snapshot, projectile 수, 좌우 presentation 결과가 같은지 확인한다.
+6. 빈 방향 투사체가 10m 직전에서 멈춰 수명 timer를 기다리지 않고 즉시 사라지는지, `WorldMonster`에는 기본 피해 1 후 즉시 사라지는지, `TrackMonster`에는 피해 없이 통과하는지 확인한다.
+7. 부분 탄창과 재장전 중 각각 Late Join해 현재 ammo·reload 진행률이 복원되는지 확인한다. Runner Despawn 뒤 HUD·Presenter event가 더 호출되지 않는지도 확인한다.
 
 ## 남은 위험
 
-- Fusion Weaver가 NetworkBehaviour 상속 계층의 Networked property와 OnChangedRender callback을 현재 package에서 처리하는지 compile로 확인해야 한다.
-- 현재 Player Runner prefab은 공용 Muzzle 한 개만 가지므로 좌우 모델별 muzzle flash는 사용자가 `ShotPresented` hand를 이용해 별도 표현한다.
+- 현재 Left/Right Muzzle은 사용자가 만든 Pistol Anchor 자체를 가리킨다. 모델을 배치한 뒤 총열 끝과 Anchor 원점이 다르면 별도 총구 child Transform을 만들고 참조를 교체해야 한다.
 - 실제 Host·Client runtime과 Late Join 증거는 Unity 다중 Peer 환경에서 별도로 수집해야 한다.

@@ -160,17 +160,55 @@ field를 유지한다. 조사 중 Asset 수정이 필요해지면 변경 전에 
 
 ## 실제 변경
 
-예약 단계. 구현 후 기록한다.
+- `Territory`를 private vertex snapshot과 revision별 `TerritorySpatialIndex`를 함께 교체하는
+  facade로 축소하고 기존 공개 query/expansion/Mesh API를 유지했다.
+- `Assets/02_Scripts/Features/Territory/Logic/`에 sparse Chunk, local adaptive Quadtree,
+  supercover segment traversal, expansion calculator와 spatial ear-clipping 구현을 추가했다.
+- point containment는 bounds와 정렬 Chunk row/Quadtree edge 후보만 exact 검사한다.
+- expansion은 Trail segment마다 spatial boundary 후보만 검사하고, 후보 Polygon의
+  self-intersection과 triangulation도 Chunk 후보 인덱스를 사용한다.
+- `TerritoryTrailSegmentIndex`는 사선 AABB 전체 Chunk 대신 실제 통과 Chunk만 등록·조회하며
+  Chunk 경계 공유 끝점은 supercover로 양쪽 후보에서 보존한다.
+- `TerritoryContainmentIndex`, `TerritoryBoundsIndex`와 기존 전용 테스트를 삭제하고 새
+  spatial query/expansion/Trail 회귀 테스트로 교체했다.
+- `Territory.Vertices`를 외부 mutation이 불가능한 `IReadOnlyList<Vector2>` snapshot으로
+  바꿨으며 기존 소비자는 Count/index/enumeration 계약으로 컴파일 변경 없이 유지됐다.
+- Fusion Networked field, RPC, packet budget, Scene·Prefab 직렬화와 visual component는
+  변경하지 않았다.
+- ADR-0005, Territory 기능 문서와 Project Map을 현재 구현에 맞게 갱신했다.
+
+실제 추가 파일은 예약한 7개 Logic `.cs`와 `.meta`, 두 폴더 `.meta`,
+`TerritorySpatialIndexTests`, `TerritoryExpansionSpatialIndexTests`,
+`TerritoryTrailSegmentIndexTests`와 각 `.meta`, ADR-0005다. 기존 변경·삭제 파일도 모두
+예약 범위 안이며 `TerritorySystem`, Background worker, Scene·Prefab은 수정하지 않았다.
 
 ## 검증 결과
 
-예약 단계. 구현 후 기록한다.
+- Unity `6000.0.69f1` EditMode filter `ProjectIO.Territory.Tests`:
+  최종 48/48 통과, 실패·skip 없음, 1.669초.
+- 포함 범위: 기존 background expansion/packet/replica 회귀, ChunkDomain Trail 계약,
+  신규 boundary·concave·음수 좌표·4096 edge candidate 축소·4096 randomized query,
+  allocation-free warm query, 2048 edge 사선 expansion, self-intersection, Trail 공유 끝점.
+- Unity Assembly-CSharp/Editor 컴파일과 Fusion ILWeaver가 Tundra build success로 통과했다.
+- 첫 실행의 Trail 공유 끝점 1건 실패는 Chunk 경계 segment가 한쪽 Chunk만 소유한 원인이었고,
+  supercover traversal로 수정한 뒤 동일 48개를 재실행해 전부 통과했다.
+- `git diff --check` 통과. old index 타입 runtime 참조와 외부 `Vertices` mutation 사용처 없음.
+- Scene·Prefab/Fusion schema를 수정하지 않아 serialized Asset diff는 없다.
+- 실제 2-Peer Host·Client runtime은 이 환경에서 실행하지 않았으므로 Peer 체감은 미검증이다.
+  수동 확인: Host owner와 Client owner가 각각 영역 이탈→Trail→재진입 성공 및 자기 교차
+  실패를 한 번 수행하고, 양쪽에서 Mesh/event/revision이 한 번만 적용되며 teardown 뒤 stale
+  결과가 적용되지 않는지 확인한다.
 
 ## 남은 위험
 
 - Polygon vertex 수가 매우 클 때 결과 snapshot 전송량과 전체 Mesh 교체 비용은 이번 query
   index 교체와 별개의 병목으로 남을 수 있다.
-- adaptive index build 비용과 메모리는 boundary 길이·분포에 영향을 받으므로 후보 수,
-  Chunk 수, node 수를 계측하고 비정상 입력에 deterministic failure를 둔다.
-- 정확한 경계 epsilon과 Chunk 경계의 supercover 누락은 false negative 위험이 있으므로
-  Chunk 경계·대각선·음수 좌표 회귀 테스트를 우선한다.
+- revision 적용 시 main thread의 spatial index rebuild 비용은 boundary 길이·분포에 영향을
+  받는다. `ChunkCount`, `NodeCount`와 Rebuild Profiler marker로 실제 Stage 데이터를 확인한다.
+- 한 Chunk에 경계가 극단적으로 집중되면 최대 깊이 leaf의 후보 수가 증가한다. 결과 정확성은
+  유지하지만 후보 축소율은 Stage 실측이 필요하다.
+- Host·Client runtime과 실제 몬스터 대량 이동 상황의 frame time은 작업자 실행 검증이 남았다.
+- `InfiniteGrid.IsCellInTerritory`를 통한 타워 설치·Builder footprint preview·Monster 이동
+  판정은 새 query를 사용하지만, 기본 육각 Grid atlas 색상은 별도
+  `InfiniteGridTerritoryChunkClassifier` scanline 경로를 유지한다. 영역 판정이 필요한 전체
+  소비자 조사와 이 별도 classifier의 전환은 작업자 결정에 따라 후속 작업으로 분리한다.

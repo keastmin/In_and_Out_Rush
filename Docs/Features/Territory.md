@@ -73,6 +73,15 @@ owner prediction은 마지막 confirmed point로 reconcile한다. 강제 이동 
   StageBootstrapper, FogOfWarSystem, Player Runner와 관련 아이템 표현
 - 코드: Assets/02_Scripts/Territory/, Assets/02_Scripts/Territory Refactor/, Assets/02_Scripts/Features/Territory/Logic/
 
+점 내부·외부 판정 소비자는 `Territory.IsPointInPolygon` 또는 `IsPointOnBoundary` facade를
+사용한다. 타워 설치와 Builder footprint preview는 `InfiniteGrid`를 통해 같은 facade를
+사용하고, 기본 육각 Grid atlas도 `InfiniteGridTerritoryChunkClassifier`가 각 셀 중심을 같은
+query로 분류한 결과를 Chunk cache에 저장한다. 별도 scanline Polygon 판정은 사용하지 않는다.
+
+`InfiniteGridTerritoryChangeTracker`의 vertex snapshot은 변경된 표시 Chunk invalidation용이며
+membership 판정이 아니다. Sanctuary 원-다각형 겹침과 Fog Mesh triangle 판정은 각각 별도
+공간 query와 presentation 계약으로 유지한다.
+
 Scene·Prefab의 `TerritorySystem`, `TerritoryVisible`, LineRenderer 직렬화 참조는 변경하지 않는다.
 
 ## 검증 방법

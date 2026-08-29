@@ -23,6 +23,9 @@ Last reviewed: 2026-08-20
 - 활성 Sanctuary는 Territory 밖의 셀을 임시 Tower 건설 가능 영역으로 등록한다.
 - Resource Spawn과 Stage가 장애물 목록을 소비한다.
 - `PlayerBuilderTowerBuild.EvaluateBuildFootprint` 미리보기는 Grid 조회 결과를 `TowerPlacementCellState`로 변환해 순수 `TowerPlacementPolicy`로 판정한다. 실제 건설과 Host 검증은 계속 `InfiniteGrid.CanPlaceAt`을 사용한다.
+- `InfiniteGridTerritoryChunkClassifier`는 표시 Chunk의 각 셀 중심을
+  `Territory.IsPointInPolygon`으로 분류해 cache한다. 따라서 기본 Grid 색상, Builder
+  footprint와 실제 설치 검증이 같은 Chunk·Quadtree 기반 boundary-inside 판정을 사용한다.
 
 ## 관련 Asset
 

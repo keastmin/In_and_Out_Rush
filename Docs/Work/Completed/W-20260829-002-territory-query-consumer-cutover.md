@@ -1,6 +1,6 @@
 # W-20260829-002 Territory 영역 판정 소비자 전환
 
-Status: Reserved
+Status: Completed
 
 ## 동기화 기준
 
@@ -101,7 +101,16 @@ Territory 내부·외부 판정 소비자와 무한 Grid 영역 표시 Chunk 분
 
 ## 실제 변경
 
-예약 단계. 구현 후 기록한다.
+- `InfiniteGridTerritoryChunkClassifier`의 별도 scanline crossing, boundary edge cache와
+  자체 point-on-segment/ray-crossing 구현을 제거했다.
+- 표시 Chunk의 각 hex 셀 중심을 `Territory.IsPointInPolygon`으로 분류한다. 결과는 기존
+  `InfiniteGridChunkState.TerritoryCells`에 저장되므로 visible atlas 이동 중에는 Chunk cache를
+  재사용하고, Territory 변경 또는 관련 Chunk invalidation 때만 다시 계산한다.
+- 정형·concave·boundary·음수 Chunk와 null Territory clear를 공용 query 결과와 비교하는
+  `InfiniteGridTerritoryChunkClassifierTests`를 추가했다.
+- Territory와 Grid 기능 문서에 타워 설치, Builder footprint, Grid atlas가 같은 공용 query를
+  사용한다는 현재 계약과 membership가 아닌 잔존 vertex 사용처를 기록했다.
+- Scene·Prefab, Fusion 상태, 몬스터·타워 규칙과 공개 API는 변경하지 않았다.
 
 ## 검증 결과
 
@@ -111,11 +120,23 @@ Territory 내부·외부 판정 소비자와 무한 Grid 영역 표시 Chunk 분
   `InfiniteGridTerritoryChunkClassifier`를 확인했다.
 - 타워 설치·Builder footprint·몬스터 이동·스폰의 현재 호출자는 이미
   `Territory.IsPointInPolygon` facade를 사용한다.
+- 독립 scanline 구현 식별자(`BuildScanline`, `IsInsideFromCrossings`, crossing/boundary row
+  cache)가 런타임 코드에서 제거됐음을 `rg`로 확인했다.
+- `dotnet build Assembly-CSharp.csproj`: 복원 포함 성공, 오류 0개. 기존 Photon·Legacy 경고
+  16개가 있으며 이번 변경에서 새 경고는 확인되지 않았다. 첫 `--no-restore` 시도는
+  `Temp/obj/Assembly-CSharp/project.assets.json` 부재로 컴파일 전에 중단됐고, 복원을 허용한
+  빌드로 원인을 해결했다.
+- `git diff --check`: 통과.
+- Unity Editor test는 ProjectIO를 점유 중인 열린 Unity Editor 프로세스 때문에 별도 batchmode를
+  실행하지 못했다. 새 테스트를 포함한 Unity import/compile과 test 결과는 미검증이다.
+- 실제 Host·Client Grid 표시와 타워 설치 성공·거부 동등성은 실행하지 않았다. 수동 확인은
+  두 Peer가 연결된 상태에서 Territory 확장 전후의 같은 경계/내부/외부 hex 색상을 비교하고,
+  Builder preview의 허용·차단과 State Authority 실제 설치 결과가 일치하는지 확인한다.
 
 ## 남은 위험
 
 - 표시 Chunk를 다시 계산할 때 셀 수만큼 공용 point query가 실행되므로 실제 visible atlas
   규모의 Profiler 비용은 런타임에서 확인해야 한다. 기존 Chunk 캐시가 정상인 동안 매 frame
   재계산하지 않는 계약은 유지한다.
-- 실제 Host·Client 런타임 Grid 표시와 타워 성공·거부 동등성은 자동 테스트만으로 완전히
-  검증할 수 없다.
+- 새 Editor test를 포함한 Unity import/compile, 집중 test와 실제 Host·Client 런타임 Grid
+  표시·타워 성공/거부 동등성은 열린 Editor에서 확인이 남았다.

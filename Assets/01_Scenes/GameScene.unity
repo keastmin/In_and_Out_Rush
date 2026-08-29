@@ -2315,13 +2315,17 @@ PrefabInstance:
       propertyPath: _territoryMeshRenderer
       value: 
       objectReference: {fileID: 6219545451852062859}
+    - target: {fileID: 4764181635377372804, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
+      propertyPath: _playerRunnerVisibleRange
+      value: 20
+      objectReference: {fileID: 0}
     - target: {fileID: 5400355807062306309, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
       propertyPath: m_Name
       value: Fog of War System
       objectReference: {fileID: 0}
     - target: {fileID: 5400355807062306309, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8092433541136705184, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
       propertyPath: m_LocalPosition.x

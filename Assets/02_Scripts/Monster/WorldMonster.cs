@@ -3,6 +3,7 @@ using UnityEditor;
 #endif
 using System.Collections.Generic;
 using Dev.Network;
+using Fusion;
 using KIM.Dev;
 using ProjectIO.Monsters;
 using UnityEngine;
@@ -31,6 +32,18 @@ public class WorldMonster : Monster
 
     protected override bool ShouldDestroyInsideTerritory => true;
     protected virtual bool CanReceiveKnockback => true;
+
+    public override void Spawned()
+    {
+        base.Spawned();
+        FogOfWarHiddenObjectController.Register(transform);
+    }
+
+    public override void Despawned(NetworkRunner runner, bool hasState)
+    {
+        FogOfWarHiddenObjectController.Unregister(transform);
+        base.Despawned(runner, hasState);
+    }
 
 #if UNITY_EDITOR
     void OnDrawGizmosSelected()

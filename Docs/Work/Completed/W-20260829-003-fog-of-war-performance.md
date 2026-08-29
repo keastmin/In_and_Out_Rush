@@ -1,6 +1,6 @@
 # W-20260829-003 Fog of War 주기 비용 최적화
 
-Status: Reserved
+Status: Completed
 
 ## 동기화 기준
 
@@ -107,7 +107,22 @@ Fog of War 로컬 마스크 렌더링, Territory 기반 숨김 판정과 WorldMo
 
 ## 실제 변경
 
-예약 단계. 구현 후 기록한다.
+- `WorldMonster.Spawned`/`Despawned`가 각 Peer의 정적 로컬 registry에 root를 중복 없이
+  등록·해제하고, 파괴된 root는 다음 registry 동기화에서 정리하도록 했다.
+- Fog runtime의 전체 `FindObjectsByType<Renderer/Canvas>`를 제거했다. 각 Fog driver는 registry
+  revision 또는 hidden layer mask가 바뀔 때만 등록 root의 Renderer·Canvas를 재구성하고,
+  기존 enabled 상태를 복원·보존한다.
+- Territory mesh/transform 변경 때 월드 삼각형, 삼각형 AABB와 전체 AABB를 캐시한다. 0.15초
+  숨김 판정은 Runner 원형 시야를 먼저 검사하고, Territory AABB 빠른 거절 뒤 기존 내부/edge
+  거리 판정을 수행한다.
+- Territory 전용 캐시 RenderTexture를 추가했다. Territory geometry, visible range 또는 world
+  bounds가 바뀔 때만 polygon draw와 2-pass blur를 갱신하고, 안정 frame에는 캐시 mask 복사와
+  Runner brush 합성만 수행한다.
+- Overlay mesh의 vertex/triangle 배열을 재사용하며 world bounds 또는 grid 높이가 바뀔 때만
+  `Mesh.Clear`와 geometry 쓰기를 수행하고 bounds를 직접 설정한다.
+- `FogOfWar.Update`, `FogOfWar.RegistrySync`, `FogOfWar.HiddenVisibility`,
+  `FogOfWar.TerritoryMaskUpdate` Profiler marker를 추가했다.
+- Fog 안정 frame의 `Mathf.Max(params)` 배열 할당을 중첩 2항 호출로 바꿨다.
 
 ## 검증 결과
 
@@ -115,9 +130,19 @@ Fog of War 로컬 마스크 렌더링, Territory 기반 숨김 판정과 WorldMo
 - Active 충돌: 없음.
 - 읽기 전용 조사에서 현재 layer 6 Fog-hidden prefab은 WorldMonster 계열이며 TrackMonster는
   `IFogOfWarAlwaysVisible`로 제외되는 구조를 확인했다.
+- `dotnet build Assembly-CSharp.csproj --no-restore`: 성공, 오류 0. 출력된 13개 경고는 기존
+  third-party obsolete API, 미사용 field와 기존 Unity message signature 경고다.
+- `dotnet build ProjectIO.slnx`: 성공, 오류 0. 출력된 9개 경고는 기존 Photon/third-party 및
+  Editor obsolete API 경고다.
+- 정적 확인: Fog runtime 경로의 `FindObjectsByType`, `Transform.hasChanged` 조작과 매 frame
+  overlay 배열 생성이 제거됐다.
+- `git diff --check`: 최종 문서 갱신 뒤 다시 실행한다.
+- 실제 Host·Client Player Profiler와 AOI/late-join 실행 검증은 이 환경에서 수행하지 못했다.
 
 ## 남은 위험
 
 - 새 Fog-hidden 타입이 WorldMonster 밖에서 추가되면 해당 타입도 동일한 local registry 계약에
   연결해야 한다.
 - GPU pass 감소와 CPU/GC 개선은 실제 Player Profiler에서 전후 frame을 비교해야 확정할 수 있다.
+- Host와 Client에서 WorldMonster spawn/AOI 진입/Despawn, TrackMonster always-visible, Territory
+  확장 전후 mask, Additive Scene teardown 뒤 원래 Renderer·Canvas enabled 복원을 확인해야 한다.

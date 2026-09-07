@@ -1,6 +1,6 @@
 # W-20260907-001 자원 오브젝트 Host·Client 표시 복구
 
-Status: Reserved
+Status: Complete
 
 ## 동기화 기준
 
@@ -71,12 +71,21 @@ Status: Reserved
 
 ## 실제 변경
 
-- 구현 후 기록
+- `GamePresentation.unity`와 Legacy `GameScene.unity`의 Main Camera Culling Mask에 `Resource` 레이어 비트(11)를 추가했다.
+- `ResourceVisible.Spawned`에서 각 Peer의 Fog of War 숨김 대상 레지스트리에 자원 Transform을 등록한다.
+- `ResourceVisible.Despawned`에서 등록을 해제해 수집·Scene 종료 뒤 파괴된 자원 참조가 남지 않게 했다.
+- 자원 Spawn, State Authority, AOI 반경, 배치·수집 로직은 변경하지 않았다.
 
 ## 검증 결과
 
-- 구현 후 기록
+- `dotnet restore ProjectIO.slnx`: 성공. 최초 `--no-restore` 빌드는 `Temp/obj/*/project.assets.json` 부재로 중단되어 복원 후 재실행했다.
+- `dotnet build ProjectIO.slnx --no-restore`: 성공, 오류 0개, 기존 코드·패키지 경고 25개.
+- 정적 Scene 검증: `GamePresentation.unity`, `GameScene.unity` Main Camera 마스크가 모두 `3031`이며 `Resource` 레이어 비트 `2048`을 포함한다.
+- 정적 Prefab 검증: 여섯 개 개별 네트워크 자원 프리팹이 모두 레이어 11을 포함한다.
+- `git diff --check`: 통과. 줄 끝 변환 예고 외 공백 오류 없음.
+- 실제 Host·Client 멀티 Peer 실행은 이 환경에서 수행하지 않아 런타임 Peer 동등성은 미검증이다.
+- 작업자의 최종 Commit·Push 진행 요청을 수신했다. Host·Client 런타임 결과의 구체적인 로그나 캡처는 전달되지 않아 독립 검증 상태는 변경하지 않았다.
 
 ## 남은 위험
 
-- 구현 후 기록
+- Host와 Client 각각에서 러너 시야 안 자원 표시, 시야 밖 Fog 숨김, Territory 공개, Client Late Join, 수집 Despawn을 실제 플레이로 확인해야 한다.

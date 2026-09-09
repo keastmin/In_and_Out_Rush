@@ -1,6 +1,6 @@
 # W-20260910-001 포트폴리오 README 개편
 
-Status: Reserved
+Status: Complete
 
 ## 동기화 기준
 
@@ -66,12 +66,22 @@ Status: Reserved
 
 ## 실제 변경
 
-예약 단계. 구현 후 기록한다.
+- `README.md`를 `IN & OUT: RUSH` 포트폴리오 소개 문서로 전면 개편했다.
+- 2인 비대칭 협동 플레이의 Runner·Builder 역할과 핵심 플레이 루프를 정리했다.
+- Fusion 권위 모델, Polygon Territory 공간 인덱스, 건설 rollback, 순수 규칙 분리 등 실제 구현의 기술적 특징을 기록했다.
+- 김동민·유현우 2인 팀의 최근 주요 기여 영역과 AI-assisted 변경 영향 분석·검증 절차를 구분해 설명했다.
+- Unity 버전, 기술 스택, Additive Scene 구성, 실행 순서와 저장소 문서 탐색 경로를 추가했다.
 
 ## 검증 결과
 
-예약 단계. 구현 후 기록한다.
+- `ProjectSettings/ProjectVersion.txt`, `Packages/manifest.json`, `ProjectSettings/EditorBuildSettings.asset`과 기술·Scene 정보를 대조했다.
+- `Docs/PROJECT_MAP.md`와 관련 기능 문서에서 플레이 흐름, 시스템 책임, 네트워크 계약을 대조했다.
+- Git contributor와 최근 commit 기록을 바탕으로 2인 구성과 주요 기여 영역을 확인했다.
+- README의 모든 상대 링크와 안내한 파일·디렉터리 경로가 로컬에 존재함을 확인했다.
+- `git diff --check`: 통과.
+- 문서 전용 변경이므로 Unity compile과 Host·Client 런타임 테스트는 수행하지 않았다.
 
 ## 남은 위험
 
-- 실행 화면과 팀원별 세부 역할 자료가 저장소에 없을 경우, 확인 가능한 내용만으로 포트폴리오를 구성한다.
+- 저장소에 프로젝트 전용 플레이 화면이 없어 README에는 스크린샷이나 영상이 포함되지 않았다.
+- 외부 공개 전에는 팀원이 주요 기여 영역 표현과 Photon·외부 Asset 준비 안내를 최종 확인한다.

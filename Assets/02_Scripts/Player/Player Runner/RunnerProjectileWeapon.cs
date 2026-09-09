@@ -1,7 +1,8 @@
 using Fusion;
+using ProjectIO.RunnerWeapons;
 using UnityEngine;
 
-public class RunnerProjectileWeapon : MonoBehaviour, IRunnerWeapon
+public abstract class RunnerProjectileWeapon : RunnerWeaponNetworkBehaviour
 {
     [Header("Projectile")]
     [SerializeField] private RunnerProjectile _projectilePrefab;
@@ -11,55 +12,95 @@ public class RunnerProjectileWeapon : MonoBehaviour, IRunnerWeapon
     [Header("Statistics")]
     [SerializeField] private float _damage = 1f;
     [SerializeField] private float _projectileSpeed = 18f;
-    [SerializeField] private float _cooldown = 0.25f;
     [SerializeField] private float _projectileLifetime = 3f;
+    [SerializeField] private float _maximumRange = 10f;
 
-    private TickTimer _cooldownTimer;
-
-    public void TryFire(PlayerRunner owner, Vector3 targetPosition)
+    protected override bool TryExecuteShot(
+        PlayerRunner owner,
+        Vector3 targetPosition,
+        bool isRunning,
+        RunnerWeaponHand hand,
+        int shotSequence,
+        out Vector3 shotDirection)
     {
-        if (owner == null || !owner.HasStateAuthority) return;
-        if (!_cooldownTimer.ExpiredOrNotRunning(owner.Runner)) return;
+        shotDirection = owner != null ? owner.transform.forward : Vector3.forward;
 
         if (_projectilePrefab == null)
         {
             Debug.LogWarning($"{nameof(RunnerProjectileWeapon)} requires a projectile prefab.", this);
-            return;
+            return false;
         }
 
-        if (_muzzle == null)
+        Transform muzzle = ResolveMuzzle(hand);
+        if (muzzle == null)
         {
             Debug.LogWarning($"{nameof(RunnerProjectileWeapon)} requires a muzzle transform.", this);
-            return;
+            return false;
         }
 
-        Vector3 direction = GetFireDirection(owner, targetPosition);
-        float attackSpeedScaler = Mathf.Max(owner.WeaponAttackSpeedScaler, 0.01f);
-        float cooldownSeconds = Mathf.Max(0f, _cooldown / attackSpeedScaler);
-
-        _cooldownTimer = TickTimer.CreateFromSeconds(owner.Runner, cooldownSeconds);
+        Vector3 directShotDirection = GetFireDirection(owner, muzzle, targetPosition);
+        shotDirection = ModifyShotDirection(owner, directShotDirection, isRunning);
+        shotDirection.y = 0f;
+        if (!IsFinite(shotDirection) || shotDirection.sqrMagnitude <= 0.0001f)
+            shotDirection = directShotDirection;
+        else
+            shotDirection.Normalize();
 
         RunnerProjectile projectile = owner.Runner.Spawn(
             _projectilePrefab,
-            _muzzle.position,
-            Quaternion.LookRotation(direction, Vector3.up));
+            muzzle.position,
+            Quaternion.LookRotation(shotDirection, Vector3.up));
+
+        if (projectile == null)
+            return false;
 
         float finalDamage = _damage * owner.WeaponDamage * owner.WeaponDamageScaler;
-        projectile.Init(owner, direction, _projectileSpeed, finalDamage, _projectileLifetime, _damageableMask);
+        projectile.Init(
+            owner,
+            shotDirection,
+            _projectileSpeed,
+            finalDamage,
+            _projectileLifetime,
+            _maximumRange,
+            _damageableMask);
+        return true;
     }
 
-    private Vector3 GetFireDirection(PlayerRunner owner, Vector3 targetPosition)
+    protected virtual Transform ResolveMuzzle(RunnerWeaponHand hand)
     {
-        Vector3 direction = targetPosition - _muzzle.position;
+        return _muzzle;
+    }
+
+    protected virtual Vector3 ModifyShotDirection(
+        PlayerRunner owner,
+        Vector3 directShotDirection,
+        bool isRunning)
+    {
+        return directShotDirection;
+    }
+
+    private static Vector3 GetFireDirection(
+        PlayerRunner owner,
+        Transform muzzle,
+        Vector3 targetPosition)
+    {
+        Vector3 direction = targetPosition - muzzle.position;
         direction.y = 0f;
 
-        if (direction.sqrMagnitude <= 0.0001f)
+        if (!IsFinite(direction) || direction.sqrMagnitude <= 0.0001f)
             direction = owner.transform.forward;
 
         direction.y = 0f;
-        if (direction.sqrMagnitude <= 0.0001f)
+        if (!IsFinite(direction) || direction.sqrMagnitude <= 0.0001f)
             return Vector3.forward;
 
         return direction.normalized;
+    }
+
+    private static bool IsFinite(Vector3 value)
+    {
+        return !float.IsNaN(value.x) && !float.IsInfinity(value.x) &&
+               !float.IsNaN(value.y) && !float.IsInfinity(value.y) &&
+               !float.IsNaN(value.z) && !float.IsInfinity(value.z);
     }
 }

@@ -5,15 +5,17 @@ namespace ProjectIO.Territory
 {
     public sealed class TerritoryTrailSegmentIndex
     {
-        private const float ChunkSize = 8f;
-
         private readonly Dictionary<Vector2Int, List<Vector4>> _segmentsByChunk = new();
         private readonly HashSet<Vector4> _querySegments = new();
+        private readonly List<Vector2Int> _coveredChunks = new();
+        private readonly HashSet<Vector2Int> _uniqueChunks = new();
 
         public void Clear()
         {
             _segmentsByChunk.Clear();
             _querySegments.Clear();
+            _coveredChunks.Clear();
+            _uniqueChunks.Clear();
         }
 
         public void Add(Vector2 start, Vector2 end)
@@ -22,8 +24,16 @@ namespace ProjectIO.Territory
                 return;
 
             Vector4 segment = new(start.x, start.y, end.x, end.y);
-            foreach (Vector2Int key in GetCoveredChunks(start, end))
+            if (!TerritorySegmentTraversal.TryCollectChunks(
+                    start,
+                    end,
+                    _coveredChunks,
+                    _uniqueChunks))
+                return;
+
+            for (int index = 0; index < _coveredChunks.Count; index++)
             {
+                Vector2Int key = _coveredChunks[index];
                 if (!_segmentsByChunk.TryGetValue(key, out List<Vector4> segments))
                 {
                     segments = new List<Vector4>();
@@ -37,8 +47,16 @@ namespace ProjectIO.Territory
         public bool Intersects(Vector2 start, Vector2 end, Vector2 ignoredStart, Vector2 ignoredEnd)
         {
             _querySegments.Clear();
-            foreach (Vector2Int key in GetCoveredChunks(start, end))
+            if (!TerritorySegmentTraversal.TryCollectChunks(
+                    start,
+                    end,
+                    _coveredChunks,
+                    _uniqueChunks))
+                return false;
+
+            for (int index = 0; index < _coveredChunks.Count; index++)
             {
+                Vector2Int key = _coveredChunks[index];
                 if (_segmentsByChunk.TryGetValue(key, out List<Vector4> segments))
                     _querySegments.UnionWith(segments);
             }
@@ -60,20 +78,6 @@ namespace ProjectIO.Territory
             }
 
             return false;
-        }
-
-        private static IEnumerable<Vector2Int> GetCoveredChunks(Vector2 start, Vector2 end)
-        {
-            int minimumX = Mathf.FloorToInt(Mathf.Min(start.x, end.x) / ChunkSize);
-            int maximumX = Mathf.FloorToInt(Mathf.Max(start.x, end.x) / ChunkSize);
-            int minimumY = Mathf.FloorToInt(Mathf.Min(start.y, end.y) / ChunkSize);
-            int maximumY = Mathf.FloorToInt(Mathf.Max(start.y, end.y) / ChunkSize);
-
-            for (int y = minimumY; y <= maximumY; y++)
-            {
-                for (int x = minimumX; x <= maximumX; x++)
-                    yield return new Vector2Int(x, y);
-            }
         }
     }
 }

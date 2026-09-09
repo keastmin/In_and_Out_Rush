@@ -1,18 +1,26 @@
 using Fusion;
+using Unity.Profiling;
 using UnityEngine;
 
 [RequireComponent(typeof(NetworkObject))]
 [RequireComponent(typeof(Rigidbody))]
 public class RunnerProjectile : NetworkBehaviour
 {
+    private static readonly ProfilerMarker FixedUpdateMarker = new("RunnerProjectile.FixedUpdateNetwork");
+    private const float MaximumRangeEpsilon = 0.001f;
+
     private Rigidbody _rigidbody;
     private PlayerRunner _owner;
     private Vector3 _direction;
     private float _speed;
     private float _damage;
+    private float _maximumRange;
+    private Vector3 _spawnPosition;
     private LayerMask _damageableMask;
     private TickTimer _lifeTimer;
     private bool _initialized;
+    private bool _hitResolved;
+    private bool _despawnAtMaximumRangeNextTick;
 
     public override void Spawned()
     {
@@ -25,6 +33,7 @@ public class RunnerProjectile : NetworkBehaviour
         float speed,
         float damage,
         float lifetime,
+        float maximumRange,
         LayerMask damageableMask)
     {
         if (!HasStateAuthority) return;
@@ -33,8 +42,12 @@ public class RunnerProjectile : NetworkBehaviour
         _direction = direction.sqrMagnitude > 0.0001f ? direction.normalized : transform.forward;
         _speed = speed;
         _damage = damage;
+        _maximumRange = Mathf.Max(0.01f, maximumRange);
+        _spawnPosition = transform.position;
         _damageableMask = damageableMask;
         _lifeTimer = TickTimer.CreateFromSeconds(Runner, Mathf.Max(0.01f, lifetime));
+        _hitResolved = false;
+        _despawnAtMaximumRangeNextTick = false;
         _initialized = true;
 
         ApplyVelocity();
@@ -42,15 +55,30 @@ public class RunnerProjectile : NetworkBehaviour
 
     public override void FixedUpdateNetwork()
     {
-        if (!HasStateAuthority || !_initialized) return;
-
-        if (_lifeTimer.Expired(Runner))
+        using (FixedUpdateMarker.Auto())
         {
-            Runner.Despawn(Object);
-            return;
-        }
+            if (!HasStateAuthority || !_initialized) return;
 
-        ApplyVelocity();
+            if (_despawnAtMaximumRangeNextTick)
+            {
+                DespawnAtMaximumRange();
+                return;
+            }
+
+            if (_lifeTimer.Expired(Runner))
+            {
+                Runner.Despawn(Object);
+                return;
+            }
+
+            if (HasReachedMaximumRange())
+            {
+                DespawnAtMaximumRange();
+                return;
+            }
+
+            ApplyVelocity();
+        }
     }
 
     private void OnTriggerEnter(Collider other)
@@ -65,13 +93,20 @@ public class RunnerProjectile : NetworkBehaviour
 
     private void TryHit(Collider other)
     {
-        if (!HasStateAuthority || !_initialized || other == null) return;
+        if (!HasStateAuthority || !_initialized || _hitResolved || other == null) return;
+        if (HasExceededMaximumRange())
+        {
+            _hitResolved = true;
+            DespawnAtMaximumRange();
+            return;
+        }
         if (IsOwnerCollider(other)) return;
         if (!IsInDamageableMask(other.gameObject.layer)) return;
 
         WorldMonster worldMonster = other.GetComponentInParent<WorldMonster>();
         if (worldMonster == null) return;
 
+        _hitResolved = true;
         worldMonster.TakeDamage(_damage);
         Runner.Despawn(Object);
     }
@@ -94,6 +129,50 @@ public class RunnerProjectile : NetworkBehaviour
         if (_rigidbody == null)
             _rigidbody = GetComponent<Rigidbody>();
 
-        _rigidbody.linearVelocity = _direction * _speed;
+        float speed = Mathf.Max(0f, _speed);
+        if (_initialized && Runner != null && Runner.DeltaTime > 0f)
+        {
+            float travelled = Vector3.Dot(transform.position - _spawnPosition, _direction);
+            float remainingDistance = Mathf.Max(0f, _maximumRange - travelled);
+            float maximumStepDistance = speed * Runner.DeltaTime;
+
+            if (remainingDistance <= MaximumRangeEpsilon)
+            {
+                speed = 0f;
+                _despawnAtMaximumRangeNextTick = true;
+            }
+            else if (maximumStepDistance >= remainingDistance)
+            {
+                speed = remainingDistance / Runner.DeltaTime;
+                _despawnAtMaximumRangeNextTick = true;
+            }
+        }
+
+        _rigidbody.linearVelocity = _direction * speed;
+    }
+
+    private bool HasReachedMaximumRange()
+    {
+        float travelled = Vector3.Dot(transform.position - _spawnPosition, _direction);
+        return travelled >= _maximumRange - MaximumRangeEpsilon;
+    }
+
+    private bool HasExceededMaximumRange()
+    {
+        Vector3 offset = transform.position - _spawnPosition;
+        return offset.sqrMagnitude > (_maximumRange * _maximumRange) + 0.0001f;
+    }
+
+    private void DespawnAtMaximumRange()
+    {
+        Vector3 maximumRangePosition = _spawnPosition + _direction * _maximumRange;
+
+        if (_rigidbody == null)
+            _rigidbody = GetComponent<Rigidbody>();
+
+        _rigidbody.linearVelocity = Vector3.zero;
+        _rigidbody.position = maximumRangePosition;
+        transform.position = maximumRangePosition;
+        Runner.Despawn(Object);
     }
 }

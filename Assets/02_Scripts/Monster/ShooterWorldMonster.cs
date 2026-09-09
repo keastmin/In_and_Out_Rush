@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class ShooterWorldMonster : WorldMonster
 {
+    protected override bool CanReceiveKnockback => false;
+
     [Header("Shooter Settings")]
     [SerializeField, Min(0f)] private float detectionRadius = 10f;
     [SerializeField, Min(0.01f)] private float fireInterval = 2f;

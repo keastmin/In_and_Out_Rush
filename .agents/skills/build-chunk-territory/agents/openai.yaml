@@ -1,0 +1,4 @@
+interface:
+  display_name: "Territory 구조 작업"
+  short_description: "Territory 설계·이식·교체·정리를 현재 계약에 따라 수행"
+  default_prompt: "Use $build-chunk-territory to inspect the current Territory contract and complete the reserved design, migration, replacement, or retirement phase with appropriate verification."

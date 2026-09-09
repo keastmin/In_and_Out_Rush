@@ -1,0 +1,21 @@
+{
+  "name": "ProjectIO.GridPlacement.Tests",
+  "rootNamespace": "ProjectIO.GridPlacement.Tests",
+  "references": [
+    "ProjectIO.GridPlacement"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

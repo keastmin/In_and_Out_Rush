@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 1287462723279336629}
   - component: {fileID: 3472767642691166672}
   - component: {fileID: 2240025861059067290}
-  m_Layer: 0
+  m_Layer: 11
   m_Name: Mineral Medium
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -98,7 +98,7 @@ GameObject:
   - component: {fileID: 6930607987308622488}
   - component: {fileID: 595273138194022746}
   - component: {fileID: 8784003546115126841}
-  m_Layer: 0
+  m_Layer: 11
   m_Name: Body
   m_TagString: Untagged
   m_Icon: {fileID: 0}

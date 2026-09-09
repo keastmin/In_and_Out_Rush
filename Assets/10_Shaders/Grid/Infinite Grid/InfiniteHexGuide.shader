@@ -45,8 +45,7 @@ Shader "GridVisualize/InfiniteHexGuide"
             #pragma vertex vert
             #pragma fragment frag
 
-            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
-            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile _ _ADDITIONAL_LIGHTS
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
 
@@ -226,8 +225,16 @@ Shader "GridVisualize/InfiniteHexGuide"
                 BRDFData brdfData;
                 InitializeBRDFData(surfaceData, brdfData);
 
-                Light mainLight = GetMainLight();
-                half3 litColor = surfaceData.albedo * (0.2h * surfaceData.occlusion);
+                float4 shadowCoord = TransformWorldToShadowCoord(positionWS);
+                Light mainLight = GetMainLight(shadowCoord);
+                half3 bakedGI = SampleSH(normalWS);
+                half3 litColor = GlobalIllumination(
+                    brdfData,
+                    bakedGI,
+                    surfaceData.occlusion,
+                    positionWS,
+                    normalWS,
+                    viewDirWS);
                 litColor += LightingPhysicallyBased(brdfData, mainLight, normalWS, viewDirWS);
 
                 #ifdef _ADDITIONAL_LIGHTS

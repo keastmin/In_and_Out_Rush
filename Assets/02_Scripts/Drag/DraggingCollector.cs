@@ -34,7 +34,7 @@ namespace KIM.Dev
 
             // 드래그 사각형 4모서리를 near/far로 언프로젝션(월드에 8점)
             float nearZ = Mathf.Max(cam.nearClipPlane, 0.03f);
-            float farZ = 30f; // 감지할 거리 조절 가능
+            float farZ = 100f; // 감지할 거리 조절 가능
 
             Vector3 Near(float x, float y) => cam.ScreenToWorldPoint(new Vector3(x, y, nearZ));
             Vector3 Far(float x, float y) => cam.ScreenToWorldPoint(new Vector3(x, y, farZ));

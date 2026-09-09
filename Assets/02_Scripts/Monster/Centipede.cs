@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class Centipede : WorldMonster
 {
+    protected override bool CanReceiveKnockback => false;
+
     [Header("Centipede Settings")]
     public Transform head;
     public GameObject segmentPrefab;
@@ -39,6 +41,7 @@ public class Centipede : WorldMonster
     Vector3 progressivePosition;
     float elapsedTime;
     float distance;
+    bool isExitingTerritory;
 
 #if UNITY_EDITOR
     protected override void OnDrawGizmos()
@@ -54,22 +57,28 @@ public class Centipede : WorldMonster
 
     protected override void Patrol()
     {
+        bool isInsideTerritory = IsPositionInTerritory(RigidbodyPosition);
+        if (!isInsideTerritory)
+            isExitingTerritory = false;
+
+        if (isInsideTerritory && !isExitingTerritory)
+            isPatrolling = false;
+
         if (isPatrolling == false)
         {
             StopMovement();
 
-            var randomTargetPosition = patrolPivotPosition + Random.insideUnitSphere * patrolRadius;
-            if (!IsPositionInRunnerSafeZone(randomTargetPosition))
-            {
-                originalPosition = RigidbodyPosition;
-                progressivePosition = RigidbodyPosition;
-                patrolTargetPosition = randomTargetPosition;
-                patrolTargetPosition.y = RigidbodyPosition.y;
-                elapsedTime = 0;
-                distance = Vector3.Distance(RigidbodyPosition, randomTargetPosition);
-                isPatrolling = true;
-                // Debug.Log("!!: " + distance);
-            }
+            if (!TrySelectPatrolTarget(out Vector3 targetPosition, isInsideTerritory))
+                return;
+
+            originalPosition = RigidbodyPosition;
+            progressivePosition = RigidbodyPosition;
+            patrolTargetPosition = targetPosition;
+            elapsedTime = 0;
+            distance = Vector3.Distance(RigidbodyPosition, targetPosition);
+            isPatrolling = true;
+            isExitingTerritory = isInsideTerritory;
+            // Debug.Log("!!: " + distance);
         }
         else
         {
@@ -83,13 +92,6 @@ public class Centipede : WorldMonster
             elapsedTime += Runner.DeltaTime; // Fusion 고정 틱 델타타임 사용
             Vector3 direction = (patrolTargetPosition - originalPosition).normalized;
             Vector3 nextProgressivePosition = progressivePosition + movementSpeed * deltaTime * direction;
-            if (IsPositionInRunnerSafeZone(nextProgressivePosition))
-            {
-                isPatrolling = false;
-                StopMovement();
-                return;
-            }
-
             progressivePosition = nextProgressivePosition;
             // Debug.Log("??: " + Vector3.Distance(progressivePosition, originalPosition));
             if (distance <= Vector3.Distance(progressivePosition, originalPosition))
@@ -101,12 +103,15 @@ public class Centipede : WorldMonster
             var verticalDirection = Quaternion.AngleAxis(90f, Vector3.up) * direction;
             var verticalMovement = segmentAmplitude * Mathf.Sin(elapsedTime * segmentFrequency) * verticalDirection;
             Vector3 desiredPosition = progressivePosition + verticalMovement;
+            if (IsMovementPathBlocked(RigidbodyPosition, desiredPosition, isExitingTerritory))
+            {
+                isPatrolling = false;
+                isExitingTerritory = false;
+                StopMovement();
+                return;
+            }
+
             SetMovementVelocity((desiredPosition - RigidbodyPosition) / deltaTime);
-            // TODO: 안닿게 하려면 길찾기 알고리즘이 필요함
-            // if (territory.IsPointInPolygon(new Vector2(transform.position.x, transform.position.z)))
-            // {
-            //     isPatrolling = false;
-            // }
         }
     }
 

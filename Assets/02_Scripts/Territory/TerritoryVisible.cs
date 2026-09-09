@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using ProjectIO.Territory;
 using UnityEngine;
 
 namespace Dev.Local
@@ -15,23 +16,33 @@ namespace Dev.Local
 
         public void SetVertices(List<Vector2> vertices)
         {
+            TrySetMesh(Territory.GenerateMesh(vertices));
+        }
+
+        public bool SetMeshData(TerritoryMeshData meshData)
+        {
+            return TrySetMesh(Territory.GenerateMesh(meshData));
+        }
+
+        private bool TrySetMesh(Mesh mesh)
+        {
             if (_meshFilter == null && !TryGetComponent(out _meshFilter))
             {
                 Debug.LogError($"{nameof(TerritoryVisible)} requires a {nameof(MeshFilter)}.");
-                return;
+                return false;
             }
 
-            var mesh = Territory.GenerateMesh(vertices);
             if (mesh == null)
             {
                 Debug.LogError("Territory mesh update skipped because the polygon is invalid.");
-                return;
+                return false;
             }
 
             Mesh previousMesh = _meshFilter.mesh;
             _meshFilter.mesh = mesh;
             if (previousMesh != null)
                 Destroy(previousMesh);
+            return true;
         }
     }
 }

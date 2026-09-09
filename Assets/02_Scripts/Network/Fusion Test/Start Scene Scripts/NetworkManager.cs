@@ -205,12 +205,12 @@ namespace KIM.Dev
 
         public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player)
         {
-            Debug.Log($"AOI Enter: {player} -> {obj.name}");
+            //Debug.Log($"AOI Enter: {player} -> {obj.name}");
         }
 
         public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player)
         {
-            Debug.Log($"AOI Exit: {player} -> {obj.name}");
+            //Debug.Log($"AOI Exit: {player} -> {obj.name}");
         }
 
         public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress)

@@ -1,0 +1,21 @@
+{
+  "name": "ProjectIO.Construction.Tests",
+  "rootNamespace": "ProjectIO.Construction.Tests",
+  "references": [
+    "ProjectIO.Construction"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

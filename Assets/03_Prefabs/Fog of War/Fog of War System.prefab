@@ -50,9 +50,9 @@ MonoBehaviour:
     m_Bits: 128
   _fogHiddenLayers:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 2112
   _runnerVisionBrush: {fileID: 2800000, guid: c36f65eb23b02574eb515d2afa3ac4a9, type: 3}
-  _playerRunnerVisibleRange: 10
+  _playerRunnerVisibleRange: 20
   _fogDensity: 0.95
   _territoryMeshFilter: {fileID: 0}
   _territoryMeshRenderer: {fileID: 0}

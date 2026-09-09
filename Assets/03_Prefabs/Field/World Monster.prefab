@@ -28,6 +28,10 @@ PrefabInstance:
       propertyPath: 'NetworkedBehaviours.Array.data[2]'
       value: 
       objectReference: {fileID: 3443739926629535264}
+    - target: {fileID: 777614999088421246, guid: 1f07dcc6068889e46ba5ca7a07d5f118, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1081141730720889549, guid: 1f07dcc6068889e46ba5ca7a07d5f118, type: 3}
       propertyPath: m_Name
       value: World Monster
@@ -105,9 +109,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   attackTargetTransform: {fileID: 1882568577623817179}
   health: 10
-  moveSpeed: 3
-  arriveThreshold: 0.1
+  movementSpeed: 3
+  arrivalThreshold: 0.1
   playerTransform: {fileID: 0}
+  patrolMinimumRadius: 5
+  patrolMaximumRadius: 10
+  obstaclePathPadding: 0.25
 --- !u!114 &6282168818028803302 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: -1151282776921145717, guid: 1f07dcc6068889e46ba5ca7a07d5f118, type: 3}

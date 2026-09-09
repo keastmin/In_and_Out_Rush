@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using Dev.Local;
 using Fusion;
+using Unity.Profiling;
 using UnityEngine;
 using KIM.Dev;
 
@@ -9,6 +10,14 @@ namespace Dev.Network
 {
     public partial class StageBootstrapper : Entity
     {
+        private static readonly ProfilerMarker FixedUpdateMarker = new("StageBootstrapper.FixedUpdateNetwork");
+        private static readonly ProfilerMarker ConfigureAreaOfInterestMarker =
+            new("StageBootstrapper.ConfigureAreaOfInterestGrid");
+        private static readonly ProfilerMarker RegisterAreaOfInterestMarker =
+            new("StageBootstrapper.RegisterPlayerAreaOfInterest");
+        private const float PlayerAreaOfInterestRadius = 128f;
+        private const int AreaOfInterestCellSize = 64;
+
         [Networked] public PlayerRunner PlayerRunner { get; private set; }
         [Networked] public PlayerBuilder PlayerBuilder { get; private set; }
 
@@ -24,7 +33,7 @@ namespace Dev.Network
 
         [Header("Network Systems")]
         [SerializeField] private NetworkInputSystem networkInputSystemPrefab;
-        [SerializeField] private NetworkSystemBase[] systems;
+        [SerializeField] private System[] systems;
         [SerializeField] private PingSystem _pingSystem;
         [SerializeField] private KIM.Dev.TowerUpgradeManager _towerUpgradeManager;
         public KIM.Dev.ResourceSystem ResourceSystem;
@@ -43,6 +52,7 @@ namespace Dev.Network
         public TrackVisible TrackVisible;
 
         private bool _initialized = false;
+        private bool _isAreaOfInterestGridConfigured;
 
         public bool IsInitialized => _initialized;
 
@@ -192,6 +202,10 @@ namespace Dev.Network
             {
                 if (system == null)
                     continue;
+                if (system is TimeSystem)
+                    continue;
+                if (system is ResourceSpawnSystem)
+                    continue;
 
                 system.SetUp();
             }
@@ -269,25 +283,51 @@ namespace Dev.Network
 
         public override void FixedUpdateNetwork()
         {
-            if (!Runner.IsServer)
+            using (FixedUpdateMarker.Auto())
+            {
+                if (!Runner.IsServer)
+                    return;
+
+                ConfigureAreaOfInterestGrid();
+
+                using (RegisterAreaOfInterestMarker.Auto())
+                {
+                    foreach (PlayerRef player in Runner.ActivePlayers)
+                    {
+                        if (!Runner.TryGetPlayerObject(
+                                player,
+                                out NetworkObject playerObject))
+                        {
+                            continue;
+                        }
+
+                        if (Runner.GameMode != GameMode.Shared)
+                            Runner.ClearPlayerAreaOfInterest(player);
+
+                        Runner.AddPlayerAreaOfInterest(
+                            player,
+                            playerObject.transform.position,
+                            PlayerAreaOfInterestRadius);
+                    }
+                }
+            }
+        }
+
+        private void ConfigureAreaOfInterestGrid()
+        {
+            if (_isAreaOfInterestGridConfigured)
                 return;
 
-            const float aoiRadius = 128f;
-
-            foreach (PlayerRef player in Runner.ActivePlayers)
+            if (Runner.GameMode == GameMode.Shared)
             {
-                if (!Runner.TryGetPlayerObject(
-                        player,
-                        out NetworkObject playerObject))
-                {
-                    continue;
-                }
-
-                Runner.AddPlayerAreaOfInterest(
-                    player,
-                    playerObject.transform.position,
-                    aoiRadius);
+                _isAreaOfInterestGridConfigured = true;
+                return;
             }
+
+            using (ConfigureAreaOfInterestMarker.Auto())
+                Runner.SetAreaOfInterestCellSize(AreaOfInterestCellSize);
+
+            _isAreaOfInterestGridConfigured = true;
         }
     }
 }

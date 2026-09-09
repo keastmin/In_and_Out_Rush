@@ -1,11 +1,14 @@
 using Fusion;
 using System.Collections;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace KIM.Dev
 {
     public class LaserTower : AttackTower
     {
+        private static readonly ProfilerMarker FixedUpdateMarker = new("LaserTower.FixedUpdateNetwork");
+
         protected override TowerUpgradeType UpgradeType => TowerUpgradeType.LaserBeam;
 
         [Header("레이저")]
@@ -35,11 +38,14 @@ namespace KIM.Dev
 
         public override void FixedUpdateNetwork()
         {
-            if (HasStateAuthority)
+            using (FixedUpdateMarker.Auto())
             {
-                _currTarget = SetTarget();
-                LookAtTarget(_currTarget);
-                Fire();
+                if (HasStateAuthority)
+                {
+                    _currTarget = SetTarget();
+                    LookAtTarget(_currTarget);
+                    Fire();
+                }
             }
         }
 

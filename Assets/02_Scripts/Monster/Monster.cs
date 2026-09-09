@@ -1,8 +1,11 @@
 using Fusion;
+using Unity.Profiling;
 using UnityEngine;
 
 public class Monster : NetworkBehaviour, IMonster, IDamageable
 {
+    private static readonly ProfilerMarker FixedUpdateMarker = new("Monster.FixedUpdateNetwork");
+
     [SerializeField] protected Transform attackTargetTransform;
     [SerializeField] protected float health = 10;
     [SerializeField] protected float movementSpeed = 3f;
@@ -10,10 +13,12 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
 
     [Networked] protected float Health { get; private set; }
     [Networked] private TickTimer StunTimer { get; set; }
+    [Networked] private TickTimer KnockbackTimer { get; set; }
+    [Networked] private Vector3 KnockbackVelocity { get; set; }
     protected float maxHealth;
 
     protected Territory territory;
-    private TerritorySystem territoryExpansionSystem;
+    protected TerritorySystem territoryExpansionSystem;
     [SerializeField] protected Transform playerTransform;
     protected Rigidbody rigidBody;
 
@@ -44,6 +49,8 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
         {
             maxHealth = health;
             Health = maxHealth;
+            KnockbackTimer = TickTimer.None;
+            KnockbackVelocity = Vector3.zero;
             Initialize();
         }
     }
@@ -122,17 +129,21 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
 
     public override void FixedUpdateNetwork()
     {
-        if (!CanAccessNetworkState || !Object.HasStateAuthority) { return; }
-        if (TryDestroyInsideTerritory())
-            return;
-
-        if (IsStunned)
+        using (FixedUpdateMarker.Auto())
         {
-            StopByStun();
-            return;
-        }
+            if (!CanAccessNetworkState || !Object.HasStateAuthority) { return; }
 
-        UpdateMonster();
+            if (UpdateKnockback())
+                return;
+
+            if (IsStunned)
+            {
+                StopByStun();
+                return;
+            }
+
+            UpdateMonster();
+        }
     }
 
     public virtual void UpdateMonster() => throw new System.NotImplementedException();
@@ -151,6 +162,65 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
 
         rigidBody.linearVelocity = Vector3.zero;
         rigidBody.angularVelocity = Vector3.zero;
+    }
+
+    protected bool BeginKnockback(Vector3 direction, float distance, float duration)
+    {
+        if (!CanAccessNetworkState ||
+            !Object.HasStateAuthority ||
+            distance <= 0f ||
+            duration <= 0f)
+        {
+            return false;
+        }
+
+        direction.y = 0f;
+        if (direction.sqrMagnitude <= 0.0001f)
+            return false;
+
+        KnockbackVelocity = direction.normalized * (distance / duration);
+        KnockbackTimer = TickTimer.CreateFromSeconds(Runner, duration);
+        return true;
+    }
+
+    protected virtual bool IsKnockbackPathBlocked(
+        Vector3 startPosition,
+        Vector3 endPosition)
+    {
+        return false;
+    }
+
+    private bool UpdateKnockback()
+    {
+        if (!KnockbackTimer.IsRunning)
+            return false;
+
+        if (KnockbackTimer.Expired(Runner))
+        {
+            ClearKnockback();
+            StopMovement();
+            return true;
+        }
+
+        float deltaTime = Runner.DeltaTime;
+        Vector3 currentPosition = RigidbodyPosition;
+        Vector3 nextPosition = currentPosition + KnockbackVelocity * deltaTime;
+        if (deltaTime <= Mathf.Epsilon ||
+            IsKnockbackPathBlocked(currentPosition, nextPosition))
+        {
+            ClearKnockback();
+            StopMovement();
+            return true;
+        }
+
+        SetMovementVelocity(KnockbackVelocity);
+        return true;
+    }
+
+    private void ClearKnockback()
+    {
+        KnockbackTimer = TickTimer.None;
+        KnockbackVelocity = Vector3.zero;
     }
 
     protected Vector3 RigidbodyPosition
@@ -178,6 +248,9 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
         => IsPositionInTerritory(position) ||
            IsPositionInActiveSanctuary(new Vector3(position.x, transform.position.y, position.y));
 
+    protected bool IsPositionInTerritory(Vector3 position)
+        => IsPositionInTerritory(new Vector2(position.x, position.z));
+
     protected bool IsTargetInRunnerSafeZone(Transform target)
         => target != null && IsPositionInRunnerSafeZone(target.position);
 
@@ -202,7 +275,7 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
         return true;
     }
 
-    private static bool IsPositionInActiveSanctuary(Vector3 position)
+    protected static bool IsPositionInActiveSanctuary(Vector3 position)
         => Dev.Network.StageBootstrapper.Instance != null &&
            Dev.Network.StageBootstrapper.Instance.IsPointInActiveSanctuary(position);
 

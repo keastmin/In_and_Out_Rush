@@ -15,6 +15,7 @@ public class NetworkInputSystem : NetworkBehaviour, INetworkRunnerCallbacks
     private bool _itemInput = false; // 러너 아이템 입력
     private bool _skillInput = false; // 러너 스킬 입력
     private bool _interactInput = false; // 러너 상호작용 입력
+    private bool _reloadInput = false; // 러너 재장전 입력
     private int _selectedItemSlotIndex = 0; // 러너 아이템 슬롯
     private int _selectedSkill = 1; // 러너 스킬
     private bool _mouseButton0 = false; // 마우스 좌클릭
@@ -29,6 +30,7 @@ public class NetworkInputSystem : NetworkBehaviour, INetworkRunnerCallbacks
         _itemInput = _itemInput | Input.GetKeyDown(KeyCode.Q); // Q키를 통해 _itemInput 여부 검사
         _skillInput = _skillInput | Input.GetKeyDown(KeyCode.E); // E키를 통해 _skillInput 여부 검사
         _interactInput = _interactInput | Input.GetKeyDown(KeyCode.F); // F키를 통해 _interactInput 여부 검사
+        _reloadInput = _reloadInput | Input.GetKeyDown(KeyCode.R); // R키를 통해 재장전 입력 검사
         _mouseButton0 = _mouseButton0 | Input.GetMouseButtonDown(0); // 마우스 좌클릭 여부 검사
         _mouseButton1 = _mouseButton1 | Input.GetMouseButtonDown(1); // 마우스 우클릭 여부 검사
         if (Input.GetKeyDown(KeyCode.Alpha1))
@@ -103,17 +105,28 @@ public class NetworkInputSystem : NetworkBehaviour, INetworkRunnerCallbacks
         _interactInput = false;
 
         // 무기 사용
+        data.ReloadInput.Set(NetworkInputData.RELOAD_INPUT, _reloadInput);
+        _reloadInput = false;
         data.WeaponInput.Set(NetworkInputData.WEAPON_INPUT, Input.GetMouseButton(0));
 
         // ---------------------------------------------------------------------------------------
 
         // 빌더 Input -----------------------------------------------------------------------------
 
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray.origin, ray.direction, out RaycastHit hit, 100f, _environmentalLayer))
+        Camera mainCamera = Camera.main;
+        if (mainCamera != null)
         {
-            // 마우스 위치
-            data.MousePosition = hit.point;
+            Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+            if (Physics.Raycast(ray.origin, ray.direction, out RaycastHit hit, 100f, _environmentalLayer))
+            {
+                // 마우스 위치
+                data.MousePosition = hit.point;
+                data.WeaponAimPosition = hit.point;
+            }
+            else
+            {
+                data.WeaponAimPosition = GetFallbackWeaponAimPosition(ray);
+            }
         }
 
         // 좌클릭 처리
@@ -129,6 +142,15 @@ public class NetworkInputSystem : NetworkBehaviour, INetworkRunnerCallbacks
 
         // Input 데이터 전송
         input.Set(data);
+    }
+
+    private static Vector3 GetFallbackWeaponAimPosition(Ray cameraRay)
+    {
+        var groundPlane = new Plane(Vector3.up, Vector3.zero);
+        if (groundPlane.Raycast(cameraRay, out float enter) && enter >= 0f)
+            return cameraRay.GetPoint(enter);
+
+        return cameraRay.origin + cameraRay.direction * 100f;
     }
 
     public void OnConnectedToServer(NetworkRunner runner){}

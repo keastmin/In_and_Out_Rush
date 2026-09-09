@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 5197405023047534726}
   - component: {fileID: 685109582639024927}
   m_Layer: 0
-  m_Name: Cube
+  m_Name: Eye
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -26,12 +26,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 104489258268109255}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.39, z: 0.423}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.39, z: 0.423}
   m_LocalScale: {x: 0.60842, y: 0.32988, z: 0.44249}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 81610131430948187}
+  m_Father: {fileID: 5782809305708921265}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &5197405023047534726
 MeshFilter:
@@ -86,38 +86,6 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!1 &1469017794580482605
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 8355381677218973595}
-  m_Layer: 0
-  m_Name: Model
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &8355381677218973595
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1469017794580482605}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 81610131430948187}
-  m_Father: {fileID: 5782809305708921265}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1641716306489939394
 GameObject:
   m_ObjectHideFlags: 0
@@ -147,10 +115,13 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 8355381677218973595}
+  - {fileID: 81610131430948187}
+  - {fileID: 5423249800793955960}
   - {fileID: 5455947531722268542}
   - {fileID: 8889067391957367747}
   - {fileID: 654166963584021036}
+  - {fileID: 8645579627188254611}
+  - {fileID: 3503190511484473734}
   m_Father: {fileID: 5948079281826790062}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2419436783449513935
@@ -179,6 +150,37 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0.8, z: 0.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5782809305708921265}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2731145860072043403
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8645579627188254611}
+  m_Layer: 0
+  m_Name: Left Pistol Anchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8645579627188254611
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2731145860072043403}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.69, y: 1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5029,7 +5031,7 @@ GameObject:
   - component: {fileID: 8088177334714375683}
   - component: {fileID: 6508947550375967291}
   m_Layer: 0
-  m_Name: Capsule
+  m_Name: Body
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5043,13 +5045,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7093039242594386974}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 5423249800793955960}
-  m_Father: {fileID: 8355381677218973595}
+  m_Children: []
+  m_Father: {fileID: 5782809305708921265}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &8088177334714375683
 MeshFilter:
@@ -5193,6 +5194,37 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 1.5, z: 0.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5782809305708921265}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &7530035004274009328
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3503190511484473734}
+  m_Layer: 0
+  m_Name: Right Pistol Anchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3503190511484473734
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7530035004274009328}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.74, y: 1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5378,6 +5410,7 @@ MonoBehaviour:
   - {fileID: 9208446726996137561}
   - {fileID: 1669351244208117714}
   - {fileID: 373271162909325404}
+  - {fileID: -3321396743853381275}
   - {fileID: 1680865586286248271}
   ForceRemoteRenderTimeframe: 0
 --- !u!136 &2540990109086367435
@@ -5499,15 +5532,29 @@ MonoBehaviour:
   m_GameObject: {fileID: 9008013758366610681}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ad6d06dacd9bec44b9b7a619cfa3e908, type: 3}
+  m_Script: {fileID: 11500000, guid: 8bc4d92e16a74853a9f1730c6dbe2541, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _projectilePrefab: {fileID: 2082090766327459836, guid: 65b489919c650d84c8b159cacd9c949a, type: 3}
+  _magazineCapacity: 5
+  _shotsPerSecond: 1.25
+  _reloadDuration: 1
   _muzzle: {fileID: 5455947531722268542}
   _damageableMask:
     serializedVersion: 2
     m_Bits: 64
-  _damage: 1
-  _projectileSpeed: 18
-  _cooldown: 0.25
-  _projectileLifetime: 3
+  _nearDamage: 36
+  _middleDamage: 18
+  _farDamage: 9
+  _nearRange: 3
+  _middleRange: 5
+  _maximumRange: 7
+  _fullConeDegrees: 24
+  _runningAccuracyPercent: 50
+  _presentationPelletCount: 8
+  _showTracers: 1
+  _tracerColor: {r: 1, g: 0.8, b: 0.25, a: 1}
+  _tracerDuration: 0.1
+  _tracerStartWidth: 0.035
+  _tracerEndWidth: 0.008
+  _knockbackDistance: 1
+  _knockbackDuration: 0.2

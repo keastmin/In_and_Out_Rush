@@ -1,6 +1,7 @@
 using Dev.Network;
 using Fusion;
 using System;
+using Unity.Profiling;
 using UnityEngine;
 using KIM.Dev;
 
@@ -12,6 +13,9 @@ using KIM.Dev;
 [RequireComponent(typeof(PlayerRunnerTeleporter))]
 public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLaboratoryUpgradeReceiver
 {
+    private static readonly ProfilerMarker TerritoryPositionChangedMarker =
+        new("PlayerRunner.TerritoryPositionChanged");
+
     private const float DefaultMaxHealth = 100f;
     private const float DefaultMaxStamina = 100f;
     private const float DefaultSlideStaminaCost = 10f;
@@ -99,6 +103,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
 
     // 러너의 핑 가이드
     public PlayerRunnerPingGuide PingGuide => _pingGuide;
+    public IRunnerWeapon Weapon => _weapon;
 
     #endregion 
 
@@ -242,12 +247,14 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
 
         if (!GetInput(out NetworkInputData data)) return;
 
-        HandleMovementInput(data);
+        bool isRunning = HandleMovementInput(data);
         HandleSlideInput(data);
         HandleItemInput(data);
         HandleSkillInput(data);
         HandleInteractInput(data);
-        HandleWeaponInput(data);
+        HandleWeaponInput(
+            data,
+            isRunning && !_slideHandler.IsSliding && !_tumbleHandler.IsTumbling);
     }
 
     public override void Render()
@@ -265,7 +272,10 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
                 _outOfBodyController.ClearRecovering();
         }
 
-        OnPositionChanged?.Invoke(sharedPosition, this, this);
+        using (TerritoryPositionChangedMarker.Auto())
+        {
+            OnPositionChanged?.Invoke(sharedPosition, this, this);
+        }
 
         TerritorySystem territorySystem = StageBootstrapper.Instance != null
             ? StageBootstrapper.Instance.TerritorySystem
@@ -296,13 +306,14 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
             .SetElapsedTimeText($"{minutes:D2}:{seconds:D2}");
     }
 
-    private void HandleMovementInput(NetworkInputData data)
+    private bool HandleMovementInput(NetworkInputData data)
     {
-        if (_slideHandler.IsSliding || _tumbleHandler.IsTumbling) return;
+        if (_slideHandler.IsSliding || _tumbleHandler.IsTumbling) return false;
         bool isDashing = data.DashInput.IsSet(NetworkInputData.DASH_INPUT);
         Vector3 direction = data.PlayerRunnerDirection.normalized;
         isDashing = TryConsumeDashStamina(isDashing, direction, Runner.DeltaTime);
         _movement.UpdateMovement(EffectiveMovementSpeed, isDashing, direction);
+        return isDashing;
     }
 
     private bool TryConsumeDashStamina(bool isDashing, Vector3 direction, float deltaTime)
@@ -360,12 +371,17 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
         Debug.Log("상호작용 사용");
     }
 
-    private void HandleWeaponInput(NetworkInputData data)
+    private void HandleWeaponInput(NetworkInputData data, bool isRunning)
     {
         if (!HasStateAuthority) return;
+
+        if (data.ReloadInput.IsSet(NetworkInputData.RELOAD_INPUT))
+            _weapon?.TryReload(this);
+
+        if (_slideHandler.IsSliding) return;
         if (!data.WeaponInput.IsSet(NetworkInputData.WEAPON_INPUT)) return;
 
-        _weapon?.TryFire(this, data.MousePosition);
+        _weapon?.TryFire(this, data.WeaponAimPosition, isRunning);
     }
 
     private void UpdateSkillIcon(int skillIndex)

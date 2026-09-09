@@ -10,14 +10,28 @@ public class Stalker : WorldMonster
     [Header("Stalker Settings")]
     [SerializeField] private float _sensingRange = 5f;
     [SerializeField] private float _attackRange = 2f;
+    [SerializeField] private float _chaseResumeRange = 2.2f;
     [SerializeField] private float _attackSpeed = 1f;
+    [SerializeField, Min(0f)] private float _projectileSpeed = 8f;
+    [SerializeField, Min(0f)] private float _projectileDamage = 1f;
+    [SerializeField, Min(0.01f)] private float _projectileLifetime = 5f;
+    [SerializeField] private Transform _muzzle;
+    [SerializeField] private MonsterProjectile _projectilePrefab;
 
     private bool _isChasing;
     private bool _isAttacking;
+    private bool _isStunLogged;
     private float _attackElapsedTime = 0f;
+    private string _lastChaseStatus;
 
     public override void UpdateMonster()
     {
+        if (_isStunLogged)
+        {
+            _isStunLogged = false;
+            Debug.Log($"{name} Stalker stun ended: resuming AI update.");
+        }
+
         if (_isChasing)
         {
             if (attackTargetTransform == null)
@@ -34,18 +48,20 @@ public class Stalker : WorldMonster
 
             if (_isAttacking)
             {
-                if (IsTargetWithinRange(_attackRange))
+                if (IsTargetWithinRange(GetChaseResumeRange()))
                 {
                     Attack();
                     return;
                 }
 
+                Debug.Log(
+                    $"{name} Stalker attack state -> chase: target left {GetChaseResumeRange():F2}m resume range.");
                 _isAttacking = false;
             }
 
             if (CanEnterAttackState())
             {
-                _isAttacking = true;
+                EnterAttackState();
                 Attack();
                 return;
             }
@@ -56,7 +72,7 @@ public class Stalker : WorldMonster
 
             if (CanEnterAttackState())
             {
-                _isAttacking = true;
+                EnterAttackState();
                 Attack();
             }
         }
@@ -83,6 +99,9 @@ public class Stalker : WorldMonster
     private float GetAttackRangeThreshold()
         => _attackRange * AttackRangeThresholdRatio;
 
+    private float GetChaseResumeRange()
+        => Mathf.Max(_attackRange, _chaseResumeRange);
+
     private float GetPlanarSqrDistance(Vector3 targetPosition)
     {
         Vector3 offset = targetPosition - RigidbodyPosition;
@@ -97,10 +116,58 @@ public class Stalker : WorldMonster
         _attackElapsedTime += Runner.DeltaTime * _attackSpeed;
         if (_attackElapsedTime >= 1f)
         {
-            attackTargetTransform.GetComponent<IDamageable>()?.TakeDamage(1f);
-            Debug.Log($"{name} attacks {attackTargetTransform.name}");
+            FireProjectile();
             _attackElapsedTime = 0f;
         }
+    }
+
+    private void FireProjectile()
+    {
+        if (_projectilePrefab == null || attackTargetTransform == null)
+        {
+            Debug.LogWarning(
+                $"{name} Stalker projectile skipped: prefab={_projectilePrefab != null}, target={attackTargetTransform != null}.");
+            return;
+        }
+
+        Vector3 muzzlePosition = GetMuzzlePosition();
+        Vector3 direction = attackTargetTransform.position - muzzlePosition;
+        direction.y = 0f;
+        if (direction.sqrMagnitude <= 0.0001f)
+            direction = transform.forward;
+
+        direction.Normalize();
+        MonsterProjectile projectile = Runner.Spawn(
+            _projectilePrefab,
+            muzzlePosition,
+            Quaternion.LookRotation(direction, Vector3.up));
+
+        projectile.Initialize(
+            this,
+            direction,
+            _projectileSpeed,
+            _projectileDamage,
+            _projectileLifetime);
+
+        // Debug.Log(
+        //     $"{name} Stalker projectile fired: distance={Mathf.Sqrt(GetPlanarSqrDistance(attackTargetTransform.position)):F2}, "
+        //     + $"muzzle={muzzlePosition}, projectile={projectile.name}.");
+    }
+
+    private Vector3 GetMuzzlePosition()
+    {
+        if (_muzzle != null)
+            return _muzzle.position;
+
+        return transform.TransformPoint(new Vector3(0f, 1f, 0.5f));
+    }
+
+    private void EnterAttackState()
+    {
+        _isAttacking = true;
+        Debug.Log(
+            $"{name} Stalker chase -> attack: distance={Mathf.Sqrt(GetPlanarSqrDistance(attackTargetTransform.position)):F2}, "
+            + $"enterRange={GetAttackRangeThreshold():F2}, attackRange={_attackRange:F2}.");
     }
 
     public void StartChasing(Transform target)
@@ -109,6 +176,7 @@ public class Stalker : WorldMonster
         attackTargetTransform = target;
         _isChasing = true;
         _isAttacking = false;
+        Debug.Log($"{name} Stalker patrol -> chase: target={target.name}.");
     }
 
     protected virtual void Chase()
@@ -116,6 +184,7 @@ public class Stalker : WorldMonster
         var attackTargetPosition = attackTargetTransform.position;
         if (IsPositionInRunnerSafeZone(attackTargetPosition))
         {
+            LogChaseStatus("stopped: target entered runner safe zone");
             StopChasing();
             return;
         }
@@ -123,6 +192,7 @@ public class Stalker : WorldMonster
         float deltaTime = Runner.DeltaTime;
         if (deltaTime <= Mathf.Epsilon)
         {
+            LogChaseStatus("waiting: simulation delta time is zero");
             StopMovement();
             return;
         }
@@ -134,6 +204,7 @@ public class Stalker : WorldMonster
         float distance = toTarget.magnitude;
         if (distance <= GetAttackRangeThreshold())
         {
+            LogChaseStatus("at attack-entry range");
             StopMovement();
             return;
         }
@@ -144,20 +215,34 @@ public class Stalker : WorldMonster
 
         if (moveDistance <= Mathf.Epsilon)
         {
+            LogChaseStatus("waiting: computed movement distance is zero");
             StopMovement();
             return;
         }
 
         Vector3 direction = toTarget / distance;
         Vector3 nextPosition = currentPosition + direction * moveDistance;
-        if (IsPositionInRunnerSafeZone(nextPosition))
+        if (IsMovementPathBlocked(currentPosition, nextPosition))
         {
+            LogChaseStatus("stopped: movement path is blocked");
             StopChasing();
             return;
         }
 
+        LogChaseStatus("moving");
         SetMovementVelocity(direction * (moveDistance / deltaTime));
         FaceTarget();
+    }
+
+    protected override void StopByStun()
+    {
+        if (!_isStunLogged)
+        {
+            _isStunLogged = true;
+            Debug.Log($"{name} Stalker stunned: AI update and movement are paused.");
+        }
+
+        base.StopByStun();
     }
 
     private void StopChasing()
@@ -166,6 +251,17 @@ public class Stalker : WorldMonster
         _isAttacking = false;
         attackTargetTransform = null;
         StopMovement();
+    }
+
+    private void LogChaseStatus(string status)
+    {
+        if (_lastChaseStatus == status)
+            return;
+
+        _lastChaseStatus = status;
+        Debug.Log(
+            $"{name} Stalker chase: {status}, distance={Mathf.Sqrt(GetPlanarSqrDistance(attackTargetTransform.position)):F2}, "
+            + $"attackRange={GetAttackRangeThreshold():F2}, resumeRange={GetChaseResumeRange():F2}.");
     }
 
     private void FaceTarget()
@@ -205,7 +301,7 @@ public class Stalker : WorldMonster
             transform.position + Vector3.up * 2.5f,
             $"State: {state}\n"
             + $"Target Distance: {targetDistance}\n"
-            + $"Enter Range: {GetAttackRangeThreshold():F2} / Exit Range: {_attackRange:F2}\n"
+            + $"Attack Range: {GetAttackRangeThreshold():F2} / Chase Resume Range: {GetChaseResumeRange():F2}\n"
             + $"Attack Timer: {_attackElapsedTime:F2}",
             style);
     }

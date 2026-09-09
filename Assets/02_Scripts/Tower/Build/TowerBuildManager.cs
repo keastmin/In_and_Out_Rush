@@ -1,6 +1,8 @@
 using System;
 using Dev.Network;
 using Fusion;
+using ProjectIO.Construction;
+using ProjectIO.ResourceEconomy.Adapters.Fusion;
 using UnityEngine;
 
 namespace KIM.Dev
@@ -11,7 +13,10 @@ namespace KIM.Dev
 
         public event Action<bool, bool> OnTowerBuildRequestCompleted;
 
+        private static readonly TowerConstructionUseCase ConstructionUseCase = new();
+
         private TowerUpgradeManager _towerUpgradeManager;
+        private ResourcePaymentFusionAdapter _resourcePayment;
 
         public override void Spawned()
         {
@@ -26,11 +31,14 @@ namespace KIM.Dev
                 Instance = null;
         }
 
-        public void Initialize(TowerUpgradeManager towerUpgradeManager)
+        public void Initialize(
+            TowerUpgradeManager towerUpgradeManager,
+            ResourcePaymentFusionAdapter resourcePayment)
         {
             _towerUpgradeManager = towerUpgradeManager != null
                 ? towerUpgradeManager
                 : GetComponent<TowerUpgradeManager>();
+            _resourcePayment = resourcePayment;
 
             InjectTowerDependenciesToSpawnedTowers();
         }
@@ -48,10 +56,7 @@ namespace KIM.Dev
             if (tower.IsCenter && (builder == null || centerTowerCount >= builder.MaxCenterTowerCount))
                 return false;
 
-            ResourceSystem resourceSystem = ResourceSystem.Instance;
-            if (resourceSystem == null ||
-                resourceSystem.Mineral < tower.Cost.Mineral ||
-                resourceSystem.Gas < tower.Cost.Gas)
+            if (_resourcePayment == null || !_resourcePayment.CanAfford(tower.Cost))
             {
                 return false;
             }
@@ -114,8 +119,13 @@ namespace KIM.Dev
             int[] supplyArray,
             PlayerRef requester)
         {
-            if (!HasStateAuthority || Runner == null || InfiniteGrid.Instance == null || ResourceSystem.Instance == null)
+            if (!HasStateAuthority ||
+                Runner == null ||
+                InfiniteGrid.Instance == null ||
+                _resourcePayment == null)
+            {
                 return false;
+            }
 
             if (!Runner.TryFindObject(builderId, out NetworkObject builderObject) ||
                 !builderObject.TryGetComponent(out PlayerBuilder builder))
@@ -129,37 +139,14 @@ namespace KIM.Dev
             if (!CanBuildSpecialTower(requestedTowerId, supplyArray))
                 return false;
 
-            Vector3 position = InfiniteGrid.Instance.GetCellCenterPositionFromCellIndex(index);
-            NetworkObject towerObject = Runner.Spawn(towerRef, position, Quaternion.identity);
-            if (towerObject == null || !towerObject.TryGetComponent(out Tower tower))
-            {
-                DespawnFailedTower(towerObject);
-                return false;
-            }
-
-            bool isValid = tower.TowerID == requestedTowerId &&
-                           tower.HasGridOccupation &&
-                           HasSufficientResources(tower.Cost) &&
-                           CanRegisterCenterTower(tower, builder) &&
-                           TryInitializeSpecialTower(tower, supplyArray);
-
-            if (!isValid)
-            {
-                DespawnFailedTower(towerObject);
-                return false;
-            }
-
-            InjectTowerDependencies(tower);
-            RegisterCenterTower(tower, builder);
-            ResourceSystem.Instance.Mineral -= tower.Cost.Mineral;
-            ResourceSystem.Instance.Gas -= tower.Cost.Gas;
-            return true;
-        }
-
-        private static bool HasSufficientResources(Cost cost)
-        {
-            return ResourceSystem.Instance.Mineral >= cost.Mineral &&
-                   ResourceSystem.Instance.Gas >= cost.Gas;
+            var operation = new HostTowerConstructionOperation(
+                this,
+                towerRef,
+                requestedTowerId,
+                builder,
+                index,
+                supplyArray);
+            return ConstructionUseCase.Execute(operation) == TowerConstructionResult.Success;
         }
 
         private static bool CanBuildSpecialTower(string towerId, int[] supplyArray)
@@ -224,6 +211,86 @@ namespace KIM.Dev
                 tower.ReleaseGridOccupation();
 
             Runner.Despawn(towerObject);
+        }
+
+        private sealed class HostTowerConstructionOperation : ITowerConstructionOperation
+        {
+            private readonly TowerBuildManager _manager;
+            private readonly NetworkPrefabRef _towerRef;
+            private readonly string _requestedTowerId;
+            private readonly PlayerBuilder _builder;
+            private readonly Vector2Int _index;
+            private readonly int[] _supplyArray;
+
+            private NetworkObject _towerObject;
+            private Tower _tower;
+            private bool _rolledBack;
+
+            public HostTowerConstructionOperation(
+                TowerBuildManager manager,
+                NetworkPrefabRef towerRef,
+                string requestedTowerId,
+                PlayerBuilder builder,
+                Vector2Int index,
+                int[] supplyArray)
+            {
+                _manager = manager;
+                _towerRef = towerRef;
+                _requestedTowerId = requestedTowerId;
+                _builder = builder;
+                _index = index;
+                _supplyArray = supplyArray;
+            }
+
+            public bool TrySpawn()
+            {
+                InfiniteGrid grid = InfiniteGrid.Instance;
+                if (grid == null || _manager.Runner == null)
+                    return false;
+
+                Vector3 position = grid.GetCellCenterPositionFromCellIndex(_index);
+                _towerObject = _manager.Runner.Spawn(_towerRef, position, Quaternion.identity);
+                return _towerObject != null && _towerObject.TryGetComponent(out _tower);
+            }
+
+            public bool ValidatePlacement()
+            {
+                return _tower != null &&
+                       _tower.TowerID == _requestedTowerId &&
+                       _tower.HasGridOccupation;
+            }
+
+            public bool TryInitialize()
+            {
+                return _tower != null &&
+                       CanRegisterCenterTower(_tower, _builder) &&
+                       TryInitializeSpecialTower(_tower, _supplyArray);
+            }
+
+            public bool TryPay()
+            {
+                return _tower != null &&
+                       _manager._resourcePayment != null &&
+                       _manager._resourcePayment.TryPay(_tower.Cost);
+            }
+
+            public void Commit()
+            {
+                if (_tower == null)
+                    return;
+
+                _manager.InjectTowerDependencies(_tower);
+                RegisterCenterTower(_tower, _builder);
+            }
+
+            public void Rollback()
+            {
+                if (_rolledBack)
+                    return;
+
+                _rolledBack = true;
+                _manager.DespawnFailedTower(_towerObject);
+            }
         }
 
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]

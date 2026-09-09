@@ -13,6 +13,7 @@ namespace KIM.Dev
         [SerializeField, Min(0f)] private float _maximumHalfExtent = 220f;
         [SerializeField, Range(0f, 0.45f)] private float _edgePaddingRatio = 0.08f;
         [SerializeField, Min(0f)] private float _centerExclusionRadius = 40f;
+        [Tooltip("Retained for existing scenes; random placement no longer uses grid-cell jitter.")]
         [SerializeField, Range(0f, 0.45f)] private float _cellJitterRatio = 0.2f;
         [SerializeField, Min(1)] private int _placementRetryCount = 24;
         [SerializeField, Min(0f)] private float _minimumSpacing = 24f;
@@ -110,19 +111,8 @@ namespace KIM.Dev
             _spawnedObstacles.Clear();
 
             int spawnCount = GetTotalSpawnCount();
-            int columnCount = Mathf.CeilToInt(Mathf.Sqrt(spawnCount));
-            int rowCount = Mathf.CeilToInt((float)spawnCount / columnCount);
-            float cellWidth = usableHalfExtentX * 2f / columnCount;
-            float cellDepth = usableHalfExtentZ * 2f / rowCount;
-
-            for (int row = 0; row < rowCount; row++)
+            for (int spawnIndex = 0; spawnIndex < spawnCount; spawnIndex++)
             {
-                for (int column = 0; column < columnCount; column++)
-                {
-                    int spawnIndex = row * columnCount + column;
-                    if (spawnIndex >= spawnCount)
-                        continue;
-
                     ObstacleSpawnData spawnData = GetSpawnDataForIndex(spawnIndex);
                     NetworkObject prefab = spawnData.Prefab;
                     if (!TryFindSpawnPosition(
@@ -130,12 +120,6 @@ namespace KIM.Dev
                             groundBounds,
                             usableHalfExtentX,
                             usableHalfExtentZ,
-                            row,
-                            column,
-                            rowCount,
-                            columnCount,
-                            cellWidth,
-                            cellDepth,
                             spawnData.HeightOffset,
                             out Vector3 spawnPosition))
                     {
@@ -145,7 +129,7 @@ namespace KIM.Dev
 
                     float yaw = NextRange(random, 0f, 360f);
                     Quaternion rotation = Quaternion.Euler(0f, yaw, 0f);
-                    int instanceNumber = row + 1;
+                    int instanceNumber = spawnIndex + 1;
                     NetworkObject spawnedObstacle = _grid.Runner.Spawn(
                         prefab,
                         spawnPosition,
@@ -165,7 +149,6 @@ namespace KIM.Dev
                     {
                         Debug.LogError($"{spawnedObstacle.name}에 WorldObstacle 컴포넌트가 없어 장애물 목록에 등록할 수 없습니다.", spawnedObstacle);
                     }
-                }
             }
         }
 
@@ -246,36 +229,12 @@ namespace KIM.Dev
             Bounds groundBounds,
             float usableHalfExtentX,
             float usableHalfExtentZ,
-            int row,
-            int column,
-            int rowCount,
-            int columnCount,
-            float cellWidth,
-            float cellDepth,
             float heightOffset,
             out Vector3 position)
         {
-            float minX = groundBounds.center.x - usableHalfExtentX;
-            float minZ = groundBounds.center.z - usableHalfExtentZ;
-            float centerX = minX + cellWidth * (column + 0.5f);
-            float centerZ = minZ + cellDepth * (row + 0.5f);
-            float jitterX = cellWidth * _cellJitterRatio;
-            float jitterZ = cellDepth * _cellJitterRatio;
             float groundHeight = groundBounds.max.y + heightOffset;
 
             for (int attempt = 0; attempt < _placementRetryCount; attempt++)
-            {
-                position = new Vector3(
-                    centerX + NextRange(random, -jitterX, jitterX),
-                    groundHeight,
-                    centerZ + NextRange(random, -jitterZ, jitterZ));
-
-                if (IsValidPosition(position, groundBounds.center))
-                    return true;
-            }
-
-            int fallbackRetryCount = _placementRetryCount * Mathf.Max(rowCount, columnCount);
-            for (int attempt = 0; attempt < fallbackRetryCount; attempt++)
             {
                 position = new Vector3(
                     groundBounds.center.x + NextRange(random, -usableHalfExtentX, usableHalfExtentX),

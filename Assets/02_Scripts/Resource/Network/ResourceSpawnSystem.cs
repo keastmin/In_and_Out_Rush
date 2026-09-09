@@ -1,26 +1,19 @@
 using System.Collections.Generic;
 using Fusion;
+using ProjectIO.ResourceSpawn;
+using Unity.Profiling;
 using UnityEngine;
 using KIM.Dev;
+using PlacedResource = ProjectIO.ResourceSpawn.ResourceCandidatePlacementPolicy.PlacedResource;
 
 namespace Dev.Network
 {
     public class ResourceSpawnSystem : System, IWorldObstacleConsumer
     {
+        private static readonly ProfilerMarker FixedUpdateMarker = new("ResourceSpawnSystem.FixedUpdateNetwork");
+
         private const float DefaultResourceInterestRadius = 128f;
         private const float DefaultResourceInterestRefreshInterval = 0.25f;
-
-        private readonly struct PlacedResource
-        {
-            public readonly Vector3 Position;
-            public readonly float MinDistance;
-
-            public PlacedResource(Vector3 position, float minDistance)
-            {
-                Position = position;
-                MinDistance = minDistance;
-            }
-        }
 
         [SerializeField] private ResourceSystem _resourceSystem;
         [SerializeField] private TerritorySystem _territorySystem;
@@ -46,6 +39,7 @@ namespace Dev.Network
         [SerializeField, Min(0f)] private float _mineralObstaclePadding = 0f;
 
         private readonly List<PlacedResource> _placedResources = new();
+        private readonly List<float> _obstacleDistancesSquared = new();
         private readonly List<ResourceVisible> _spawnedResources = new();
         private readonly Dictionary<ResourceVisible, HashSet<PlayerRef>> _forcedInterestPlayers = new();
         private IReadOnlyList<WorldObstacle> _worldObstacles;
@@ -100,13 +94,16 @@ namespace Dev.Network
 
         public override void FixedUpdateNetwork()
         {
-            if (Object == null || !Object.HasStateAuthority || !_resourceInterestRefreshTimer.ExpiredOrNotRunning(Runner))
-                return;
+            using (FixedUpdateMarker.Auto())
+            {
+                if (Object == null || !Object.HasStateAuthority || !_resourceInterestRefreshTimer.ExpiredOrNotRunning(Runner))
+                    return;
 
-            RefreshClientResourceInterest();
-            _resourceInterestRefreshTimer = TickTimer.CreateFromSeconds(
-                Runner,
-                GetResourceInterestRefreshInterval());
+                RefreshClientResourceInterest();
+                _resourceInterestRefreshTimer = TickTimer.CreateFromSeconds(
+                    Runner,
+                    GetResourceInterestRefreshInterval());
+            }
         }
 
         private void ResolveReferences()
@@ -229,7 +226,7 @@ namespace Dev.Network
                             continue;
                         }
 
-                        zonePlacedResources.Add(new PlacedResource(position, chunk.MinDistance));
+                        zonePlacedResources.Add(new PlacedResource(position.x, position.z, chunk.MinDistance));
                         zoneResources.Add(resource);
                     }
 
@@ -289,65 +286,19 @@ namespace Dev.Network
             if (budget <= 0 || availableChunks == null || availableChunks.Count == 0)
                 return chunks;
 
-            bool[] fillableBudgets = CreateFillableBudgetTable(budget, availableChunks);
-            int remainingBudget = GetMaxFillableBudget(fillableBudgets);
-            if (remainingBudget <= 0)
-                return chunks;
+            var amounts = new int[availableChunks.Count];
+            for (int i = 0; i < availableChunks.Count; i++)
+                amounts[i] = availableChunks[i].Amount;
 
-            while (remainingBudget > 0)
-            {
-                var candidates = new List<ResourceChunkPlacementSettings>();
-                for (int i = 0; i < availableChunks.Count; i++)
-                {
-                    ResourceChunkPlacementSettings chunk = availableChunks[i];
-                    int nextBudget = remainingBudget - chunk.Amount;
-                    if (nextBudget >= 0 && fillableBudgets[nextBudget])
-                        candidates.Add(chunk);
-                }
+            IReadOnlyList<int> selectedIndexes = ResourceBudgetPlanner.CreatePlan(
+                budget,
+                amounts,
+                candidateCount => UnityEngine.Random.Range(0, candidateCount));
 
-                if (candidates.Count == 0)
-                    break;
-
-                ResourceChunkPlacementSettings selected = candidates[UnityEngine.Random.Range(0, candidates.Count)];
-                chunks.Add(selected);
-                remainingBudget -= selected.Amount;
-            }
+            for (int i = 0; i < selectedIndexes.Count; i++)
+                chunks.Add(availableChunks[selectedIndexes[i]]);
 
             return chunks;
-        }
-
-        private static bool[] CreateFillableBudgetTable(
-            int budget,
-            IReadOnlyList<ResourceChunkPlacementSettings> availableChunks)
-        {
-            var fillable = new bool[budget + 1];
-            fillable[0] = true;
-
-            for (int value = 1; value <= budget; value++)
-            {
-                for (int i = 0; i < availableChunks.Count; i++)
-                {
-                    int amount = availableChunks[i].Amount;
-                    if (value >= amount && fillable[value - amount])
-                    {
-                        fillable[value] = true;
-                        break;
-                    }
-                }
-            }
-
-            return fillable;
-        }
-
-        private static int GetMaxFillableBudget(IReadOnlyList<bool> fillableBudgets)
-        {
-            for (int budget = fillableBudgets.Count - 1; budget >= 0; budget--)
-            {
-                if (fillableBudgets[budget])
-                    return budget;
-            }
-
-            return 0;
         }
 
         private bool TryFindResourcePosition(
@@ -362,10 +313,10 @@ namespace Dev.Network
             for (int i = 0; i < _maxRetryCount; i++)
             {
                 position = SampleAnnularSectorPosition(innerRadius, outerRadius, startAngle, endAngle);
-                if (!IsValidResourcePosition(position, chunk))
+                if (!IsOutsideTerritory(position))
                     continue;
 
-                if (!IsFarEnoughFromPlacedResources(position, chunk.MinDistance, zonePlacedResources))
+                if (!IsCandidatePlacementValid(position, chunk, zonePlacedResources))
                     continue;
 
                 return true;
@@ -390,36 +341,6 @@ namespace Dev.Network
                 Mathf.Cos(angle) * radius,
                 0f,
                 Mathf.Sin(angle) * radius);
-        }
-
-        private bool IsFarEnoughFromPlacedResources(
-            Vector3 position,
-            float minDistance,
-            IReadOnlyList<PlacedResource> zonePlacedResources)
-        {
-            if (!IsFarEnoughFromPlacedResourceList(position, minDistance, _placedResources))
-                return false;
-
-            return IsFarEnoughFromPlacedResourceList(position, minDistance, zonePlacedResources);
-        }
-
-        private static bool IsFarEnoughFromPlacedResourceList(
-            Vector3 position,
-            float minDistance,
-            IReadOnlyList<PlacedResource> placedResources)
-        {
-            if (placedResources == null)
-                return true;
-
-            for (int i = 0; i < placedResources.Count; i++)
-            {
-                PlacedResource placedResource = placedResources[i];
-                float requiredDistance = Mathf.Max(minDistance, placedResource.MinDistance);
-                if (Vector3.SqrMagnitude(position - placedResource.Position) < requiredDistance * requiredDistance)
-                    return false;
-            }
-
-            return true;
         }
 
         private bool TrySpawnResource(
@@ -676,12 +597,6 @@ namespace Dev.Network
                 : DefaultResourceInterestRefreshInterval;
         }
 
-        private bool IsValidResourcePosition(Vector3 position, ResourceChunkPlacementSettings chunk)
-        {
-            return IsOutsideTerritory(position) &&
-                   !IsOverlappingWorldObstacle(position, chunk);
-        }
-
         private bool IsOutsideTerritory(Vector3 position)
         {
             var xzPosition = new Vector2(position.x, position.z);
@@ -690,12 +605,29 @@ namespace Dev.Network
                    !_territorySystem.Territory.IsPointInPolygon(xzPosition);
         }
 
-        private bool IsOverlappingWorldObstacle(Vector3 position, ResourceChunkPlacementSettings chunk)
+        private bool IsCandidatePlacementValid(
+            Vector3 position,
+            ResourceChunkPlacementSettings chunk,
+            IReadOnlyList<PlacedResource> zonePlacedResources)
         {
-            if (_worldObstacles == null || _worldObstacles.Count == 0)
-                return false;
-
             float clearance = GetObstacleClearance(chunk);
+            CollectObstacleDistancesSquared(position, clearance);
+
+            return ResourceCandidatePlacementPolicy.IsCandidateValid(
+                position.x,
+                position.z,
+                chunk.MinDistance,
+                clearance,
+                _obstacleDistancesSquared,
+                _placedResources,
+                zonePlacedResources);
+        }
+
+        private void CollectObstacleDistancesSquared(Vector3 position, float clearance)
+        {
+            _obstacleDistancesSquared.Clear();
+            if (_worldObstacles == null)
+                return;
 
             for (int i = 0; i < _worldObstacles.Count; i++)
             {
@@ -704,14 +636,11 @@ namespace Dev.Network
                     continue;
 
                 Collider obstacleCollider = obstacle.Collider;
-                if (obstacleCollider != null && IsNearObstacleCollider(position, clearance, obstacleCollider))
-                    return true;
-
-                if (obstacleCollider == null && IsNearBoundsXZ(position, clearance, obstacle.Bounds))
-                    return true;
+                float distanceSquared = obstacleCollider != null
+                    ? GetObstacleColliderDistanceSquared(position, clearance, obstacleCollider)
+                    : GetBoundsDistanceSquaredXZ(position, obstacle.Bounds);
+                _obstacleDistancesSquared.Add(distanceSquared);
             }
-
-            return false;
         }
 
         private float GetObstacleClearance(ResourceChunkPlacementSettings chunk)
@@ -721,24 +650,35 @@ namespace Dev.Network
             return Mathf.Max(_mineralObstaclePadding, fallbackRadius, prefabRadius);
         }
 
-        private static bool IsNearObstacleCollider(Vector3 position, float clearance, Collider obstacleCollider)
+        private static float GetObstacleColliderDistanceSquared(
+            Vector3 position,
+            float clearance,
+            Collider obstacleCollider)
         {
             Bounds bounds = obstacleCollider.bounds;
-            if (!IsNearBoundsXZ(position, clearance, bounds))
-                return false;
+            if (!IsWithinExpandedBoundsXZ(position, clearance, bounds))
+                return float.PositiveInfinity;
 
             Vector3 closestPoint = obstacleCollider.ClosestPoint(position);
-            Vector2 positionXZ = new(position.x, position.z);
-            Vector2 closestPointXZ = new(closestPoint.x, closestPoint.z);
-            return (positionXZ - closestPointXZ).sqrMagnitude <= clearance * clearance;
+            float offsetX = position.x - closestPoint.x;
+            float offsetZ = position.z - closestPoint.z;
+            return offsetX * offsetX + offsetZ * offsetZ;
         }
 
-        private static bool IsNearBoundsXZ(Vector3 position, float clearance, Bounds bounds)
+        private static bool IsWithinExpandedBoundsXZ(Vector3 position, float clearance, Bounds bounds)
         {
             return position.x >= bounds.min.x - clearance &&
                    position.x <= bounds.max.x + clearance &&
                    position.z >= bounds.min.z - clearance &&
                    position.z <= bounds.max.z + clearance;
+        }
+
+        private static float GetBoundsDistanceSquaredXZ(Vector3 position, Bounds bounds)
+        {
+            float offsetX = Mathf.Max(bounds.min.x - position.x, 0f, position.x - bounds.max.x);
+            float offsetZ = Mathf.Max(bounds.min.z - position.z, 0f, position.z - bounds.max.z);
+            float maxOffset = Mathf.Max(offsetX, offsetZ);
+            return maxOffset * maxOffset;
         }
 
         private static float GetPrefabFootprintRadius(GameObject prefab)

@@ -10,6 +10,7 @@ public struct NetworkInputData : INetworkInput
     public const byte ITEM_INPUT = 5; // 러너의 아이템 사용
     public const byte SKILL_INPUT = 6; // 러너의 스킬 사용
     public const byte INTERACT_INPUT = 7; // 러너의 상호작용
+    public const byte RELOAD_INPUT = 8; // 러너의 재장전
     public const byte WEAPON_INPUT = 9; // 러너의 무기 사용
 
 
@@ -22,7 +23,9 @@ public struct NetworkInputData : INetworkInput
     public NetworkButtons SkillInput;
     public int SelectedSkill;
     public NetworkButtons InteractInput;
+    public NetworkButtons ReloadInput;
     public NetworkButtons WeaponInput;
+    public Vector3 WeaponAimPosition;
 
     // 빌더 입력
     public NetworkButtons MouseButton0; // 빌더의 타워 설치에 필요한 좌클릭 

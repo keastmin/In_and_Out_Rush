@@ -17,6 +17,7 @@ public sealed class Strider : WorldMonster
     [Header("Strider Settings")]
     [SerializeField, Min(0f)] private float _slideDistanceInTiles = 3f;
     [SerializeField, Min(0f)] private float _slideSpeedMultiplier = 1.5f;
+    [SerializeField, Range(0f, 1f)] private float _slideDecelerationDistanceRatio = 0.35f;
     [SerializeField, Min(0f)] private float _restDuration = 1.5f;
 
     [Networked] private MovementState State { get; set; }
@@ -93,7 +94,7 @@ public sealed class Strider : WorldMonster
             Vector3 targetPosition = RigidbodyPosition + direction * slideDistance;
             targetPosition.y = RigidbodyPosition.y;
 
-            if (IsPositionInRunnerSafeZone(targetPosition))
+            if (IsMovementPathBlocked(RigidbodyPosition, targetPosition))
                 continue;
 
             State = MovementState.Sliding;
@@ -127,12 +128,19 @@ public sealed class Strider : WorldMonster
         }
 
         Vector3 currentPosition = RigidbodyPosition;
+        float decelerationDistance = ResolveSlideDistance() * Mathf.Clamp01(_slideDecelerationDistanceRatio);
+        float speedFactor = decelerationDistance > Mathf.Epsilon
+            ? Mathf.SmoothStep(
+                0f,
+                1f,
+                Mathf.Clamp01((SlideTarget - currentPosition).magnitude / decelerationDistance))
+            : 1f;
         Vector3 nextPosition = Vector3.MoveTowards(
             currentPosition,
             SlideTarget,
-            slideSpeed * deltaTime);
+            slideSpeed * speedFactor * deltaTime);
 
-        if (IsPositionInRunnerSafeZone(nextPosition))
+        if (IsMovementPathBlocked(currentPosition, nextPosition))
         {
             BeginRest();
             return;

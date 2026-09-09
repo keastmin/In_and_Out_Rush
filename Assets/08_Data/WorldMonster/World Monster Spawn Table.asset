@@ -17,14 +17,14 @@ MonoBehaviour:
     spawnCount: 500
     spawnRadius: 400
   - prefab: {fileID: 1996878198739820596, guid: 08c57da2db45b24428da686d59997b61, type: 3}
-    spawnCount: 100
+    spawnCount: 48
     spawnRadius: 400
   - prefab: {fileID: -1371715635768697079, guid: 3febb430baa3e5a42834c9c276f5ce3e, type: 3}
     spawnCount: 48
     spawnRadius: 400
   - prefab: {fileID: -7740008079418054329, guid: 016c82c53b2d0094ea2d7832ca2e11b1, type: 3}
-    spawnCount: 500
+    spawnCount: 250
     spawnRadius: 400
   - prefab: {fileID: -1357924680135792468, guid: f9bdf593ea2a3f34581116acc2b00d4f, type: 3}
-    spawnCount: 0
+    spawnCount: 250
     spawnRadius: 400

@@ -37,7 +37,7 @@ RenderSettings:
   m_ReflectionBounces: 1
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
-  m_Sun: {fileID: 0}
+  m_Sun: {fileID: 1254791979}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -800,7 +800,7 @@ Camera:
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
-    m_Bits: 983
+    m_Bits: 3031
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
@@ -1072,6 +1072,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 87f0ef62108ee764fa80f9af7e616495, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  chunkSize: 32
+  activeChunkRadius: 1
+  dormantWanderRadius: 8
+  streamingRefreshInterval: 0.25
+  maxSpawnsPerRefresh: 8
   territorySystem: {fileID: 1028244186}
   monsterParentTransform: {fileID: 1314383435}
   spawnTable: {fileID: 11400000, guid: cdad72f4250b44e28c571e2b7944f8c8, type: 2}
@@ -1808,9 +1813,6 @@ MonoBehaviour:
   circlePointCount: 10
   circleRadius: 20
   lineRenderer: {fileID: 1028244188}
-  isExpanding: 0
-  previousPosition: {x: 0, y: 0}
-  playerPath: []
   TerritoryVisible: {fileID: 0}
 --- !u!114 &1028244187
 MonoBehaviour:
@@ -2013,9 +2015,9 @@ Light:
     m_Type: 2
     m_Resolution: -1
     m_CustomResolution: -1
-    m_Strength: 1
+    m_Strength: 0.75
     m_Bias: 0.05
-    m_NormalBias: 0.4
+    m_NormalBias: 0.25
     m_NearPlane: 0.2
     m_CullingMatrixOverride:
       e00: 1
@@ -2054,7 +2056,7 @@ Light:
   m_UseViewFrustumForShadowCasterCull: 1
   m_ForceVisible: 0
   m_ShadowRadius: 0
-  m_ShadowAngle: 0
+  m_ShadowAngle: 2
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
@@ -2313,13 +2315,17 @@ PrefabInstance:
       propertyPath: _territoryMeshRenderer
       value: 
       objectReference: {fileID: 6219545451852062859}
+    - target: {fileID: 4764181635377372804, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
+      propertyPath: _playerRunnerVisibleRange
+      value: 20
+      objectReference: {fileID: 0}
     - target: {fileID: 5400355807062306309, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
       propertyPath: m_Name
       value: Fog of War System
       objectReference: {fileID: 0}
     - target: {fileID: 5400355807062306309, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8092433541136705184, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
       propertyPath: m_LocalPosition.x
@@ -3288,6 +3294,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: -2636266358375431104, guid: 4e4841cec5e071f4b8139bae6a2b9696, type: 3}
+      propertyPath: FollowOffset.y
+      value: 22
+      objectReference: {fileID: 0}
+    - target: {fileID: -2636266358375431104, guid: 4e4841cec5e071f4b8139bae6a2b9696, type: 3}
+      propertyPath: FollowOffset.z
+      value: -3.6667
+      objectReference: {fileID: 0}
     - target: {fileID: 5051312552433943779, guid: 4e4841cec5e071f4b8139bae6a2b9696, type: 3}
       propertyPath: m_Name
       value: Player Runner Cinemachine Camera
@@ -3679,10 +3693,6 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 886242802}
     - target: {fileID: 7251378647776299556, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: _obstacleSpawner
-      value: 
-      objectReference: {fileID: 1774563717}
-    - target: {fileID: 7251378647776299556, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
       propertyPath: ResourceSystem
       value: 
       objectReference: {fileID: 1712230124}
@@ -3694,6 +3704,10 @@ PrefabInstance:
       propertyPath: TerritoryVisible
       value: 
       objectReference: {fileID: 6219545451852062858}
+    - target: {fileID: 7251378647776299556, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
+      propertyPath: _obstacleSpawner
+      value: 
+      objectReference: {fileID: 1774563717}
     - target: {fileID: 7251378647776299556, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
       propertyPath: _stageResultView
       value: 
@@ -3751,10 +3765,6 @@ PrefabInstance:
       value: 2015209220
       objectReference: {fileID: 0}
     - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
-      propertyPath: _obstacleSpawner
-      value: 
-      objectReference: {fileID: 1774563717}
-    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
       propertyPath: _resourceView
       value: 
       objectReference: {fileID: 0}
@@ -3762,6 +3772,10 @@ PrefabInstance:
       propertyPath: _maxRetryCount
       value: 10
       objectReference: {fileID: 0}
+    - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
+      propertyPath: _obstacleSpawner
+      value: 
+      objectReference: {fileID: 1774563717}
     - target: {fileID: 7322582062983139011, guid: e46fd544ab81d8149a8abf931cb9cc60, type: 3}
       propertyPath: _territorySystem
       value: 

@@ -1,0 +1,21 @@
+{
+  "name": "ProjectIO.ResourceSpawn.Tests",
+  "rootNamespace": "ProjectIO.ResourceSpawn.Tests",
+  "references": [
+    "ProjectIO.ResourceSpawn"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

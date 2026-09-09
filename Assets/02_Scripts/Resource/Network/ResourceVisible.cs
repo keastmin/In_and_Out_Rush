@@ -1,4 +1,6 @@
 using System;
+using Fusion;
+using KIM.Dev;
 
 namespace Dev.Network
 {
@@ -10,6 +12,18 @@ namespace Dev.Network
         private bool _isCollected;
 
         public event Action<ResourceType, int, ResourceVisible, object> OnCollected;
+
+        public override void Spawned()
+        {
+            base.Spawned();
+            FogOfWarHiddenObjectController.Register(transform);
+        }
+
+        public override void Despawned(NetworkRunner runner, bool hasState)
+        {
+            FogOfWarHiddenObjectController.Unregister(transform);
+            base.Despawned(runner, hasState);
+        }
 
         public void Collect()
         {

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Feature Slice Migration"
+  short_description: "Move one legacy feature flow with rollback and checks"
+  default_prompt: "Use $migrate-feature-slice to migrate one bounded ProjectIO feature slice with rollback and verification."

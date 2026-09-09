@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Dev.Local;
 using UnityEngine;
 using KIM.Dev;
+using ProjectIO.ResourceEconomy.Adapters.Fusion;
 
 namespace Dev.Network
 {
@@ -51,7 +52,7 @@ namespace Dev.Network
             sacredZoneSystem ??= FindFirstObjectByType<SacredZoneSystem>(FindObjectsInactive.Include);
             _stageResultView ??= FindFirstObjectByType<StageResultView>(FindObjectsInactive.Include);
 
-            NetworkSystemBase[] discoveredSystems = FindObjectsByType<NetworkSystemBase>(
+            System[] discoveredSystems = FindObjectsByType<System>(
                 FindObjectsInactive.Include,
                 FindObjectsSortMode.None);
             if (discoveredSystems.Length > 0)
@@ -92,9 +93,9 @@ namespace Dev.Network
                    systems.Length > 0;
         }
 
-        private static NetworkSystemBase[] OrderSystems(NetworkSystemBase[] discoveredSystems)
+        private static System[] OrderSystems(System[] discoveredSystems)
         {
-            var orderedSystems = new List<NetworkSystemBase>(discoveredSystems.Length);
+            var orderedSystems = new List<System>(discoveredSystems.Length);
             AddSystem<TerritorySystem>(orderedSystems, discoveredSystems);
             AddSystem<TrackSystem>(orderedSystems, discoveredSystems);
             AddSystem<TrackMonsterSpawnSystem>(orderedSystems, discoveredSystems);
@@ -102,7 +103,7 @@ namespace Dev.Network
 
             for (int i = 0; i < discoveredSystems.Length; i++)
             {
-                NetworkSystemBase system = discoveredSystems[i];
+                System system = discoveredSystems[i];
                 if (system != null && !orderedSystems.Contains(system))
                     orderedSystems.Add(system);
             }
@@ -110,8 +111,8 @@ namespace Dev.Network
             return orderedSystems.ToArray();
         }
 
-        private static void AddSystem<T>(List<NetworkSystemBase> orderedSystems, NetworkSystemBase[] discoveredSystems)
-            where T : NetworkSystemBase
+        private static void AddSystem<T>(List<System> orderedSystems, System[] discoveredSystems)
+            where T : System
         {
             for (int i = 0; i < discoveredSystems.Length; i++)
             {
@@ -141,7 +142,9 @@ namespace Dev.Network
             }
             else
             {
-                _towerBuildManager.Initialize(_towerUpgradeManager);
+                _towerBuildManager.Initialize(
+                    _towerUpgradeManager,
+                    new ResourcePaymentFusionAdapter(ResourceSystem));
                 PlayerBuilder?.InjectTowerBuildManager(_towerBuildManager);
             }
 

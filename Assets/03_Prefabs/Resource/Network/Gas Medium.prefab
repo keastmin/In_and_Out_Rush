@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: -4769506676359899512}
   - component: {fileID: 8466970799922438682}
   - component: {fileID: -1719614178540343546}
-  m_Layer: 0
+  m_Layer: 11
   m_Name: Gas Medium
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -98,7 +98,7 @@ GameObject:
   - component: {fileID: 6930607987308622488}
   - component: {fileID: 595273138194022746}
   - component: {fileID: 8784003546115126841}
-  m_Layer: 0
+  m_Layer: 11
   m_Name: Body
   m_TagString: Untagged
   m_Icon: {fileID: 0}

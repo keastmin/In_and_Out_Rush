@@ -800,7 +800,7 @@ Camera:
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
-    m_Bits: 983
+    m_Bits: 3031
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
@@ -2315,13 +2315,17 @@ PrefabInstance:
       propertyPath: _territoryMeshRenderer
       value: 
       objectReference: {fileID: 6219545451852062859}
+    - target: {fileID: 4764181635377372804, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
+      propertyPath: _playerRunnerVisibleRange
+      value: 20
+      objectReference: {fileID: 0}
     - target: {fileID: 5400355807062306309, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
       propertyPath: m_Name
       value: Fog of War System
       objectReference: {fileID: 0}
     - target: {fileID: 5400355807062306309, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8092433541136705184, guid: ee248ae6d211c2d42bb17c238bdc10d5, type: 3}
       propertyPath: m_LocalPosition.x
@@ -3290,6 +3294,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: -2636266358375431104, guid: 4e4841cec5e071f4b8139bae6a2b9696, type: 3}
+      propertyPath: FollowOffset.y
+      value: 22
+      objectReference: {fileID: 0}
+    - target: {fileID: -2636266358375431104, guid: 4e4841cec5e071f4b8139bae6a2b9696, type: 3}
+      propertyPath: FollowOffset.z
+      value: -3.6667
+      objectReference: {fileID: 0}
     - target: {fileID: 5051312552433943779, guid: 4e4841cec5e071f4b8139bae6a2b9696, type: 3}
       propertyPath: m_Name
       value: Player Runner Cinemachine Camera

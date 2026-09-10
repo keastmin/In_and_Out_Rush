@@ -1,6 +1,6 @@
 # ProjectIO Project Map
 
-마지막 대조: 2026-08-28, implementation base `aa6f09d`
+마지막 대조: 2026-08-29, implementation base `ce92742`
 
 이 문서는 전체 코드 설명서가 아니라 작업 요청을 올바른 기능 문서와 진입점으로 보내는 지도다.
 
@@ -9,7 +9,7 @@
 | 세션과 Additive Scene | 방 생성·참가, 역할 등록, 게임 Scene 로딩 | `MatchMaker`, `NetworkManager`, `PlayerRegistry` | `LobbyScene`, `GameWorld`, `GamePresentation`, `GameRoot` | [SessionAndScenes](Features/SessionAndScenes.md) |
 | Stage 초기화 | 시스템 발견, 플레이어 스폰, 기능 연결 순서 | `StageBootstrapper` partials | `Core.prefab`, `GameRoot` | [StageInitialization](Features/StageInitialization.md) |
 | Grid와 장애물 | 셀 점유, 표시 Chunk, 장애물 생성·제거 | `InfiniteGrid`, `InfiniteGridObstacleSpawner` | Territory, Track, Tower, Resource Spawn | [GridAndObstacles](Features/GridAndObstacles.md) |
-| Territory | Polygon 영역 상태·판정·확장과 네트워크 Trail 표현 | `TerritorySystem`, `Territory`, `TerritoryContainmentIndex`, `TerritoryExpansionSession` | Grid, Fog, Resource, Monster, Sacred Zone, Sanctuary, `build-chunk-territory` | [Territory](Features/Territory.md) |
+| Territory | Polygon 영역 상태·청크/쿼드트리 판정·확장과 네트워크 Trail 표현 | `TerritorySystem`, `Territory`, `TerritorySpatialIndex`, `TerritoryExpansionSession` | Grid, Fog, Resource, Monster, Sacred Zone, Sanctuary, `build-chunk-territory` | [Territory](Features/Territory.md) |
 | Track와 Round | 트랙 확장, 라운드 시간과 웨이브 연결 | `TrackSystem`, `TimeSystem` | Track monster, StageBootstrapper | [TrackAndRounds](Features/TrackAndRounds.md) |
 | Resource Spawn | 자원 배치 계획, 네트워크 Spawn, AOI와 수집 | `ResourceSpawnSystem`, `ResourcePlacementSettings` | Territory, 장애물, Laboratory, ResourceSystem | [ResourceSpawn](Features/ResourceSpawn.md) |
 | Resource Economy | 광물·가스 상태와 비용 지불 | `KIM.Dev.ResourceSystem`, `Cost` | PlayerBuilder, Tower, UI | [ResourceEconomy](Features/ResourceEconomy.md) |
@@ -33,7 +33,7 @@
 | `Network`, `Manager` | SessionAndScenes |
 | `Stage`, `Global` | StageInitialization |
 | `Grid`, `Field` | GridAndObstacles |
-| `Territory`, `Territory Refactor` | Territory |
+| `Territory`, `Territory Refactor`, `Features/Territory/Logic` | Territory |
 | `Track`, `Time` | TrackAndRounds |
 | `Resource/Network` | ResourceSpawn |
 | `Resource/Local`, `System/ResourceSystem.cs` | ResourceEconomy |

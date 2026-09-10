@@ -65,7 +65,6 @@ namespace KIM.Dev
 
             RefreshSettings();
             _runtimeDriver.UpdateFogOfWar(
-                transform,
                 _fogHiddenLayers,
                 _territoryMeshFilter,
                 _playerRunner.transform,
@@ -113,7 +112,7 @@ namespace KIM.Dev
             if (_territoryMeshRenderer != null)
             {
                 Bounds bounds = _territoryMeshRenderer.bounds;
-                _worldSize = Mathf.Max(DefaultWorldSize, bounds.size.x, bounds.size.z);
+                _worldSize = Mathf.Max(DefaultWorldSize, Mathf.Max(bounds.size.x, bounds.size.z));
             }
             else
             {

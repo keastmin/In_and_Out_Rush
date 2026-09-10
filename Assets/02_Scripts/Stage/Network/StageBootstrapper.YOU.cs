@@ -46,11 +46,15 @@ namespace Dev.Network
         private bool _isReturningToTitle = false;
         private readonly List<SanctuaryView> sanctuaries = new();
         private int queuedInternalizedMonsterCount;
+        private int pendingTrackMonsterWaveRound;
+        private bool trackMonsterSettlementInProgress;
         private Gate activeGate;
 
         public event global::System.Action<PlayerRunner, Gate, object> OnGateEntered;
         public TrackSystem RoundTrackSystem => roundTrackSystem;
         public SacredZoneSystem SacredZoneSystem => sacredZoneSystem;
+        public Vector3 WorldCenter => sacredZoneSystem != null ? sacredZoneSystem.Center : transform.position;
+        public float WorldBoundaryRadius => Mathf.Max(0f, _worldBoundaryRadius);
         public TerritorySystem TerritorySystem =>
             territorySystem != null ? territorySystem : UnityEngine.Object.FindFirstObjectByType<TerritorySystem>();
 
@@ -70,6 +74,8 @@ namespace Dev.Network
         {
             UnbindRoundSystemEvents();
             UnbindSacredZoneEvents();
+            trackMonsterSettlementInProgress = false;
+            pendingTrackMonsterWaveRound = 0;
         }
 
         private void ResolveRoundSystemReferences(System[] systems)
@@ -170,6 +176,18 @@ namespace Dev.Network
                 return;
             }
 
+            if (trackMonsterSettlementInProgress || trackMonsterSpawnSystem.IsSettlementRunning)
+            {
+                pendingTrackMonsterWaveRound = round;
+                Debug.Log($"Track monster wave {round} deferred until settlement and track transformation complete.");
+                return;
+            }
+
+            SpawnTrackMonsterWave(round);
+        }
+
+        private void SpawnTrackMonsterWave(int round)
+        {
             FlushQueuedInternalizedMonsters();
             trackMonsterSpawnSystem.SpawnMonsters(roundTrackSystem.Track, round);
             Debug.Log($"Track monsters spawned for round {round}.");
@@ -180,27 +198,18 @@ namespace Dev.Network
             if (!HasStateAuthority)
                 return;
 
-            StartTrackMonsterSettlement();
-
-            if (round == 3 || round == 7 || round == 9)
-            {
-                if (roundTrackSystem == null)
-                {
-                    Debug.LogWarning("TrackSystem is missing. Track expansion skipped.");
-                    return;
-                }
-
-                roundTrackSystem.ExpandTrack();
-                Debug.Log($"Track expanded after round {round}.");
-            }
+            StartTrackMonsterSettlement(round);
         }
 
-        private void HandleTrackChanged(Vector3[] vertices, TrackSystem trackSystem, object context)
+        private void HandleTrackChanged(Track track, TrackSystem trackSystem, object context)
         {
-            if (!HasStateAuthority || vertices == null)
+            if (!HasStateAuthority || track == null || _obstacleSpawner == null)
                 return;
 
-            _obstacleSpawner.DespawnObstaclesOverlappingTrack(Runner, vertices, trackSystem != null ? trackSystem.TrackLineWidth : 0f);
+            _obstacleSpawner.DespawnObstaclesOverlappingTrack(
+                Runner,
+                track.Segments,
+                trackSystem != null ? trackSystem.TrackLineWidth : 0f);
         }
 
         private void HandleTerritoryExpanded(Territory territory, TerritorySystem sender)
@@ -211,21 +220,54 @@ namespace Dev.Network
             _obstacleSpawner.DespawnObstaclesOverlappingTerritory(Runner, territory);
         }
 
-        private void StartTrackMonsterSettlement()
+        private void StartTrackMonsterSettlement(int completedRound)
         {
             if (trackMonsterSpawnSystem == null)
             {
                 Debug.LogWarning("TrackMonsterSpawnSystem is missing. Track monster settlement skipped.");
+                CompleteTrackMonsterSettlement(completedRound);
                 return;
             }
 
-            if (PlayerRunner == null)
+            trackMonsterSettlementInProgress = true;
+            trackMonsterSpawnSystem.SettleTrackMonstersCascade(
+                PlayerRunner,
+                () => CompleteTrackMonsterSettlement(completedRound));
+        }
+
+        private void CompleteTrackMonsterSettlement(int completedRound)
+        {
+            trackMonsterSettlementInProgress = false;
+
+            if (completedRound == 3 || completedRound == 7)
             {
-                Debug.LogWarning("PlayerRunner is missing. Track monster settlement skipped.");
+                if (roundTrackSystem == null)
+                {
+                    Debug.LogWarning("TrackSystem is missing. Track transformation skipped.");
+                }
+                else if (roundTrackSystem.ExpandTrack())
+                {
+                    Debug.Log($"Track transformed after round {completedRound}.");
+                }
+            }
+            else if (completedRound == 9 && trackMonsterSpawnSystem != null)
+            {
+                if (trackMonsterSpawnSystem.ApplyPermanentMovementSpeedBoost(1.5f))
+                {
+                    Debug.Log("Permanent 1.5x track monster movement speed boost applied after round 9.");
+                }
+            }
+
+            if (pendingTrackMonsterWaveRound <= 0 ||
+                trackMonsterSpawnSystem == null ||
+                roundTrackSystem == null)
+            {
                 return;
             }
 
-            trackMonsterSpawnSystem.SettleTrackMonstersCascade(PlayerRunner);
+            int pendingRound = pendingTrackMonsterWaveRound;
+            pendingTrackMonsterWaveRound = 0;
+            SpawnTrackMonsterWave(pendingRound);
         }
 
         private void HandleBerserkStarted(TimeSystem sender, object context)

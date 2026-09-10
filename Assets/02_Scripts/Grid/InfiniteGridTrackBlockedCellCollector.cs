@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using ProjectIO.Tracks;
 using UnityEngine;
 
 namespace KIM.Dev
@@ -12,14 +13,14 @@ namespace KIM.Dev
             GridCalculator gridCalculator,
             Vector3 gridOrigin,
             float cellSize,
-            IReadOnlyList<Vector3> trackVertices,
+            IReadOnlyList<TrackSegment> trackSegments,
             float overlapRadius,
             InfiniteGridTrackOverlapTester overlapTester)
         {
             if (blockedCellIndices == null ||
                 gridCalculator == null ||
-                trackVertices == null ||
-                trackVertices.Count < 2 ||
+                trackSegments == null ||
+                trackSegments.Count == 0 ||
                 overlapTester == null)
             {
                 return;
@@ -29,10 +30,10 @@ namespace KIM.Dev
             float safeRadius = Mathf.Max(0f, overlapRadius);
             float candidateExtent = safeCellSize + safeRadius;
 
-            for (int i = 0; i < trackVertices.Count; i++)
+            for (int i = 0; i < trackSegments.Count; i++)
             {
-                Vector3 start = trackVertices[i];
-                Vector3 end = trackVertices[(i + 1) % trackVertices.Count];
+                Vector3 start = trackSegments[i].Start;
+                Vector3 end = trackSegments[i].End;
                 CollectSegmentCells(
                     blockedCellIndices,
                     gridCalculator,

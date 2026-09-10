@@ -625,13 +625,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1e702a0ef1b4a2b469f5bdeb9e24736d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  trackSystem: {fileID: 896837533}
   territorySystem: {fileID: 0}
   monsterParentTransform: {fileID: 636045684}
-  monsterPrefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
   waveSpawnTable: {fileID: 11400000, guid: 2e7fe6f56c6b6db4bbc655e2d9ea5382, type: 2}
   spawnInterval: 1
-  spawnCount: 20
+  fallbackNormalUnitCount: 4
   strengthenMultiplier: 1.2
 --- !u!114 &266549079
 MonoBehaviour:
@@ -794,7 +792,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 60.000004
+  field of view: 67
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -1592,9 +1590,6 @@ MonoBehaviour:
   verticalRadius: 8
   noise: 0.1
   vertexCount: 30
-  smoothingIteration: 4
-  noiseVertexCount: 10
-  noiseIntensity: 2
 --- !u!1 &954032441
 GameObject:
   m_ObjectHideFlags: 0

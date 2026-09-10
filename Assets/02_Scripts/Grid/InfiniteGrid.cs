@@ -1,6 +1,7 @@
 using Dev;
 using Dev.Network;
 using Fusion;
+using ProjectIO.Tracks;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -732,7 +733,7 @@ namespace KIM.Dev
             return _cachedRenderCamera;
         }
 
-        private void OnTrackChanged(Vector3[] vertices, TrackSystem trackSystem, object sender)
+        private void OnTrackChanged(Track track, TrackSystem trackSystem, object sender)
         {
             RefreshTrackBlockedCells();
             RefreshTrackDestructionSchedule();
@@ -743,7 +744,10 @@ namespace KIM.Dev
             _trackBlockedCellIndices.Clear();
             CacheTrackBlockingConfiguration();
 
-            if (_gridCalculator == null || _trackSystem == null || _trackSystem.Track?.Vertices == null || _trackSystem.Track.Vertices.Length < 2)
+            if (_gridCalculator == null ||
+                _trackSystem == null ||
+                _trackSystem.Track == null ||
+                _trackSystem.Track.Segments.Count == 0)
             {
                 if (refreshVisuals)
                 {
@@ -758,7 +762,7 @@ namespace KIM.Dev
                 _gridCalculator,
                 GridOrigin,
                 _layout.CellSize,
-                _trackSystem.Track.Vertices,
+                _trackSystem.Track.Segments,
                 _monsterTrackBlocking.HalfLineWidth,
                 _trackOverlapTester);
 

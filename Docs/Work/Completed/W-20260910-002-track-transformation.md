@@ -1,6 +1,14 @@
 # W-20260910-002 트랙 변형과 트랙 몬스터 스폰 개편
 
-Status: Reserved
+Status: Completed
+
+## Implementation progress (2026-09-10)
+
+- Replaced the flat vertex array and RPC vertex transfer with deterministic `TrackPath`/`TrackSegment` generation driven by Networked stage parameters and revision.
+- Added Stage 2/3 line geometry, two-path presentation, explicit segment consumers, authoritative path teleport/elite loop behavior, settlement ordering, deferred next-wave spawn, and the round-9 one-time movement boost.
+- Migrated the wave table to enum/unit groups, centralized all seven prefab slots, mapped all 33 existing groups to `ElitePredator`, and preserved every group count/delay/repeat value. Both compatible scenes now use four Normal units for the 20-monster fallback.
+- Added pure EditMode coverage for geometry determinism, axes/length/center, perpendicular preservation, phantom-segment prevention, traversal decisions, Normal formation, special unit counts, and movement multiplier composition.
+- Unity refreshed the new asmdefs and compiled the runtime and EditMode test assemblies. Static scene/table/GUID scans, both focused test-assembly builds, the regenerated solution build, and `git diff --check` pass. Unity Test Runner execution and Host/Client runtime checks remain manual because the open Editor could not be controlled from this session.
 
 ## 동기화 기준
 
@@ -111,14 +119,28 @@ Codex
 
 ## 실제 변경
 
-예약 단계. 구현 전.
+- Track을 단계와 여러 `TrackPath`로 구성하고, 각 Path에서 명시적인 `TrackSegment`만 생성하도록 교체했다.
+- Host가 단계·seed·축·반전·중심·길이·revision을 Networked 상태로 소유하며 모든 Peer가 결정적으로 형상을 복원한다.
+- 2차 단일 직선과 3차 수직 직선, 2→3 순간이동, 일반·보스 완료, 정예 순환 및 라운드 정산을 구현했다.
+- 라운드 전환 중 Spawn 보류, 라운드 9 영구 1.5배, Territory 밖 1.5배와 기존 강화의 곱연산을 구현했다.
+- Spawn Group을 유형과 unit 수 계약으로 전환하고 Normal unit의 `소·소·소·중·대` 순서, 특수 unit, 내재화 전용 Prefab을 적용했다.
+- 기존 33개 그룹을 수량·지연·반복 값 보존 상태로 `ElitePredator`에 마이그레이션하고 두 호환 Scene의 fallback을 Normal 4 unit으로 변경했다.
+- 기하·경로 결정·Spawn 구성·속도 배율에 대한 순수 EditMode 테스트를 추가하고 기능 문서를 새 계약으로 갱신했다.
 
 ## 검증 결과
 
-예약 단계. 미실행.
+- Unity import/compile: 새 runtime 및 EditMode test assembly 생성 확인, 최신 Editor log에서 compile error 없음.
+- `dotnet build ProjectIO.Tracks.Tests.csproj --no-restore -v:q`: 성공, 경고 0, 오류 0.
+- `dotnet build ProjectIO.Monsters.Tests.csproj --no-restore -v:q`: 성공, 경고 0, 오류 0.
+- `dotnet build ProjectIO.slnx --no-restore -v:q`: 성공, 기존 경고 21, 오류 0.
+- Wave Table 정적 검사: 기존 그룹 33개와 unit count 33개 일치, 구 직접 Prefab/count 필드 없음, 일곱 Prefab GUID와 두 Scene 직렬화 필드 확인.
+- `git diff --check`: 통과. 출력은 기존 Git line-ending 변환 경고만 존재한다.
+- Unity Test Runner 자동 실행: 미실행. Editor가 열린 상태였고 이 세션의 UI 제어 연결을 사용할 수 없어 테스트 코드는 컴파일까지만 검증했다.
+- Host·Client, 권한 없는 변형 차단, Late Join, 순간이동·Despawn 복제, Runner 피해 단일 실행: 실제 다중 Peer 실행 미검증.
+- Unity가 새 asmdef를 반영하며 자동 갱신한 `ProjectIO.slnx`는 예약 범위 밖 생성 파일이므로 보존하되 구현 commit에서는 제외한다.
 
 ## 남은 위험
 
-- Track의 새 Networked 상태는 Fusion CodeGen과 실제 Late Join에서 확인해야 한다.
-- 두 Scene과 Track Prefab의 YAML 직렬화 변경은 Unity import 후 누락 참조 검사가 필요하다.
+- Track의 새 Networked 상태는 Fusion CodeGen 컴파일을 통과했지만 실제 Late Join에서 확인해야 한다.
+- 두 Scene과 Wave Table의 YAML 직렬화 참조는 정적으로 확인했지만 실제 Inspector와 플레이 실행에서 최종 확인해야 한다.
 - 롤백은 이 예약의 구현 commit을 되돌려 기존 `ExpandTrack`, RPC vertex sync, 그룹별 Prefab 경로를 복원하는 방식으로 수행한다.

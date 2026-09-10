@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Fusion;
+using ProjectIO.Tracks;
 using UnityEngine;
 
 namespace KIM.Dev
@@ -28,16 +29,16 @@ namespace KIM.Dev
 
         public IReadOnlyList<WorldObstacle> SpawnedObstacles => _spawnedObstacles;
 
-        public void DespawnObstaclesOverlappingTrack(NetworkRunner runner, IReadOnlyList<Vector3> trackVertices, float trackLineWidth)
+        public void DespawnObstaclesOverlappingTrack(NetworkRunner runner, IReadOnlyList<TrackSegment> trackSegments, float trackLineWidth)
         {
-            if (runner == null || trackVertices == null || trackVertices.Count < 2)
+            if (runner == null || trackSegments == null || trackSegments.Count == 0)
                 return;
 
             float trackRadius = Mathf.Max(0f, trackLineWidth * 0.5f);
             for (int i = _spawnedObstacles.Count - 1; i >= 0; i--)
             {
                 WorldObstacle obstacle = _spawnedObstacles[i];
-                if (!ShouldDespawnObstacle(obstacle, trackVertices, trackRadius))
+                if (!ShouldDespawnObstacle(obstacle, trackSegments, trackRadius))
                     continue;
 
                 DespawnObstacle(runner, obstacle);
@@ -200,11 +201,11 @@ namespace KIM.Dev
 
         private static bool ShouldDespawnObstacle(
             WorldObstacle obstacle,
-            IReadOnlyList<Vector3> trackVertices,
+            IReadOnlyList<TrackSegment> trackSegments,
             float trackRadius)
         {
             return obstacle == null ||
-                   DoesTrackOverlapObstacleBounds(trackVertices, trackRadius, obstacle.Bounds);
+                   DoesTrackOverlapObstacleBounds(trackSegments, trackRadius, obstacle.Bounds);
         }
 
         private static bool ShouldDespawnObstacle(WorldObstacle obstacle, Territory territory)
@@ -282,16 +283,16 @@ namespace KIM.Dev
             return min + (float)random.NextDouble() * (max - min);
         }
 
-        private static bool DoesTrackOverlapObstacleBounds(IReadOnlyList<Vector3> trackVertices, float trackRadius, Bounds bounds)
+        private static bool DoesTrackOverlapObstacleBounds(IReadOnlyList<TrackSegment> trackSegments, float trackRadius, Bounds bounds)
         {
             Vector2 boundsMin = ToXZ(bounds.min);
             Vector2 boundsMax = ToXZ(bounds.max);
             float trackRadiusSqr = trackRadius * trackRadius;
 
-            for (int i = 0; i < trackVertices.Count; i++)
+            for (int i = 0; i < trackSegments.Count; i++)
             {
-                Vector2 start = ToXZ(trackVertices[i]);
-                Vector2 end = ToXZ(trackVertices[(i + 1) % trackVertices.Count]);
+                Vector2 start = ToXZ(trackSegments[i].Start);
+                Vector2 end = ToXZ(trackSegments[i].End);
 
                 if (GetSegmentBoundsDistanceSqr(start, end, boundsMin, boundsMax) <= trackRadiusSqr)
                     return true;

@@ -1,12 +1,23 @@
 using System.Collections.Generic;
-using UnityEngine;
+using ProjectIO.Tracks;
 
 namespace Dev
 {
-    public class Track
+    public sealed class Track
     {
-        public int Level = 1;
-        public List<Vector2> Vertices2d;
-        public Vector3[] Vertices;
+        public Track(TrackStage stage, IReadOnlyList<TrackPath> paths)
+        {
+            Stage = stage;
+            Paths = paths ?? new List<TrackPath>();
+            Segments = TrackGeometryGenerator.CreateSegments(Paths);
+        }
+
+        public TrackStage Stage { get; }
+
+        public int Level => (int)Stage;
+
+        public IReadOnlyList<TrackPath> Paths { get; }
+
+        public IReadOnlyList<TrackSegment> Segments { get; }
     }
 }

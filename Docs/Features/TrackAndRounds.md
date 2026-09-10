@@ -2,7 +2,24 @@
 
 Status: Current
 
-Last reviewed: 2026-08-20
+Last reviewed: 2026-09-10
+
+## Track transformation contract
+
+- `Track` owns one or more `TrackPath` values and exposes only explicit `TrackSegment` values to spatial consumers. Closed paths add their final-to-first segment; open paths never do, and separate paths are never connected implicitly.
+- Stage 1 is the existing deterministic noisy ellipse (16m horizontal radius, 8m vertical radius, 30 vertices, 0.1m per-axis noise). Stage 2 replaces it with one open line centered on the runtime map center. Its length is one eighth of the map diameter, and its axis is chosen uniformly from horizontal, vertical, and the two diagonals; either endpoint can be the start. Stage 3 preserves that line and adds an equal-length perpendicular line with an independently reversed start direction.
+- `TrackSystem.ExpandTrack()` is a State Authority-only stage transition. The authority replicates ellipse seed, stage, primary axis, both reversal flags, center, line length, and revision. Every peer reconstructs the same local `Track` when the revision changes, including Late Join peers. Vertex RPC synchronization is no longer part of the active path.
+- `OnTrackChanged` delivers the completed `Track`. `TrackVisible` renders at most two paths and loops only closed paths. Grid, tower blocking, and obstacle cleanup consume `Track.Segments`, so open endpoints and the two Stage 3 paths do not create phantom connections.
+
+## Round ordering
+
+- Round-end settlement stops pending track-monster spawn routines and settles every live track monster on State Authority in spawn order.
+- After settlement finishes, rounds 3 and 7 transition to Stages 2 and 3 respectively. Round 9 applies the permanent track-monster movement multiplier once. If the next round starts while settlement is active, its track spawn and queued internalized spawn are deferred until settlement and the post-round change finish.
+- The existing strengthening schedule remains rounds 5, 8, and every round from 11 onward.
+
+## Rollback and verification
+
+Rollback restores the prior single `Track.Vertices` loop, vertex RPCs, and immediate round-end expansion together; partial rollback is unsafe because all segment consumers and track-monster traversal now use the multi-path contract. Pure EditMode coverage lives in `ProjectIO.Tracks.Tests`. Host/Client stage parity, authority rejection, Late Join restoration, teleport replication, despawn, and single Runner damage still require a two-peer runtime pass whenever automated Fusion execution is unavailable.
 
 ## 책임
 

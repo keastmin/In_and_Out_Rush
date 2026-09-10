@@ -3,19 +3,18 @@ using System.Collections.Generic;
 using Dev;
 using Dev.Network;
 using Fusion;
+using ProjectIO.Monsters;
 using UnityEngine;
 
 public class TrackMonsterSpawnSystem : Dev.Network.System
 {
     const float TrackMonsterSettlementInterval = 0.2f;
 
-    [SerializeField] TrackSystem trackSystem;
     [SerializeField] TerritorySystem territorySystem;
     [SerializeField] Transform monsterParentTransform;
-    [SerializeField] TrackMonster monsterPrefab;
     [SerializeField] TrackMonsterWaveSpawnTable waveSpawnTable;
     [SerializeField] float spawnInterval;
-    [SerializeField] int spawnCount;
+    [SerializeField, Min(1)] int fallbackNormalUnitCount = 4;
     [SerializeField] float strengthenMultiplier = 1.2f;
 
     readonly List<TrackMonster> aliveTrackMonsters = new();
@@ -23,11 +22,38 @@ public class TrackMonsterSpawnSystem : Dev.Network.System
     int spawnSequence;
     int spawnPrioritySequence;
     int strengthenCount;
+    Coroutine settlementRoutine;
+    global::System.Action settlementCompleted;
+    bool permanentMovementSpeedBoostApplied;
+    float permanentMovementSpeedMultiplier = 1f;
+
+    public bool IsSettlementRunning => settlementRoutine != null;
 
     protected override void OnSetUp()
     {
         if (!Object.HasStateAuthority) { return; }
         ResolveTerritorySystem();
+    }
+
+    protected override void OnTearDown()
+    {
+        StopMonsterSpawnRoutine();
+        if (settlementRoutine != null)
+        {
+            StopCoroutine(settlementRoutine);
+            settlementRoutine = null;
+        }
+
+        settlementCompleted = null;
+        for (int i = 0; i < aliveTrackMonsters.Count; i++)
+        {
+            if (aliveTrackMonsters[i] != null)
+            {
+                aliveTrackMonsters[i].OnDestroyed -= HandleTrackMonsterDestroyed;
+            }
+        }
+
+        aliveTrackMonsters.Clear();
     }
 
     public void SpawnMonsters(Track track)
@@ -38,7 +64,7 @@ public class TrackMonsterSpawnSystem : Dev.Network.System
     public void SpawnMonsters(Track track, int waveNumber)
     {
         if (!Object.HasStateAuthority) { return; }
-        if (track == null || track.Vertices == null || track.Vertices.Length == 0)
+        if (!IsTrackReady(track))
         {
             Debug.LogWarning("Track monster spawn skipped. Track is not ready.");
             return;
@@ -58,7 +84,7 @@ public class TrackMonsterSpawnSystem : Dev.Network.System
         for (int i = 0; i < spawnGroups.Count; i++)
         {
             TrackMonsterSpawnGroup spawnGroup = spawnGroups[i];
-            if (spawnGroup == null || spawnGroup.SpawnCount <= 0)
+            if (spawnGroup == null || spawnGroup.SpawnUnitCount <= 0)
                 continue;
 
             StartTrackedMonsterSpawnRoutine(MonsterSpawnGroupRoutine(track, spawnGroup));
@@ -74,14 +100,23 @@ public class TrackMonsterSpawnSystem : Dev.Network.System
     public void SpawnInternalizedMonsters(Track track, int count)
     {
         if (!Object.HasStateAuthority || count <= 0) { return; }
-        if (track == null || track.Vertices == null || track.Vertices.Length == 0)
+        if (!IsTrackReady(track))
         {
             Debug.LogWarning("Internalized track monster spawn skipped. Track is not ready.");
             return;
         }
 
+        TrackMonster prefab = waveSpawnTable != null ? waveSpawnTable.InternalizedPrefab : null;
+        if (prefab == null)
+        {
+            Debug.LogWarning("Internalized track monster spawn skipped. Internalized prefab is missing.");
+            return;
+        }
+
         for (int i = 0; i < count; i++)
-            SpawnTrackMonster(track, monsterPrefab, true, i);
+        {
+            SpawnTrackMonster(track, prefab, TrackMonsterSpawnType.Normal, true, i);
+        }
     }
 
     public void StrengthenTrackMonsters()
@@ -93,12 +128,43 @@ public class TrackMonsterSpawnSystem : Dev.Network.System
         Debug.Log($"New track monsters will be strengthened. Count: {strengthenCount}, multiplier: {strengthenMultiplier}");
     }
 
-    public void SettleTrackMonstersCascade(PlayerRunner runner)
+    public bool ApplyPermanentMovementSpeedBoost(float multiplier)
     {
-        if (Object == null || !Object.HasStateAuthority) { return; }
+        if (Object == null || !Object.HasStateAuthority || multiplier <= 0f)
+            return false;
+
+        if (permanentMovementSpeedBoostApplied)
+            return false;
+
+        permanentMovementSpeedBoostApplied = true;
+        permanentMovementSpeedMultiplier = multiplier;
+        CleanupDestroyedTrackMonsters();
+        for (int i = 0; i < aliveTrackMonsters.Count; i++)
+        {
+            aliveTrackMonsters[i].ApplyMovementSpeedMultiplier(multiplier);
+        }
+
+        return true;
+    }
+
+    public void SettleTrackMonstersCascade(PlayerRunner runner, global::System.Action onCompleted = null)
+    {
+        if (Object == null || !Object.HasStateAuthority)
+        {
+            onCompleted?.Invoke();
+            return;
+        }
+
+        if (settlementRoutine != null)
+        {
+            settlementCompleted += onCompleted;
+            return;
+        }
+
         if (runner == null)
         {
             Debug.LogWarning("Track monster settlement skipped. PlayerRunner is missing.");
+            onCompleted?.Invoke();
             return;
         }
 
@@ -106,17 +172,29 @@ public class TrackMonsterSpawnSystem : Dev.Network.System
         CleanupDestroyedTrackMonsters();
         var trackMonsters = GetTrackMonsterSnapshot();
         if (trackMonsters.Count <= 0)
+        {
+            onCompleted?.Invoke();
             return;
+        }
 
-        StartCoroutine(TrackMonsterSettlementRoutine(trackMonsters, runner));
+        settlementCompleted = onCompleted;
+        settlementRoutine = StartCoroutine(TrackMonsterSettlementRoutine(trackMonsters, runner));
     }
 
     IEnumerator FallbackMonsterSpawnRoutine(Track track)
     {
+        int spawnCount = TrackMonsterFormationPolicy.GetSpawnCount(
+            TrackMonsterSpawnType.Normal,
+            fallbackNormalUnitCount);
         for (int i = 0; i < spawnCount; i++)
         {
-            SpawnTrackMonster(track, monsterPrefab, false, spawnPrioritySequence++);
-            yield return new WaitForSeconds(spawnInterval);
+            TrackMonsterNormalSize size = TrackMonsterFormationPolicy.GetNormalSize(i);
+            TrackMonster prefab = waveSpawnTable != null ? waveSpawnTable.GetNormalPrefab(size) : null;
+            SpawnTrackMonster(track, prefab, TrackMonsterSpawnType.Normal, false, spawnPrioritySequence++);
+            if (i < spawnCount - 1 && spawnInterval > 0f)
+            {
+                yield return new WaitForSeconds(spawnInterval);
+            }
         }
     }
 
@@ -125,13 +203,21 @@ public class TrackMonsterSpawnSystem : Dev.Network.System
         if (spawnGroup.DelayFromWaveStartSeconds > 0f)
             yield return new WaitForSeconds(spawnGroup.DelayFromWaveStartSeconds);
 
-        TrackMonster prefab = spawnGroup.Prefab != null ? spawnGroup.Prefab : monsterPrefab;
         for (int repeatIndex = 0; repeatIndex < spawnGroup.RepeatCount; repeatIndex++)
         {
-            for (int spawnIndex = 0; spawnIndex < spawnGroup.SpawnCount; spawnIndex++)
+            int spawnCount = TrackMonsterFormationPolicy.GetSpawnCount(
+                spawnGroup.SpawnType,
+                spawnGroup.SpawnUnitCount);
+            for (int spawnIndex = 0; spawnIndex < spawnCount; spawnIndex++)
             {
-                SpawnTrackMonster(track, prefab, false, spawnPrioritySequence++);
-                if (spawnIndex < spawnGroup.SpawnCount - 1 && spawnGroup.SpawnIntervalSeconds > 0f)
+                TrackMonster prefab = ResolveSpawnPrefab(spawnGroup.SpawnType, spawnIndex);
+                SpawnTrackMonster(
+                    track,
+                    prefab,
+                    spawnGroup.SpawnType,
+                    false,
+                    spawnPrioritySequence++);
+                if (spawnIndex < spawnCount - 1 && spawnGroup.SpawnIntervalSeconds > 0f)
                     yield return new WaitForSeconds(spawnGroup.SpawnIntervalSeconds);
             }
 
@@ -140,7 +226,12 @@ public class TrackMonsterSpawnSystem : Dev.Network.System
         }
     }
 
-    TrackMonster SpawnTrackMonster(Track track, TrackMonster prefab, bool internalized, int priority)
+    TrackMonster SpawnTrackMonster(
+        Track track,
+        TrackMonster prefab,
+        TrackMonsterSpawnType spawnType,
+        bool internalized,
+        int priority)
     {
         if (prefab == null)
         {
@@ -148,7 +239,7 @@ public class TrackMonsterSpawnSystem : Dev.Network.System
             return null;
         }
 
-        var startPosition = track.Vertices[0];
+        var startPosition = track.Paths[0].Vertices[0];
         int sequence = spawnSequence++;
 
         var monster = Runner.Spawn(prefab, startPosition, Quaternion.identity, PlayerRef.None, (runner, obj) =>
@@ -157,8 +248,15 @@ public class TrackMonsterSpawnSystem : Dev.Network.System
             obj.transform.SetParent(monsterParentTransform);
         });
 
+        if (monster == null)
+        {
+            Debug.LogWarning($"Track monster spawn failed for {prefab.name}.");
+            return null;
+        }
+
         monster.SetTerritory(ResolveTerritory());
         monster.SetTrack(track);
+        monster.SetSpawnType(spawnType);
         monster.Initialize();
         monster.SetTrackMonsterPriority(priority);
         monster.SetInternalized(internalized);
@@ -167,7 +265,34 @@ public class TrackMonsterSpawnSystem : Dev.Network.System
         if (!internalized)
             ApplyCurrentStrength(monster);
 
+        if (permanentMovementSpeedBoostApplied)
+            monster.ApplyMovementSpeedMultiplier(permanentMovementSpeedMultiplier);
+
         return monster;
+    }
+
+    TrackMonster ResolveSpawnPrefab(TrackMonsterSpawnType spawnType, int spawnIndex)
+    {
+        if (waveSpawnTable == null)
+            return null;
+
+        if (spawnType == TrackMonsterSpawnType.Normal)
+        {
+            return waveSpawnTable.GetNormalPrefab(
+                TrackMonsterFormationPolicy.GetNormalSize(spawnIndex));
+        }
+
+        return waveSpawnTable.GetSpecialPrefab(spawnType);
+    }
+
+    static bool IsTrackReady(Track track)
+    {
+        return track != null &&
+               track.Paths != null &&
+               track.Paths.Count > 0 &&
+               track.Paths[0] != null &&
+               track.Paths[0].Vertices != null &&
+               track.Paths[0].Vertices.Length >= 2;
     }
 
     bool TryGetWaveData(int waveNumber, out TrackMonsterWaveData waveData)
@@ -270,20 +395,32 @@ public class TrackMonsterSpawnSystem : Dev.Network.System
 
     IEnumerator TrackMonsterSettlementRoutine(List<TrackMonster> monsters, PlayerRunner runner)
     {
-        for (int i = 0; i < monsters.Count; i++)
+        yield return null;
+
+        try
         {
-            TrackMonster monster = monsters[i];
-            if (!CanSettleTrackMonster(monster))
-                continue;
+            for (int i = 0; i < monsters.Count; i++)
+            {
+                TrackMonster monster = monsters[i];
+                if (!CanSettleTrackMonster(monster))
+                    continue;
 
-            float damage = monster.CompletionDamage;
-            runner.TakeTrackCompletionDamage(damage);
-            Debug.Log($"{monster.name} settled and dealt {damage} damage to PlayerRunner.");
+                float damage = monster.CompletionDamage;
+                runner.TakeTrackCompletionDamage(damage);
+                Debug.Log($"{monster.name} settled and dealt {damage} damage to PlayerRunner.");
 
-            monster.DestroyMonster();
+                monster.DestroyMonster();
 
-            if (i < monsters.Count - 1)
-                yield return new WaitForSeconds(TrackMonsterSettlementInterval);
+                if (i < monsters.Count - 1)
+                    yield return new WaitForSeconds(TrackMonsterSettlementInterval);
+            }
+        }
+        finally
+        {
+            settlementRoutine = null;
+            global::System.Action completed = settlementCompleted;
+            settlementCompleted = null;
+            completed?.Invoke();
         }
     }
 

@@ -1,204 +1,176 @@
 using System;
-using System.Collections.Generic;
 using Dev;
 using Dev.Local;
 using Dev.Network;
 using Fusion;
+using ProjectIO.Tracks;
 using UnityEngine;
 
-public class TrackSystem : Dev.Network.System
+public sealed class TrackSystem : Dev.Network.System
 {
-    [SerializeField] float horizontalRadius;
-    [SerializeField] float verticalRadius;
-    [SerializeField] float noise;
-    [SerializeField] int vertexCount;
-    [SerializeField] int smoothingIteration;
-    [SerializeField] int noiseVertexCount;
-    [SerializeField] float noiseIntensity;
+    private const float TrackLengthToMapDiameterRatio = 1f / 8f;
+    private const float FallbackWorldBoundaryRadius = 500f;
 
-    public Track Track;
-    TrackVisible trackVisible;
-    public event Action<Vector3[], TrackSystem, object> OnTrackChanged;
+    [SerializeField] private float horizontalRadius = 16f;
+    [SerializeField] private float verticalRadius = 8f;
+    [SerializeField] private float noise = 0.1f;
+    [SerializeField] private int vertexCount = 30;
+
+    [Networked] private int TrackStageValue { get; set; }
+    [Networked] private int EllipseSeed { get; set; }
+    [Networked] private int PrimaryAxisValue { get; set; }
+    [Networked] private NetworkBool ReversePrimary { get; set; }
+    [Networked] private NetworkBool ReverseSecondary { get; set; }
+    [Networked] private Vector3 TrackCenter { get; set; }
+    [Networked] private float TrackLineLength { get; set; }
+    [Networked, OnChangedRender(nameof(HandleTrackRevisionChanged))]
+    private int TrackRevision { get; set; }
+
+    private TrackVisible trackVisible;
+    private int appliedRevision = -1;
+
+    public Track Track { get; private set; }
+
+    public TrackStage Stage => Track != null
+        ? Track.Stage
+        : (TrackStage)Mathf.Clamp(TrackStageValue, (int)TrackStage.InitialEllipse, (int)TrackStage.PerpendicularLines);
+
+    public event Action<Track, TrackSystem, object> OnTrackChanged;
+
     public float TrackLineWidth => trackVisible != null ? trackVisible.LineWidth : 0f;
 
     void OnDrawGizmosSelected()
     {
-        if (Track == null) { return; }
+        if (Track == null)
+        {
+            return;
+        }
 
         Gizmos.color = Color.red;
-        foreach (var vertex in Track.Vertices)
+        for (int pathIndex = 0; pathIndex < Track.Paths.Count; pathIndex++)
         {
-            Gizmos.DrawSphere(vertex, 0.1f);
+            TrackPath path = Track.Paths[pathIndex];
+            for (int vertexIndex = 0; vertexIndex < path.Vertices.Length; vertexIndex++)
+            {
+                Gizmos.DrawSphere(path.Vertices[vertexIndex], 0.1f);
+            }
         }
     }
 
     protected override void OnSetUp()
     {
-        trackVisible = Dev.Network.StageBootstrapper.Instance.TrackVisible;
+        StageBootstrapper bootstrapper = StageBootstrapper.Instance;
+        trackVisible = bootstrapper != null ? bootstrapper.TrackVisible : null;
 
-        GenerateTrack();
-        if (!Object.HasStateAuthority)
+        if (Object != null && Object.HasStateAuthority && TrackRevision <= 0)
         {
-            RequestSyncTrack();
+            TrackStageValue = (int)TrackStage.InitialEllipse;
+            EllipseSeed = UnityEngine.Random.Range(1, int.MaxValue);
+            PrimaryAxisValue = (int)TrackAxis.Horizontal;
+            ReversePrimary = false;
+            ReverseSecondary = false;
+            TrackCenter = bootstrapper != null ? bootstrapper.WorldCenter : transform.position;
+            float worldRadius = bootstrapper != null
+                ? bootstrapper.WorldBoundaryRadius
+                : FallbackWorldBoundaryRadius;
+            TrackLineLength = Mathf.Max(0f, worldRadius * 2f * TrackLengthToMapDiameterRatio);
+            TrackRevision = 1;
+        }
+
+        ApplyReplicatedTrack();
+    }
+
+    protected override void OnTearDown()
+    {
+        Track = null;
+        appliedRevision = -1;
+    }
+
+    public override void Render()
+    {
+        base.Render();
+        if (TrackRevision > 0 && appliedRevision != TrackRevision)
+        {
+            ApplyReplicatedTrack();
         }
     }
 
-    void GenerateTrack()
+    public bool ExpandTrack()
     {
-        expansionLevel++;
-        CreateTrack(vertexCount, horizontalRadius, verticalRadius, noise);
-        trackVisible.name = $"{Runner.name} - Track";
-        trackVisible.GenerateTrackVertices(Track.Vertices);
-        trackVisible.GenerateTrackLine(Track.Vertices);
-
-        if (Object != null && Object.HasStateAuthority)
+        if (Object == null || !Object.HasStateAuthority)
         {
-            NotifyTrackChanged();
-        }
-    }
-
-    void CreateTrack(int vertexCount, float horizontalRadius, float verticalRadius, float noise)
-    {
-        var trackVertices = new Vector3[vertexCount];
-
-        for (int i = 0; i < vertexCount; i++)
-        {
-            float angle = Mathf.PI + 2 * Mathf.PI * i / vertexCount;
-            float x = Mathf.Cos(angle) * horizontalRadius;
-            float z = Mathf.Sin(angle) * verticalRadius;
-
-            x += UnityEngine.Random.Range(-noise, noise);
-            z += UnityEngine.Random.Range(-noise, noise);
-
-            var vertex = new Vector3(x, 0, z);
-            trackVertices[i] = vertex;
+            Debug.LogWarning("Only the TrackSystem State Authority can transform the track.", this);
+            return false;
         }
 
-        Track = new Track
+        TrackStage currentStage = (TrackStage)Mathf.Clamp(
+            TrackStageValue,
+            (int)TrackStage.InitialEllipse,
+            (int)TrackStage.PerpendicularLines);
+        if (currentStage == TrackStage.PerpendicularLines)
         {
-            Vertices = trackVertices,
-        };
-    }
+            return false;
+        }
 
-    readonly List<Vector3> temporaryVertices = new();
-
-    void RequestSyncTrack()
-    {
-        RPC_RequestSyncTrack();
-    }
-
-    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    void RPC_RequestSyncTrack()
-    {
-        if (!Object.HasStateAuthority) { return; }
-
-        SyncTrack(Track.Vertices);
-    }
-
-    void SyncTrack(Vector3[] vertices)
-    {
-        if (!Object.HasStateAuthority) { return; }
-        if (vertices.Length <= 0) { return; }
-
-        for (int i = 0; i < vertices.Length; i += 10)
+        if (currentStage == TrackStage.InitialEllipse)
         {
-            if (i + 10 < vertices.Length)
+            PrimaryAxisValue = UnityEngine.Random.Range(0, 4);
+            ReversePrimary = UnityEngine.Random.Range(0, 2) == 1;
+        }
+        else
+        {
+            ReverseSecondary = UnityEngine.Random.Range(0, 2) == 1;
+        }
+
+        TrackStageValue = (int)currentStage + 1;
+        TrackRevision++;
+        ApplyReplicatedTrack();
+        return true;
+    }
+
+    private void HandleTrackRevisionChanged()
+    {
+        ApplyReplicatedTrack();
+    }
+
+    private void ApplyReplicatedTrack()
+    {
+        if (TrackRevision <= 0)
+        {
+            return;
+        }
+
+        TrackStage stage = (TrackStage)Mathf.Clamp(
+            TrackStageValue,
+            (int)TrackStage.InitialEllipse,
+            (int)TrackStage.PerpendicularLines);
+        TrackAxis primaryAxis = (TrackAxis)Mathf.Clamp(PrimaryAxisValue, 0, 3);
+        Track = new Track(
+            stage,
+            TrackGeometryGenerator.CreatePaths(
+                stage,
+                TrackCenter,
+                vertexCount,
+                horizontalRadius,
+                verticalRadius,
+                noise,
+                EllipseSeed,
+                TrackLineLength,
+                primaryAxis,
+                ReversePrimary,
+                ReverseSecondary));
+        appliedRevision = TrackRevision;
+
+        if (trackVisible != null)
+        {
+            if (Runner != null)
             {
-                var segment = new Vector3[10];
-                System.Array.Copy(vertices, i, segment, 0, 10);
-                RPC_SyncTrackVertices(segment);
+                trackVisible.name = $"{Runner.name} - Track";
             }
-            else
-            {
-                var segment = new Vector3[vertices.Length - i];
-                System.Array.Copy(vertices, i, segment, 0, vertices.Length - i);
-                RPC_SyncTrackVertices(segment);
-            }
+
+            trackVisible.RenderTrack(Track);
         }
 
-        RPC_FinishTrackVertices();
-    }
-
-    [Rpc(RpcSources.StateAuthority, RpcTargets.Proxies)]
-    void RPC_SyncTrackVertices(Vector3[] vertices)
-    {
-        if (vertices.Length <= 0) { return; }
-
-        temporaryVertices.AddRange(vertices);
-    }
-
-    [Rpc(RpcSources.StateAuthority, RpcTargets.Proxies)]
-    void RPC_FinishTrackVertices()
-    {
-        var vertices = temporaryVertices.ToArray();
-
-        Track.Vertices = vertices;
-        trackVisible.GenerateTrackVertices(vertices);
-        trackVisible.GenerateTrackLine(vertices);
-
-        temporaryVertices.Clear();
-        NotifyTrackChanged();
-    }
-
-    int expansionLevel;
-    public void ExpandTrack()
-    {
-        expansionLevel++;
-        // var factor = Mathf.FloorToInt(expansionLevel * Mathf.Pow(2, expansionLevel - 1));
-        var factor = expansionLevel;
-        CreateTrack(vertexCount * factor, horizontalRadius * factor, verticalRadius * factor, noise);
-        var noiseCount = UnityEngine.Random.Range(2, noiseVertexCount);
-        for (int i = 0; i < noiseCount; i++)
-        {
-            var randomIndex = UnityEngine.Random.Range(0, Track.Vertices.Length);
-            var intensity = UnityEngine.Random.Range(1f / noiseIntensity, 1f * noiseIntensity);
-            Track.Vertices[randomIndex] *= intensity;
-        }
-
-        for (int itr = 0; itr < smoothingIteration; itr++)
-        {
-            var temporaryVertices = new List<Vector3>();
-            for (int i = 0; i < Track.Vertices.Length; i++)
-            {
-                var prevVertex = Track.Vertices[(i - 1 + Track.Vertices.Length) % Track.Vertices.Length];
-                var currentVertex = Track.Vertices[i];
-                var nextVertex = Track.Vertices[(i + 1) % Track.Vertices.Length];
-                var prevDistance = prevVertex.magnitude;
-                var currentDistance = currentVertex.magnitude;
-                var nextDistance = nextVertex.magnitude;
-                var averageDistance = (prevDistance + currentDistance + nextDistance) / 3f;
-                var direction = currentVertex.normalized;
-                var newVertex = direction * averageDistance;
-                temporaryVertices.Add(newVertex);
-            }
-            Track.Vertices = temporaryVertices.ToArray();
-        }
-
-        trackVisible.GenerateTrackVertices(Track.Vertices);
-        trackVisible.GenerateTrackLine(Track.Vertices);
-
-        if (Object != null && Object.HasStateAuthority)
-        {
-            SyncTrack(Track.Vertices);
-            NotifyTrackChanged();
-        }
-
-        if (!Object.HasStateAuthority)
-        {
-            RequestSyncTrack();
-        }
-    }
-
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.T))
-        {
-            ExpandTrack();
-        }
-    }
-
-    void NotifyTrackChanged()
-    {
-        OnTrackChanged?.Invoke(Track?.Vertices, this, this);
+        OnTrackChanged?.Invoke(Track, this, this);
     }
 }

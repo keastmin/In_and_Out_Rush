@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using ProjectIO.Tracks;
 using UnityEngine;
 
 namespace KIM.Dev
@@ -21,21 +22,21 @@ namespace KIM.Dev
         public bool IsOverlapping(
             Vector3 cellCenter,
             float cellSize,
-            IReadOnlyList<Vector3> trackVertices,
+            IReadOnlyList<TrackSegment> trackSegments,
             float overlapRadius)
         {
-            if (trackVertices == null || trackVertices.Count < 2)
+            if (trackSegments == null || trackSegments.Count == 0)
             {
                 return false;
             }
 
-            for (int i = 0; i < trackVertices.Count; i++)
+            for (int i = 0; i < trackSegments.Count; i++)
             {
                 if (IsSegmentOverlapping(
                         cellCenter,
                         cellSize,
-                        trackVertices[i],
-                        trackVertices[(i + 1) % trackVertices.Count],
+                        trackSegments[i].Start,
+                        trackSegments[i].End,
                         overlapRadius))
                 {
                     return true;

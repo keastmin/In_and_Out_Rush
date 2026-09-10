@@ -12,216 +12,223 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 39c5578255df7024e960e902a059022e, type: 3}
   m_Name: Track Monster Wave Spawn Table
   m_EditorClassIdentifier: 
+  normalSmallPrefab: {fileID: 5528232982346000128, guid: d3909dc42ac163241a2ede87f3fc89ee, type: 3}
+  normalMediumPrefab: {fileID: 5528232982346000128, guid: 18bef9c9af9565441a7a91af75fcb5d3, type: 3}
+  normalLargePrefab: {fileID: 5528232982346000128, guid: 37b3bc4fa8062ea4f8e6478b4b8d42e7, type: 3}
+  elitePredatorPrefab: {fileID: 5528232982346000128, guid: 3a8debeb66b9d064fb466ff4b32d5bec, type: 3}
+  eliteWalkerPrefab: {fileID: 5528232982346000128, guid: 61ad989105fd7fc4fa40bf677f45064d, type: 3}
+  bossPrefab: {fileID: 5528232982346000128, guid: c3b6845930332d543956626a2ff14b67, type: 3}
+  internalizedPrefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
   waves:
   - waveNumber: 1
     spawnGroups:
-    - prefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 0
-      spawnCount: 5
+      spawnUnitCount: 5
       spawnIntervalSeconds: 0.2
       repeatCount: 3
       repeatIntervalSeconds: 20
-    - prefab: {fileID: 5528232982346000128, guid: 3a8debeb66b9d064fb466ff4b32d5bec, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 60
-      spawnCount: 3
+      spawnUnitCount: 3
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
-    - prefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 80
-      spawnCount: 5
+      spawnUnitCount: 5
       spawnIntervalSeconds: 0.2
       repeatCount: 5
       repeatIntervalSeconds: 20
   - waveNumber: 2
     spawnGroups:
-    - prefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 0
-      spawnCount: 10
+      spawnUnitCount: 10
       spawnIntervalSeconds: 0.2
       repeatCount: 3
       repeatIntervalSeconds: 20
-    - prefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 60
-      spawnCount: 5
+      spawnUnitCount: 5
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
-    - prefab: {fileID: 5528232982346000128, guid: 3a8debeb66b9d064fb466ff4b32d5bec, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 60
-      spawnCount: 6
+      spawnUnitCount: 6
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
-    - prefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 80
-      spawnCount: 6
+      spawnUnitCount: 6
       spawnIntervalSeconds: 0.2
       repeatCount: 5
       repeatIntervalSeconds: 20
   - waveNumber: 3
     spawnGroups:
-    - prefab: {fileID: 5528232982346000128, guid: 3a8debeb66b9d064fb466ff4b32d5bec, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 0
-      spawnCount: 9
+      spawnUnitCount: 9
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
-    - prefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 60
-      spawnCount: 10
+      spawnUnitCount: 10
       spawnIntervalSeconds: 0.2
       repeatCount: 3
       repeatIntervalSeconds: 10
-    - prefab: {fileID: 5528232982346000128, guid: c3b6845930332d543956626a2ff14b67, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 90
-      spawnCount: 1
+      spawnUnitCount: 1
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
   - waveNumber: 4
     spawnGroups:
-    - prefab: {fileID: 5528232982346000128, guid: 3a8debeb66b9d064fb466ff4b32d5bec, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 0
-      spawnCount: 6
+      spawnUnitCount: 6
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
-    - prefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 10
-      spawnCount: 15
+      spawnUnitCount: 15
       spawnIntervalSeconds: 0.2
       repeatCount: 4
       repeatIntervalSeconds: 20
-    - prefab: {fileID: 5528232982346000128, guid: 3a8debeb66b9d064fb466ff4b32d5bec, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 90
-      spawnCount: 6
+      spawnUnitCount: 6
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
-    - prefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 90
-      spawnCount: 15
+      spawnUnitCount: 15
       spawnIntervalSeconds: 0.2
       repeatCount: 2
       repeatIntervalSeconds: 20
   - waveNumber: 5
     spawnGroups:
-    - prefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 0
-      spawnCount: 15
+      spawnUnitCount: 15
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
-    - prefab: {fileID: 5528232982346000128, guid: 3a8debeb66b9d064fb466ff4b32d5bec, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 20
-      spawnCount: 3
+      spawnUnitCount: 3
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
-    - prefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 40
-      spawnCount: 15
+      spawnUnitCount: 15
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
-    - prefab: {fileID: 5528232982346000128, guid: 3a8debeb66b9d064fb466ff4b32d5bec, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 60
-      spawnCount: 3
+      spawnUnitCount: 3
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
-    - prefab: {fileID: 5528232982346000128, guid: 3a8debeb66b9d064fb466ff4b32d5bec, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 80
-      spawnCount: 15
+      spawnUnitCount: 15
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
-    - prefab: {fileID: 5528232982346000128, guid: 3a8debeb66b9d064fb466ff4b32d5bec, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 100
-      spawnCount: 3
+      spawnUnitCount: 3
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
-    - prefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 120
-      spawnCount: 15
+      spawnUnitCount: 15
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
-    - prefab: {fileID: 5528232982346000128, guid: 3a8debeb66b9d064fb466ff4b32d5bec, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 140
-      spawnCount: 6
+      spawnUnitCount: 6
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
-    - prefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 160
-      spawnCount: 15
+      spawnUnitCount: 15
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
   - waveNumber: 6
     spawnGroups:
-    - prefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 0
-      spawnCount: 10
+      spawnUnitCount: 10
       spawnIntervalSeconds: 0.2
       repeatCount: 7
       repeatIntervalSeconds: 10
-    - prefab: {fileID: 5528232982346000128, guid: 3a8debeb66b9d064fb466ff4b32d5bec, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 60
-      spawnCount: 9
+      spawnUnitCount: 9
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
-    - prefab: {fileID: 5528232982346000128, guid: c3b6845930332d543956626a2ff14b67, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 90
-      spawnCount: 1
+      spawnUnitCount: 1
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
   - waveNumber: 7
     spawnGroups:
-    - prefab: {fileID: 5528232982346000128, guid: 3a8debeb66b9d064fb466ff4b32d5bec, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 0
-      spawnCount: 15
+      spawnUnitCount: 15
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
-    - prefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 30
-      spawnCount: 5
+      spawnUnitCount: 5
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
-    - prefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 60
-      spawnCount: 5
+      spawnUnitCount: 5
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
-    - prefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 90
-      spawnCount: 5
+      spawnUnitCount: 5
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
-    - prefab: {fileID: 5528232982346000128, guid: 3a8debeb66b9d064fb466ff4b32d5bec, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 90
-      spawnCount: 12
+      spawnUnitCount: 12
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
-    - prefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 120
-      spawnCount: 5
+      spawnUnitCount: 5
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
-    - prefab: {fileID: -369501393314545224, guid: d763e04522217d7449d10b064e5bdc79, type: 3}
+    - spawnType: 1
       delayFromWaveStartSeconds: 150
-      spawnCount: 5
+      spawnUnitCount: 5
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0

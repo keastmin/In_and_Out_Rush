@@ -36,6 +36,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: World Monster
       objectReference: {fileID: 0}
+    - target: {fileID: 4012451566646062793, guid: 1f07dcc6068889e46ba5ca7a07d5f118, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8854209350007772613, guid: 1f07dcc6068889e46ba5ca7a07d5f118, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -78,11 +82,12 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: -4194661950197827383, guid: 1f07dcc6068889e46ba5ca7a07d5f118, type: 3}
+    - {fileID: 4012451566646062793, guid: 1f07dcc6068889e46ba5ca7a07d5f118, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 1081141730720889549, guid: 1f07dcc6068889e46ba5ca7a07d5f118, type: 3}
-      insertIndex: 3
+      insertIndex: 2
       addedObject: {fileID: 3443739926629535264}
   m_SourcePrefab: {fileID: 100100000, guid: 1f07dcc6068889e46ba5ca7a07d5f118, type: 3}
 --- !u!4 &1882568577623817179 stripped

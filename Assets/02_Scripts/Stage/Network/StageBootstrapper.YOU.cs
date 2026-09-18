@@ -676,7 +676,11 @@ namespace Dev.Network
                 return;
             }
 
+            worldMonsterSpawnSystem.InitializeStageTime(timeSystem);
             worldMonsterSpawnSystem.SpawnMonsters();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            PlayerRunner?.InitializeWorldMonsterTestControls(worldMonsterSpawnSystem);
+#endif
         }
 
         private void SetSacredZoneGate(Gate gate)

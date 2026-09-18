@@ -110,3 +110,12 @@ Unity object, Territory, dormant 이동과 Spawn/Despawn 수명주기를 소유�
 - 원본 Unity Editor가 프로젝트를 열고 있어 별도 batchmode import는 수행하지
   않았다. 작업자는 Unity 테스트와 제시된 Host·Client Authority·중복 Spawn
   확인을 완료했으며 별도 이상을 보고하지 않았다.
+
+## World Monster 시간별 분포와 체력
+
+- 초기 배치는 기존 Spawn Table 수량·반경, 원점 중심 XZ 원과 Y=0, Territory 제외 및 SandTomb 추가 제한을 유지한다. 면적당 밀도는 정규화 거리 t에 대해 `1+2t`로 증가하여 가장자리가 중심의 3배다. `WorldMonsterPopulationPolicy`가 방사 누적분포 `(3t²+4t³)/7`을 역산한다.
+- `StageBootstrapper.YOU`가 `InitializeStageTime(TimeSystem)`으로 시간을 주입한다. State Authority는 `TimeSystem.ElapsedTime`을 기준으로 스트리밍 refresh 전에 이벤트를 한 번 처리한다. 정비 시간도 포함되며 개별 라운드마다 다시 시작하지 않는다.
+- 900초에는 전체 record 중 그 순간 비활성인 생존 개체만 검사한다. 현재 XZ 거리/그룹 생성 반경을 0~1로 제한한 t에 대해 `1-1/(1+2t)` 확률로 영구 제거한다. 가장자리 제거율은 약 2/3이며 활성 개체는 유지한다. 재배치·보충·이후 비활성 전환에 대한 소급 제거는 없다. 균등화는 기대 밀도이며 활성 개체, 이동, Territory·기존 사망으로 인해 전체의 정확한 균등 배치는 보장하지 않는다.
+- 1500초에는 모든 생존 record의 현재 체력만 0.25배로 변경한다. 최대 체력과 다른 스탯은 유지한다. 활성 개체는 Networked Health, 비활성 개체는 저장 체력을 변경한다. 아직 활성화되지 않은 개체는 프리팹 기본 체력을 사용한다.
+- 스트리밍 Despawn 직전에 현재 체력을 기록하고, 다음 Spawn의 기본 체력 초기화 이후 권위 전용 `Monster.TryRestoreCurrentHealth`로 복원한다. Chunk 왕복으로 체력이 회복되거나 약화가 반복되지 않는다. 사망·제거 record는 다시 생성하지 않는다.
+- 새 순수 정책 NUnit 11개 테스트가 독립 .NET 실행에서 통과했다. Monster Logic 및 전체 Assembly-CSharp 직접 C# 컴파일은 오류 0개다. Unity import/Fusion weaving과 실제 Host·Client·Late Join 동작은 이번 작업에서 실행하지 않았으며 수동 검증이 필요하다.

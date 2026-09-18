@@ -92,6 +92,16 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
         movementSpeed *= multiplier;
     }
 
+    public bool TryRestoreCurrentHealth(float currentHealth)
+    {
+        if (!CanAccessNetworkState || !Object.HasStateAuthority ||
+            float.IsNaN(currentHealth) || float.IsInfinity(currentHealth) || currentHealth <= 0f)
+            return false;
+
+        Health = Mathf.Min(currentHealth, MaxHealth);
+        return true;
+    }
+
     public void TakeDamage(float damage)
     {
         if (CanAccessNetworkState && Object.HasStateAuthority)

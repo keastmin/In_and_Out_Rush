@@ -109,6 +109,51 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     private bool _testModeInvincibleEnabled;
+    [Networked] private NetworkObject TestWorldMonsterSystemObject { get; set; }
+
+    private WorldMonsterSpawnSystem TestWorldMonsterSystem =>
+        Object != null && Object.IsValid && Object.IsInSimulation &&
+        TestWorldMonsterSystemObject != null && TestWorldMonsterSystemObject.IsValid
+            ? TestWorldMonsterSystemObject.GetComponent<WorldMonsterSpawnSystem>()
+            : null;
+
+    public bool CanUseWorldMonsterTestControls => HasInputAuthority &&
+        TestWorldMonsterSystem != null && TestWorldMonsterSystem.TestControlsReady;
+    public bool AreAllWorldMonstersActiveForTest =>
+        TestWorldMonsterSystem != null && TestWorldMonsterSystem.TestAllMonstersActive;
+
+    public void InitializeWorldMonsterTestControls(WorldMonsterSpawnSystem system)
+    {
+        if (HasStateAuthority)
+            TestWorldMonsterSystemObject = system != null ? system.Object : null;
+    }
+
+    public void SetAllWorldMonstersActiveForTest(bool enabled)
+    {
+        if (!CanUseWorldMonsterTestControls)
+            return;
+
+        if (HasStateAuthority)
+            ApplyWorldMonsterTestRequest(enabled);
+        else
+            RPC_SetAllWorldMonstersActiveForTest(enabled);
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void RPC_SetAllWorldMonstersActiveForTest(bool enabled)
+    {
+        ApplyWorldMonsterTestRequest(enabled);
+    }
+
+    private void ApplyWorldMonsterTestRequest(bool enabled)
+    {
+        if (!HasStateAuthority)
+            return;
+
+        WorldMonsterSpawnSystem system = TestWorldMonsterSystem;
+        if (system != null)
+            system.TrySetTestAllMonstersActive(enabled);
+    }
 #endif
     // 체력 변화시 호출되는 액션
     public event Action<float, float> OnHPValueChanged; // Max HP, Current HP

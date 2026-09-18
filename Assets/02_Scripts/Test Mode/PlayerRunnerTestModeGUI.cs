@@ -7,7 +7,7 @@ public class PlayerRunnerTestModeGUI : MonoBehaviour
     private static readonly float[] TimeScales = { 1f, 1.5f, 2f, 3f };
 
     private PlayerRunner _runner;
-    private Rect _windowRect = new Rect(20f, 20f, 260f, 135f);
+    private Rect _windowRect = new Rect(20f, 20f, 320f, 205f);
     private bool _isVisible;
     private bool _isInvincible;
     private float _defaultFixedDeltaTime;
@@ -60,6 +60,17 @@ public class PlayerRunnerTestModeGUI : MonoBehaviour
             _runner.SetTestModeInvincible(_isInvincible);
         }
 
+        GUILayout.Space(8f);
+        bool previousEnabled = GUI.enabled;
+        GUI.enabled = previousEnabled && _runner.CanUseWorldMonsterTestControls;
+        bool allMonstersActive = _runner.AreAllWorldMonstersActiveForTest;
+        bool nextAllMonstersActive = GUILayout.Toggle(allMonstersActive, "월드 몬스터 전체 활성화");
+        if (nextAllMonstersActive != allMonstersActive)
+            _runner.SetAllWorldMonstersActiveForTest(nextAllMonstersActive);
+        GUI.enabled = previousEnabled;
+        GUILayout.Label(!_runner.CanUseWorldMonsterTestControls
+            ? "월드 몬스터 시스템 준비 중"
+            : allMonstersActive ? "생존 몬스터 순차 활성화 / 전체 유지" : "플레이어 주변 Chunk만 활성화");
         GUILayout.Space(8f);
         GUILayout.Label($"Game Speed: {Time.timeScale:0.#}x");
 

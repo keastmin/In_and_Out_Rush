@@ -13,6 +13,10 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
 
     const int MaxSpawnPositionAttempts = 100;
 
+    [Header("Population Timing (Stage Seconds)")]
+    [SerializeField, Min(0f)] private float cullTimeSeconds = 900f;
+    [SerializeField, Min(0f)] private float healthReductionTimeSeconds = 1500f;
+
     [Header("Chunk Streaming")]
     [SerializeField, Min(1f)] float chunkSize = 32f;
     [SerializeField, Min(0)] int activeChunkRadius = 1;
@@ -37,6 +41,25 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
     private WorldObstacleBoundsIndex _worldObstacleBoundsIndex;
     private TickTimer _streamingRefreshTimer;
     private bool _hasPreparedSpawnRecords;
+    private TimeSystem _timeSystem;
+    private readonly WorldMonsterPopulationPolicy _populationPolicy = new();
+
+    public void InitializeStageTime(TimeSystem timeSystem) => _timeSystem = timeSystem;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    [Networked] public NetworkBool TestAllMonstersActive { get; private set; }
+    [Networked] public NetworkBool TestControlsReady { get; private set; }
+
+    public bool TrySetTestAllMonstersActive(bool enabled)
+    {
+        if (Object == null || !Object.IsValid || !Object.HasStateAuthority || !_hasPreparedSpawnRecords)
+            return false;
+
+        TestAllMonstersActive = enabled;
+        _streamingRefreshTimer = default;
+        return true;
+    }
+#endif
 
     public void InitializeWorldObstacles(IReadOnlyList<WorldObstacle> worldObstacles)
     {
@@ -44,6 +67,27 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
         _worldObstacleBoundsIndex = new WorldObstacleBoundsIndex(chunkSize);
         _worldObstacleBoundsIndex.Rebuild(worldObstacles);
     }
+
+#if UNITY_EDITOR
+    private void OnDrawGizmos()
+    {
+        if (!Application.isPlaying || Object == null || !Object.IsValid ||
+            !Object.HasStateAuthority || !TestAllMonstersActive)
+            return;
+
+        for (int i = 0; i < _spawnRecords.Count; i++)
+        {
+            WorldMonsterSpawnRecord record = _spawnRecords[i];
+            if (record.IsDestroyed)
+                continue;
+
+            bool active = record.ActiveMonster != null;
+            Gizmos.color = active ? Color.green : Color.yellow;
+            Vector3 position = active ? record.ActiveMonster.transform.position : record.Position;
+            Gizmos.DrawWireSphere(position, 1f);
+        }
+    }
+#endif
 
     protected override void OnSetUp()
     {
@@ -80,6 +124,11 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
             PrepareMonsterGroup(spawnGroups[i], territory, sacredZoneSystem, stageBootstrapper);
 
         _hasPreparedSpawnRecords = true;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        TestAllMonstersActive = false;
+        TestControlsReady = true;
+#endif
+        ApplyTimedPopulationChanges();
         RefreshChunkStreaming(territory);
         _streamingRefreshTimer = TickTimer.CreateFromSeconds(Runner, streamingRefreshInterval);
     }
@@ -90,6 +139,8 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
         {
             if (!Object.HasStateAuthority || !_hasPreparedSpawnRecords)
                 return;
+
+            ApplyTimedPopulationChanges();
 
             if (!_streamingRefreshTimer.ExpiredOrNotRunning(Runner))
                 return;
@@ -106,6 +157,10 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
     {
         if (Object != null && Object.HasStateAuthority)
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            TestAllMonstersActive = false;
+            TestControlsReady = false;
+#endif
             for (int i = 0; i < _spawnRecords.Count; i++)
             {
                 WorldMonster activeMonster = _spawnRecords[i].ActiveMonster;
@@ -124,6 +179,8 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
         _worldObstacleBoundsIndex = null;
         _hasPreparedSpawnRecords = false;
         _streamingRefreshTimer = default;
+        _timeSystem = null;
+        _populationPolicy.Reset();
     }
 
     void PrepareMonsterGroup(
@@ -161,9 +218,66 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
             var record = new WorldMonsterSpawnRecord(
                 prefab,
                 randomSpawnPosition,
-                _spawnRecords.Count + 1);
+                _spawnRecords.Count + 1,
+                spawnGroup.SpawnRadius);
             _spawnRecords.Add(record);
             _spawnChunkIndex.Add(GetChunk(record.PivotPosition), record);
+        }
+    }
+
+    private void ApplyTimedPopulationChanges()
+    {
+        if (_timeSystem == null || _timeSystem.Object == null ||
+            !_timeSystem.Object.IsValid || !_timeSystem.Object.IsInSimulation)
+            return;
+
+        float elapsedTime = _timeSystem.ElapsedTime;
+        bool cull = _populationPolicy.TryBeginCull(elapsedTime, cullTimeSeconds);
+        bool reduceHealth = _populationPolicy.TryBeginHealthReduction(elapsedTime, healthReductionTimeSeconds);
+        if (!cull && !reduceHealth)
+            return;
+
+        // Use all records, not just the player's current streaming neighbourhood.
+        for (int i = 0; i < _spawnRecords.Count; i++)
+        {
+            WorldMonsterSpawnRecord record = _spawnRecords[i];
+            if (record.IsDestroyed)
+                continue;
+
+            WorldMonster monster = record.ActiveMonster;
+            if (monster == null && _activeSpawnRecords.Contains(record))
+            {
+                record.IsDestroyed = true;
+                continue;
+            }
+
+            if (monster != null &&
+                (monster.Object == null || !monster.Object.IsValid))
+            {
+                record.IsDestroyed = true;
+                continue;
+            }
+
+            if (cull && monster == null)
+            {
+                float distance = new Vector2(record.Position.x, record.Position.z).magnitude;
+                float probability = WorldMonsterPopulationPolicy.GetCullProbability(distance, record.SpawnRadius);
+                if (Random.value < probability)
+                {
+                    record.IsDestroyed = true;
+                    continue;
+                }
+            }
+
+            if (!reduceHealth)
+                continue;
+
+            if (monster != null)
+                record.CurrentHealth = monster.CurrentHealth;
+
+            record.CurrentHealth = WorldMonsterPopulationPolicy.ReduceCurrentHealth(record.CurrentHealth);
+            if (monster != null)
+                monster.TryRestoreCurrentHealth(record.CurrentHealth);
         }
     }
 
@@ -181,10 +295,20 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
 
         int dormantChunkPadding = Mathf.CeilToInt(
             Mathf.Max(0f, dormantWanderRadius) / Mathf.Max(1f, chunkSize));
-        _spawnChunkIndex.CollectRange(
-            playerChunk,
-            activeChunkRadius + dormantChunkPadding,
-            _nearbySpawnRecords);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (TestAllMonstersActive)
+        {
+            _nearbySpawnRecords.Clear();
+            _nearbySpawnRecords.AddRange(_spawnRecords);
+        }
+        else
+#endif
+        {
+            _spawnChunkIndex.CollectRange(
+                playerChunk,
+                activeChunkRadius + dormantChunkPadding,
+                _nearbySpawnRecords);
+        }
 
         BuildSpawnCandidates(playerChunk, territory);
         _selectSpawnCandidatesUseCase.Execute(
@@ -283,9 +407,10 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
                 continue;
             }
 
-            if (IsWithinActiveChunkRange(record.Position, playerChunk))
+            if (IsWithinActiveChunkRange(activeMonster.transform.position, playerChunk))
                 continue;
 
+            record.CurrentHealth = activeMonster.CurrentHealth;
             record.SetPosition(activeMonster.transform.position);
             record.ActiveMonster = null;
             _activeSpawnRecords.RemoveAt(i);
@@ -298,6 +423,12 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
 
     private void SpawnRecord(WorldMonsterSpawnRecord record, Territory territory, int spawnSequence)
     {
+        if (record.CurrentHealth <= 0f)
+        {
+            record.IsDestroyed = true;
+            return;
+        }
+
         Vector3 spawnPosition = record.Position;
         WorldMonster monster = Runner.Spawn(record.Prefab, spawnPosition, Quaternion.identity, PlayerRef.None, (runner, obj) =>
         {
@@ -320,6 +451,14 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
             return;
         }
 
+        // Runner.Spawn has completed Spawned(), including the default health initialization.
+        if (!monster.TryRestoreCurrentHealth(record.CurrentHealth))
+        {
+            Runner.Despawn(monster.Object);
+            Debug.LogWarning($"World monster health restore failed for {record.Prefab.name}.");
+            return;
+        }
+
         record.ActiveMonster = monster;
         _activeSpawnRecords.Add(record);
     }
@@ -334,6 +473,10 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
 
     private bool IsWithinActiveChunkRange(Vector3 position, MonsterChunkCoordinate playerChunk)
     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (TestAllMonstersActive)
+            return true;
+#endif
         MonsterChunkCoordinate monsterChunk = GetChunk(position);
         return Mathf.Abs(monsterChunk.X - playerChunk.X) <= activeChunkRadius &&
                Mathf.Abs(monsterChunk.Y - playerChunk.Y) <= activeChunkRadius;
@@ -373,7 +516,9 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
         float safeSpawnRadius = Mathf.Max(0f, spawnRadius);
         for (int i = 0; i < MaxSpawnPositionAttempts; i++)
         {
-            Vector2 randomSpawnPosition2d = Random.insideUnitCircle * safeSpawnRadius;
+            float radius = WorldMonsterPopulationPolicy.SampleNormalizedRadius(Random.value) * safeSpawnRadius;
+            float angle = Random.value * Mathf.PI * 2f;
+            Vector2 randomSpawnPosition2d = new(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius);
             if (territory.IsPointInPolygon(randomSpawnPosition2d))
                 continue;
 
@@ -468,18 +613,22 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
 
     private sealed class WorldMonsterSpawnRecord
     {
-        public WorldMonsterSpawnRecord(WorldMonster prefab, Vector3 spawnPosition, int seed)
+        public WorldMonsterSpawnRecord(WorldMonster prefab, Vector3 spawnPosition, int seed, float spawnRadius)
         {
             Prefab = prefab;
             PivotPosition = spawnPosition;
             Position = spawnPosition;
             Seed = seed;
+            SpawnRadius = spawnRadius;
+            CurrentHealth = prefab.MaxHealth;
         }
 
         public WorldMonster Prefab { get; }
         public Vector3 PivotPosition { get; }
         public Vector3 Position { get; private set; }
         public int Seed { get; }
+        public float SpawnRadius { get; }
+        public float CurrentHealth { get; set; }
         public int SpawnSequence => Seed - 1;
         public WorldMonster ActiveMonster { get; set; }
         public bool IsDestroyed { get; set; }

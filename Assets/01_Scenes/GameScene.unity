@@ -1070,6 +1070,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 87f0ef62108ee764fa80f9af7e616495, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  cullTimeSeconds: 900
+  healthReductionTimeSeconds: 1500
   chunkSize: 32
   activeChunkRadius: 1
   dormantWanderRadius: 8
@@ -1079,6 +1081,10 @@ MonoBehaviour:
   monsterParentTransform: {fileID: 1314383435}
   spawnTable: {fileID: 11400000, guid: cdad72f4250b44e28c571e2b7944f8c8, type: 2}
   playerTransform: {fileID: 0}
+  _TestAllMonstersActive:
+    _value: 0
+  _TestControlsReady:
+    _value: 0
 --- !u!1 &813144253
 GameObject:
   m_ObjectHideFlags: 0

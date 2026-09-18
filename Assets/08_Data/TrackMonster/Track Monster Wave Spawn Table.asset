@@ -24,7 +24,7 @@ MonoBehaviour:
     spawnGroups:
     - spawnType: 0
       delayFromWaveStartSeconds: 0
-      spawnUnitCount: 5
+      spawnUnitCount: 1
       spawnIntervalSeconds: 0.2
       repeatCount: 3
       repeatIntervalSeconds: 20
@@ -36,7 +36,7 @@ MonoBehaviour:
       repeatIntervalSeconds: 0
     - spawnType: 0
       delayFromWaveStartSeconds: 80
-      spawnUnitCount: 5
+      spawnUnitCount: 1
       spawnIntervalSeconds: 0.2
       repeatCount: 5
       repeatIntervalSeconds: 20
@@ -44,13 +44,13 @@ MonoBehaviour:
     spawnGroups:
     - spawnType: 0
       delayFromWaveStartSeconds: 0
-      spawnUnitCount: 10
+      spawnUnitCount: 2
       spawnIntervalSeconds: 0.2
       repeatCount: 3
       repeatIntervalSeconds: 20
     - spawnType: 0
       delayFromWaveStartSeconds: 60
-      spawnUnitCount: 5
+      spawnUnitCount: 1
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
@@ -62,7 +62,7 @@ MonoBehaviour:
       repeatIntervalSeconds: 0
     - spawnType: 0
       delayFromWaveStartSeconds: 80
-      spawnUnitCount: 5
+      spawnUnitCount: 1
       spawnIntervalSeconds: 0.2
       repeatCount: 5
       repeatIntervalSeconds: 20
@@ -76,7 +76,7 @@ MonoBehaviour:
       repeatIntervalSeconds: 0
     - spawnType: 0
       delayFromWaveStartSeconds: 60
-      spawnUnitCount: 10
+      spawnUnitCount: 2
       spawnIntervalSeconds: 0.2
       repeatCount: 3
       repeatIntervalSeconds: 10
@@ -96,7 +96,7 @@ MonoBehaviour:
       repeatIntervalSeconds: 0
     - spawnType: 0
       delayFromWaveStartSeconds: 10
-      spawnUnitCount: 15
+      spawnUnitCount: 3
       spawnIntervalSeconds: 0.2
       repeatCount: 4
       repeatIntervalSeconds: 20
@@ -108,7 +108,7 @@ MonoBehaviour:
       repeatIntervalSeconds: 0
     - spawnType: 0
       delayFromWaveStartSeconds: 90
-      spawnUnitCount: 15
+      spawnUnitCount: 3
       spawnIntervalSeconds: 0.2
       repeatCount: 2
       repeatIntervalSeconds: 20
@@ -116,7 +116,7 @@ MonoBehaviour:
     spawnGroups:
     - spawnType: 0
       delayFromWaveStartSeconds: 0
-      spawnUnitCount: 15
+      spawnUnitCount: 3
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
@@ -128,7 +128,7 @@ MonoBehaviour:
       repeatIntervalSeconds: 0
     - spawnType: 0
       delayFromWaveStartSeconds: 40
-      spawnUnitCount: 15
+      spawnUnitCount: 3
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
@@ -140,7 +140,7 @@ MonoBehaviour:
       repeatIntervalSeconds: 0
     - spawnType: 0
       delayFromWaveStartSeconds: 80
-      spawnUnitCount: 15
+      spawnUnitCount: 3
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
@@ -152,7 +152,7 @@ MonoBehaviour:
       repeatIntervalSeconds: 0
     - spawnType: 0
       delayFromWaveStartSeconds: 120
-      spawnUnitCount: 15
+      spawnUnitCount: 3
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
@@ -164,7 +164,7 @@ MonoBehaviour:
       repeatIntervalSeconds: 0
     - spawnType: 0
       delayFromWaveStartSeconds: 160
-      spawnUnitCount: 15
+      spawnUnitCount: 3
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
@@ -172,7 +172,7 @@ MonoBehaviour:
     spawnGroups:
     - spawnType: 0
       delayFromWaveStartSeconds: 0
-      spawnUnitCount: 10
+      spawnUnitCount: 2
       spawnIntervalSeconds: 0.2
       repeatCount: 7
       repeatIntervalSeconds: 10
@@ -198,19 +198,19 @@ MonoBehaviour:
       repeatIntervalSeconds: 0
     - spawnType: 0
       delayFromWaveStartSeconds: 30
-      spawnUnitCount: 5
+      spawnUnitCount: 1
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
     - spawnType: 0
       delayFromWaveStartSeconds: 60
-      spawnUnitCount: 5
+      spawnUnitCount: 1
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
     - spawnType: 0
       delayFromWaveStartSeconds: 90
-      spawnUnitCount: 5
+      spawnUnitCount: 1
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
@@ -222,13 +222,13 @@ MonoBehaviour:
       repeatIntervalSeconds: 0
     - spawnType: 0
       delayFromWaveStartSeconds: 120
-      spawnUnitCount: 5
+      spawnUnitCount: 1
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0
     - spawnType: 0
       delayFromWaveStartSeconds: 150
-      spawnUnitCount: 5
+      spawnUnitCount: 1
       spawnIntervalSeconds: 0.2
       repeatCount: 1
       repeatIntervalSeconds: 0

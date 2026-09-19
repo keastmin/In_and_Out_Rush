@@ -2,7 +2,7 @@
 
 Status: Current
 
-Last reviewed: 2026-08-20
+Last reviewed: 2026-09-20
 
 ## 책임
 
@@ -22,6 +22,8 @@ Last reviewed: 2026-08-20
 ## 주요 연결
 
 PlayerBuilder, PlayerRunner, Grid, Track, Sanctuary, Resource Economy, Monster, Builder UI.
+
+공격 타워와 센터타워의 기본 공격은 Monster 레이어의 Trigger Collider를 검색하고 부모 `ITowerDamagedMonster`의 우선순위로 대상을 선택한다. State Authority만 `TakeTowerDamage`를 호출하며, 자식 Collider의 부모 NetworkObject를 발사 표시와 대상 동기화에 사용한다. Blade 범위 피해와 Missile 폭발도 같은 피해 계약을 사용한다.
 
 ## 관련 Asset
 

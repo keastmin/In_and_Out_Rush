@@ -2,7 +2,7 @@
 
 Status: Current
 
-Last reviewed: 2026-09-10
+Last reviewed: 2026-09-20
 
 ## Track transformation contract
 
@@ -15,7 +15,7 @@ Last reviewed: 2026-09-10
 
 - Round-end settlement stops pending track-monster spawn routines and settles every live track monster on State Authority in spawn order.
 - After settlement finishes, rounds 3 and 7 transition to Stages 2 and 3 respectively. Round 9 applies the permanent track-monster movement multiplier once. If the next round starts while settlement is active, its track spawn and queued internalized spawn are deferred until settlement and the post-round change finish.
-- The existing strengthening schedule remains rounds 5, 8, and every round from 11 onward.
+- The existing strengthening schedule remains rounds 5, 8, and every round from 11 onward. Track monsters move their Transform on State Authority and use NetworkTransform teleport for Stage 3 path transfers.
 
 ## Rollback and verification
 

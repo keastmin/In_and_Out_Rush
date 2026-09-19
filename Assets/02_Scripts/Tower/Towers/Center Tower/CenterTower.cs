@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Fusion;
+using ProjectIO.Monsters;
 using UnityEngine;
 
 namespace KIM.Dev
@@ -131,7 +132,10 @@ namespace KIM.Dev
 
         private void FireBullet()
         {
-            if (_targetNetworkObj != null && _targetNetworkObj.TryGetComponent(out Collider target))
+            Collider target = _targetNetworkObj != null
+                ? _targetNetworkObj.GetComponentInChildren<Collider>()
+                : null;
+            if (target != null)
             {
                 var bullet = Instantiate(_bullet, _firePosition.position, _firePosition.rotation);
                 bullet.InitBullet(target, _bulletSpeed);
@@ -287,12 +291,13 @@ namespace KIM.Dev
             for (int i = 0; i < colliders.Length; i++)
             {
                 Collider collider = colliders[i];
-                if (!TryGetTrackMonster(collider, out TrackMonster trackMonster))
+                ITowerDamagedMonster monster = collider.GetComponentInParent<ITowerDamagedMonster>();
+                if (monster == null)
                     continue;
 
-                if (trackMonster.Priority < minPriority)
+                if (monster.Priority < minPriority)
                 {
-                    minPriority = trackMonster.Priority;
+                    minPriority = monster.Priority;
                     target = collider;
                 }
             }
@@ -310,12 +315,13 @@ namespace KIM.Dev
             for (int i = 0; i < colliders.Length; i++)
             {
                 Collider collider = colliders[i];
-                if (!TryGetTrackMonster(collider, out TrackMonster trackMonster))
+                ITowerDamagedMonster monster = collider.GetComponentInParent<ITowerDamagedMonster>();
+                if (monster == null)
                     continue;
 
-                if (trackMonster.Priority < fallbackPriority)
+                if (monster.Priority < fallbackPriority)
                 {
-                    fallbackPriority = trackMonster.Priority;
+                    fallbackPriority = monster.Priority;
                     fallbackTarget = collider;
                 }
 
@@ -374,7 +380,7 @@ namespace KIM.Dev
 
             if (PropertyType == TowerPropertiesType.Flame)
             {
-                trackMonster.TakeDamage(float.MaxValue);
+                trackMonster.TakeTowerDamage(float.MaxValue);
             }
             else if (PropertyType == TowerPropertiesType.Blitz)
             {

@@ -2,15 +2,20 @@
 
 Status: Current
 
-Last reviewed: 2026-09-10
+Last reviewed: 2026-09-20
 
 ## Track monster spawn, traversal, and speed contract
 
 - `TrackMonsterSpawnGroup` stores `TrackMonsterSpawnType` (`Normal`, `ElitePredator`, `EliteWalker`, or `Boss`) and a spawn-unit count. Prefab selection is centralized on `TrackMonsterWaveSpawnTable`, which owns Normal Small/Medium/Large, both Elite, Boss, and dedicated internalized references.
 - One Normal unit expands in the exact order Small, Small, Small, Medium, Large. One special unit spawns one matching prefab. Existing wave timings, repeat values, and unit counts are preserved and the migrated groups are `ElitePredator`. Missing wave data falls back to four Normal units (20 monsters). Internalization spawns exactly the requested count from its dedicated prefab.
-- On Stage 3, reaching the first line endpoint teleports the authoritative `NetworkRigidbody3D` to the second line start. Normal and Boss monsters damage the Runner once and despawn only at the second endpoint. Elite Predator and Elite Walker instead teleport to the first line start and repeat without endpoint damage. All live types, including Elites, remain eligible for round-end settlement damage and despawn. Internalized monsters keep their no-damage natural completion rule.
+- On Stage 3, reaching the first line endpoint teleports the authoritative `NetworkTransform` to the second line start. Normal and Boss monsters damage the Runner once and despawn only at the second endpoint. Elite Predator and Elite Walker instead teleport to the first line start and repeat without endpoint damage. All live types, including Elites, remain eligible for round-end settlement damage and despawn. Internalized monsters keep their no-damage natural completion rule.
 - A valid Territory is resolved at spawn or lazily after initialization. Any track monster outside it receives a 1.5x movement multiplier, including Elite, Boss, and internalized monsters. Round 9 adds a one-time permanent 1.5x multiplier to current and future track monsters; together these equal 2.25x before the existing strengthening multiplier, and all factors compose multiplicatively.
-- Spawn, path transitions, endpoint damage, settlement, permanent speed mutation, and Despawn are State Authority-only. Clients observe replicated NetworkObject/NetworkRigidbody results.
+- Spawn, Transform movement, path transitions, endpoint damage, settlement, permanent speed mutation, and Despawn are State Authority-only. Track monster prefabs have no Rigidbody or NetworkRigidbody3D; clients observe replicated NetworkObject/NetworkTransform results. Their Body Collider is an enabled trigger on the Monster layer.
+
+## Tower damage target contract
+
+- `TrackMonster` implements `ITowerDamagedMonster` with spawn priority and `TakeTowerDamage`. Tower target scans find the interface on a detected Collider's parent and deal damage only through that contract on State Authority.
+- Attack and Center Towers include trigger Colliders in their range checks. Direct fire, Blade hits, and Missile explosions resolve the parent damage target; the NetworkObject and shot visual resolve the parent/root and child Collider respectively. The shared `Monster.prefab` and World Monster Rigidbody path remain unchanged.
 
 ## 책임
 

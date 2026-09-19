@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Fusion;
 using Dev.Network;
+using ProjectIO.Monsters;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -87,27 +88,26 @@ namespace KIM.Dev
             Collider[] monsterCollider = Physics.OverlapSphere(
                 transform.position,
                 _targettingRange,
-                _enemyLayer);
+                _enemyLayer,
+                QueryTriggerInteraction.Collide);
 
             // 트랙몬스터이고 우선순위가 더 낮으면 우선 타겟팅
             int minPriority = int.MaxValue;
             foreach (var mc in monsterCollider)
             {
-                if (mc.TryGetComponent(out TrackMonster tm))
+                ITowerDamagedMonster monster = mc.GetComponentInParent<ITowerDamagedMonster>();
+                if (monster != null)
                 {
-                    if (tm.Priority < minPriority)
+                    if (monster.Priority < minPriority)
                     {
-                        minPriority = tm.Priority;
+                        minPriority = monster.Priority;
                         target = mc;
                     }
                 }
             }
 
             // 타겟 동기화
-            if (target != null)
-            {
-                _targetObject = target.GetComponent<NetworkObject>();
-            }
+            _targetObject = target != null ? target.GetComponentInParent<NetworkObject>() : null;
 
             return target;
         }

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Fusion;
+using ProjectIO.Monsters;
 using Unity.Profiling;
 using UnityEngine;
 
@@ -53,7 +54,8 @@ namespace KIM.Dev
 
         void ApplyDamageToTarget(Collider collider)
         {
-            if (collider.TryGetComponent(out NetworkObject hitNo))
+            if (collider != null &&
+                collider.GetComponentInParent<ITowerDamagedMonster>() != null)
             {
                 ApplyDamageAndPropertyEffect(collider, blade.Damage);
             }
@@ -74,7 +76,11 @@ namespace KIM.Dev
 
         Collider[] HitTestWithAttackRange()
         {
-            var HitColliders = Physics.OverlapSphere(transform.position, AttackRange, _enemyLayer);
+            var HitColliders = Physics.OverlapSphere(
+                transform.position,
+                AttackRange,
+                _enemyLayer,
+                QueryTriggerInteraction.Collide);
             return HitColliders;
         }
 

@@ -102,9 +102,9 @@ CapsuleCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
-  m_Enabled: 0
+  m_Enabled: 1
   serializedVersion: 2
   m_Radius: 0.5
   m_Height: 2
@@ -133,7 +133,7 @@ PrefabInstance:
     - target: {fileID: -899081356136341341, guid: 1f07dcc6068889e46ba5ca7a07d5f118, type: 3}
       propertyPath: 'NetworkedBehaviours.Array.data[1]'
       value: 
-      objectReference: {fileID: 9087381548286319712}
+      objectReference: {fileID: 6800568363932527277}
     - target: {fileID: 777614999088421246, guid: 1f07dcc6068889e46ba5ca7a07d5f118, type: 3}
       propertyPath: m_IsActive
       value: 0
@@ -184,6 +184,8 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: -4194661950197827383, guid: 1f07dcc6068889e46ba5ca7a07d5f118, type: 3}
+    - {fileID: 5112166119584176575, guid: 1f07dcc6068889e46ba5ca7a07d5f118, type: 3}
+    - {fileID: -1151282776921145717, guid: 1f07dcc6068889e46ba5ca7a07d5f118, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 7559176346527958415, guid: 1f07dcc6068889e46ba5ca7a07d5f118, type: 3}
@@ -193,6 +195,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1081141730720889549, guid: 1f07dcc6068889e46ba5ca7a07d5f118, type: 3}
       insertIndex: 3
       addedObject: {fileID: -369501393314545224}
+    - targetCorrespondingSourceObject: {fileID: 1081141730720889549, guid: 1f07dcc6068889e46ba5ca7a07d5f118, type: 3}
+      insertIndex: 4
+      addedObject: {fileID: 6800568363932527277}
   m_SourcePrefab: {fileID: 100100000, guid: 1f07dcc6068889e46ba5ca7a07d5f118, type: 3}
 --- !u!1 &79362302799075366 stripped
 GameObject:
@@ -228,14 +233,20 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7559176346527958415, guid: 1f07dcc6068889e46ba5ca7a07d5f118, type: 3}
   m_PrefabInstance: {fileID: 1015859911283532523}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &9087381548286319712 stripped
+--- !u!114 &6800568363932527277
 MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: -1151282776921145717, guid: 1f07dcc6068889e46ba5ca7a07d5f118, type: 3}
-  m_PrefabInstance: {fileID: 1015859911283532523}
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 79362302799075366}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0a591d221a634417e9827eb58e17de84, type: 3}
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 1
+  _autoAOIOverride: 0
+  DisableSharedModeInterpolation: 0

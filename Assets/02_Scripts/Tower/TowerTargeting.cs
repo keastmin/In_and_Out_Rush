@@ -1,4 +1,5 @@
 using Fusion;
+using ProjectIO.Monsters;
 using UnityEngine;
 
 namespace KIM.Dev
@@ -22,24 +23,26 @@ namespace KIM.Dev
             Collider[] monsterCollider = Physics.OverlapSphere(
                 position,
                 range,
-                layer);
+                layer,
+                QueryTriggerInteraction.Collide);
 
             // 트랙몬스터이고 우선순위가 더 낮으면 우선 타겟팅
             int minPriority = int.MaxValue;
             foreach (var mc in monsterCollider)
             {
-                if (mc.TryGetComponent(out TrackMonster tm))
+                ITowerDamagedMonster monster = mc.GetComponentInParent<ITowerDamagedMonster>();
+                if (monster != null)
                 {
-                    if (tm.Priority < minPriority)
+                    if (monster.Priority < minPriority)
                     {
-                        minPriority = tm.Priority;
+                        minPriority = monster.Priority;
                         target = mc;
                     }
                 }
             }
 
             // 타겟의 네트워크 오브젝트를 반환
-            if (target != null) target.TryGetComponent(out netObj);
+            if (target != null) netObj = target.GetComponentInParent<NetworkObject>();
 
             return target;
         }

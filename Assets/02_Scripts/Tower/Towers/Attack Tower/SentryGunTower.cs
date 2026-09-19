@@ -65,7 +65,10 @@ namespace KIM.Dev
 
         private void OnShotChanged()
         {
-            if (_targetObject != null && _targetObject.TryGetComponent(out Collider target))
+            Collider target = _targetObject != null
+                ? _targetObject.GetComponentInChildren<Collider>()
+                : null;
+            if (target != null)
             {
                 var bullet = Instantiate(_bullet, _attackPosition.position, Quaternion.identity);
                 bullet.InitBullet(target, _bulletSpeed);

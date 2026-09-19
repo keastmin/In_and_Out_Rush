@@ -4,13 +4,13 @@ using UnityEditor;
 using System;
 using Dev;
 using Dev.Network;
-using Fusion.Addons.Physics;
+using Fusion;
 using KIM.Dev;
 using ProjectIO.Monsters;
 using ProjectIO.Tracks;
 using UnityEngine;
 
-public class TrackMonster : Monster, IFogOfWarAlwaysVisible
+public class TrackMonster : Monster, IFogOfWarAlwaysVisible, ITowerDamagedMonster
 {
     [SerializeField] private float _completionDamage = 10f;
     [SerializeField, Min(1f)] private float _outsideTerritorySpeedMultiplier = 1.5f;
@@ -22,7 +22,7 @@ public class TrackMonster : Monster, IFogOfWarAlwaysVisible
     private bool _isInternalized;
     private int _spawnOrder;
     private TrackMonsterSpawnType _spawnType;
-    private NetworkRigidbody3D _networkRigidbody;
+    private NetworkTransform _networkTransform;
     private bool _completionHandled;
 
     public int Priority => _priority;
@@ -47,8 +47,10 @@ public class TrackMonster : Monster, IFogOfWarAlwaysVisible
         currentPathIndex = 0;
         currentPointIndex = 1;
         _completionHandled = false;
-        TryGetComponent(out _networkRigidbody);
+        TryGetComponent(out _networkTransform);
     }
+
+    public void TakeTowerDamage(float damage) => TakeDamage(damage);
 
     public override void ApplyStatMultiplier(float multiplier)
     {
@@ -119,7 +121,8 @@ public class TrackMonster : Monster, IFogOfWarAlwaysVisible
 
         currentPointIndex = Mathf.Clamp(currentPointIndex, 1, path.Vertices.Length - 1);
         Vector3 target = path.Vertices[currentPointIndex];
-        Vector3 moveDir = target - RigidbodyPosition;
+        Vector3 currentPosition = transform.position;
+        Vector3 moveDir = target - currentPosition;
         moveDir.y = 0f;
         float distance = moveDir.magnitude;
 
@@ -154,12 +157,12 @@ public class TrackMonster : Monster, IFogOfWarAlwaysVisible
         }
 
         Vector3 direction = moveDir / distance;
-        SetMovementVelocity(direction * (moveDistance / deltaTime));
-        SetRigidbodyRotation(Quaternion.LookRotation(direction, Vector3.up));
+        transform.position = currentPosition + direction * moveDistance;
+        transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
     }
 
     private float EffectiveMovementSpeed
-        => IsPositionOutsideTerritory(RigidbodyPosition)
+        => IsPositionOutsideTerritory(transform.position)
             ? movementSpeed * Mathf.Max(1f, _outsideTerritorySpeedMultiplier)
             : movementSpeed;
 
@@ -205,14 +208,14 @@ public class TrackMonster : Monster, IFogOfWarAlwaysVisible
             return;
         }
 
-        if (_networkRigidbody == null)
+        if (_networkTransform == null)
         {
-            TryGetComponent(out _networkRigidbody);
+            TryGetComponent(out _networkTransform);
         }
 
-        if (_networkRigidbody == null)
+        if (_networkTransform == null)
         {
-            Debug.LogError($"{name} requires NetworkRigidbody3D for track path transfers.", this);
+            Debug.LogError($"{name} requires NetworkTransform for track path transfers.", this);
             StopMovement();
             return;
         }
@@ -220,7 +223,7 @@ public class TrackMonster : Monster, IFogOfWarAlwaysVisible
         StopMovement();
         currentPathIndex = pathIndex;
         currentPointIndex = 1;
-        _networkRigidbody.Teleport(targetPath.Vertices[0], transform.rotation);
+        _networkTransform.Teleport(targetPath.Vertices[0], transform.rotation);
     }
 
     private void CompleteTrack()

@@ -1,6 +1,6 @@
 # W-20260920-001 트랙 몬스터 이동·공격 타워 피해 경로 교체
 
-Status: Reserved
+Status: Completed
 
 ## 동기화 기준
 
@@ -85,12 +85,23 @@ Status: Reserved
 
 ## 실제 변경
 
-- 예약 단계. 구현 전.
+- `TrackMonster.cs`: 트랙 이동을 State Authority의 Transform 위치·회전 변경으로 교체하고 Stage 3 전환을 `NetworkTransform.Teleport`로 변경했다. `ITowerDamagedMonster`가 기존 권위 검사된 `TakeDamage`로 피해를 전달한다.
+- `Assets/02_Scripts/Features/Monster/Public/ITowerDamagedMonster.cs`와 `.meta`, `Public.meta`: 타워 전용 우선순위·피해 계약을 추가했다.
+- `TowerTargeting.cs`, `AttackTower.cs`, `TowerPropertyEffectApplier.cs`, `BladeTower.cs`, `Missile.cs`, `SentryGunTower.cs`, `CenterTower.cs`: Trigger 포함 검색, 부모 인터페이스 대상 선정·피해, 부모 NetworkObject와 자식 Collider의 발사 표시 경로로 바꿨다.
+- `Assets/03_Prefabs/Field/Track Monster.prefab`: 상속된 Rigidbody·NetworkRigidbody3D를 제거하고 NetworkTransform을 연결했다. Body CapsuleCollider를 활성 Trigger로 바꿨다. 다른 6종은 이 Prefab을 상속하므로 파일 수정 없이 반영된다.
+- `Docs/Features/MonstersAndProjectiles.md`, `Docs/Features/TrackAndRounds.md`, `Docs/Features/TowerAndLaboratory.md`: 이동 복제와 피해 계약을 갱신했다. `Docs/PROJECT_MAP.md`의 책임·라우팅은 그대로다.
 
 ## 검증 결과
 
-- 예약 단계. 구현 전.
+- `dotnet build Assembly-CSharp.csproj` 성공: 오류 0, 기존 경고 16. Unity가 생성한 `.csproj`에 신규 인터페이스가 아직 열거되지 않아 임시 MSBuild targets로 해당 파일을 빌드 입력에만 추가했다. 저장소의 `.csproj`는 수정하지 않았다.
+- Prefab YAML 정적 검사 통과: 기본 Prefab에서 Rigidbody·NetworkRigidbody3D 제거, NetworkTransform 연결, Body Trigger 활성, local fileID 고유성, 하위 6종의 상속과 무오버라이드 확인.
+- 웨이브 테이블의 7개 Track Monster Prefab GUID 참조 확인. 공유 `Monster.prefab`과 World Monster 경로는 수정되지 않았다.
+- `dotnet test ProjectIO.Tracks.Tests.csproj`는 오류 없이 종료됐지만 테스트를 발견·실행하지 않아 런타임 검증으로 계산하지 않는다.
+- `git diff --check` 통과. 기존 코드·Prefab·기능 문서의 CRLF를 유지하고 변경 파일만 작업 트리에 남겼다.
 
 ## 남은 위험
 
-- Unity/Fusion 런타임 Host·Client와 Late Join 검증은 구현 후 수행 가능 여부를 확인한다.
+- 작업자의 최종 진행 요청을 받았으며 별도 Host·Client 실행 결과는 전달받지 않았다.
+- Unity Editor import/Fusion weaving과 실제 두 Peer 런타임, Late Join은 이 환경에서 실행하지 않았다. 따라서 Transform 복제 시점, Trigger 물리 검색 시점과 Peer 동등성은 미검증이다.
+- 작업자 수동 검증: Host와 Client를 연결하고 공격·센터 타워를 배치해 Normal/Elite/Boss가 접근할 때 우선순위 선정, 각 타워의 피해·발사 표시, Missile 범위 중복 피해 방지, Blade 타격과 Center 스킬을 양 Peer에서 확인한다. 타워가 없는 상태와 타겟 Despawn 후 발사 중단도 확인한다.
+- Stage 1~3에서 이동 속도·영역 밖 배율·라운드 강화, 첫 경로 끝 전환, Elite 반복, Normal/Boss의 최종 1회 피해·Despawn, 내재화 완료와 정착을 확인한다. 중간 합류 Client가 같은 위치·체력·공격 결과를 보고, Trigger Collider가 다른 이동을 막지 않는지 확인한다.

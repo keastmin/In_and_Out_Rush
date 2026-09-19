@@ -1,6 +1,7 @@
 using Fusion;
 using System.Collections;
 using System.Collections.Generic;
+using ProjectIO.Monsters;
 using Unity.Profiling;
 using UnityEngine;
 
@@ -152,18 +153,18 @@ namespace KIM.Dev
             if (hits != null && hits.Length > 0)
             {
                 // 같은 오브젝트에 콜라이더가 여러 개면 중복 데미지 방지
-                HashSet<IDamageable> damaged = new();
+                HashSet<ITowerDamagedMonster> damaged = new();
 
                 foreach (var col in hits)
                 {
                     if (col == null) continue;
 
-                    // 필요시 GetComponentInParent로 바꿔도 됨
-                    if (col.TryGetComponent(out IDamageable d))
+                    ITowerDamagedMonster monster = col.GetComponentInParent<ITowerDamagedMonster>();
+                    if (monster != null)
                     {
-                        if (damaged.Add(d))
+                        if (damaged.Add(monster))
                         {
-                            d.TakeDamage(_damage);
+                            monster.TakeTowerDamage(_damage);
                             TowerPropertyEffectApplier.ApplyEffect(
                                 col,
                                 _propertyType,

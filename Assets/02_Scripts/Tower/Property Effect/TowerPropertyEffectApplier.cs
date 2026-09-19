@@ -1,3 +1,4 @@
+using ProjectIO.Monsters;
 using UnityEngine;
 
 namespace KIM.Dev
@@ -14,8 +15,8 @@ namespace KIM.Dev
             if (target == null)
                 return;
 
-            if (target.TryGetComponent(out IDamageable damageable))
-                damageable.TakeDamage(finalDamage);
+            ITowerDamagedMonster monster = target.GetComponentInParent<ITowerDamagedMonster>();
+            monster?.TakeTowerDamage(finalDamage);
 
             ApplyEffect(target, propertyType, sourceTower, baseDamage, finalDamage);
         }

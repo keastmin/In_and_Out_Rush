@@ -25,7 +25,7 @@ Transform:
   m_GameObject: {fileID: 3109634769057027471}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: 0.5}
+  m_LocalPosition: {x: 0, y: 1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -43,6 +43,7 @@ GameObject:
   - component: {fileID: 790474295058619815}
   - component: {fileID: 5339796140402505478}
   - component: {fileID: 1233987647164190812}
+  - component: {fileID: 1233987647164190813}
   m_Layer: 6
   m_Name: Body
   m_TagString: Untagged
@@ -133,9 +134,32 @@ CapsuleCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.5
+  m_Height: 2
+  m_Direction: 1
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!136 &1233987647164190813
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8391885916696930382}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_LayerOverridePriority: 64
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 0
+  m_Enabled: 1
   serializedVersion: 2
   m_Radius: 0.5
   m_Height: 2
@@ -274,7 +298,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d03a373a6dacbc845bc42618bf7cf7c0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  attackTargetTransform: {fileID: 0}
+  attackTargetTransform: {fileID: 2954737922473482763}
   health: 10
   movementSpeed: 3
   arrivalThreshold: 0.1
@@ -283,9 +307,16 @@ MonoBehaviour:
   patrolMaximumRadius: 10
   obstaclePathPadding: 0.25
   detectionRadius: 10
-  fireInterval: 2
-  projectileSpeed: 8
-  projectileDamage: 10
+  projectileSpeed: 1
+  projectileDamage: 1
+  projectileSize: 1
   projectileLifetime: 5
+  projectileMaximumRange: 5
   muzzle: {fileID: 7971808962401802577}
   projectilePrefab: {fileID: 867123566864448965, guid: acdc69abdb813bf4dbea53b5f3ae8707, type: 3}
+  bodyRenderers:
+  - {fileID: 5339796140402505478}
+  disabledMaterial: {fileID: 0}
+  disabledColor: {r: 0.2, g: 0.2, b: 0.2, a: 1}
+  _IsDisabled:
+    _value: 0

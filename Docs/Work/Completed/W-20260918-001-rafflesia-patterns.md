@@ -1,6 +1,6 @@
 # W-20260918-001 라플라시아 패턴 공격과 영구 무력화
 
-Status: Reserved
+Status: Completed
 
 ## 동기화 기준
 
@@ -86,16 +86,35 @@ Monster와 Projectile / 기존 Rafflesia의 ShooterWorldMonster 동작 교체
 
 ## 실제 변경
 
-예약 문서만 작성. 구현 시작 전 작업자의 예약 진행 요청 대기.
+- 예약 커밋 `5374e65`를 Push하고 VerifyReservation=READY_TO_IMPLEMENT 확인 후 구현했다.
+- 예약한 기존 코드 4개, 신규 패턴·테스트 2개와 .meta, Rafflesia prefab 및 기능 문서를 변경했다. 예약 밖 구현 파일은 수정하지 않았다.
+- 단발 조준 사격을 패턴 스케줄러로 교체하고 체력 소진과 영역화 확장 지점을 분리했다. 청크 왕복 시 0체력 무력화·고정 위치를 보존한다. 영구 유지 계약에 따라 무력화된 몸체는 비활성 인구 정리에서도 보존한다.
+- 토큰 연결부는 권위 측 RafflesiaTokenRewardRequested(recordId, position, 2) 이벤트다. 실제 재화·드랍·UI는 미구현이다.
+- 산탄총이 Trigger를 무시하므로 물리 충돌을 제외한 비Trigger 총격 판정 Collider를 프리팹에 추가했다. 접촉용 Trigger와 함께 외형에 맞춰 편집한다.
+- 동일 라플라시아의 탄끼리 충돌을 무시해 동시 발사 직후 소멸을 막는다. 기존 Stalker 기본 동작은 유지한다.
+- 2026-09-19 작업자가 방향별 발사가 정상임을 확인하고 최종 Commit·Push를 요청했다. 사용자 Scene 변경과 프리팹 외형·발사 수치 조정은 제외하고 구현 변경만 게시한다.
 
 ## 검증 결과
 
 - CheckStart: AHEAD=0, BEHIND=0, READY_TO_CHECK_CONFLICTS.
 - ShooterWorldMonster 스크립트 GUID의 Prefab 소비자는 Rafflesia.prefab 하나임을 확인했다.
-- 구현·런타임 테스트는 아직 실행하지 않았다.
+- CheckReservation=RESERVATION_READY_TO_PUSH → 예약 Commit·Push → VerifyReservation=READY_TO_IMPLEMENT.
+- 실제 NUnit·순수 소스 직접 컴파일 후 `dotnet Temp/RafflesiaValidation/PolicyTests.dll`: 20/20 통과(인구 정책 13, 신규 패턴 7).
+- `Temp/RafflesiaValidation/ProjectIO.Monsters.rsp`, `Assembly-CSharp.rsp`로 직접 Roslyn 컴파일: 오류 0. 기존 및 직렬화 필드 경고는 남아 있다.
+- Prefab local fileID 고유성·로컬 참조·외부 GUID 및 신규 script .meta 확인 통과. Unity 내장 mesh GUID는 외부 asset 검사에서 제외했다.
+- git diff --check 통과. 보조 검증 산출물은 Git에서 무시되는 Temp/RafflesiaValidation에만 생성했다.
+- Unity Editor가 열려 있어 동일 프로젝트 별도 batchmode를 실행하지 않았다. Unity import/Fusion weaving, 실제 물리 충돌과 Host·Client·Late Join은 미검증이다. 기능 문서의 단계별 수동 절차를 수행해야 한다.
 
 ## 남은 위험
 
-- 공용 Monster의 기존 종료 경로와 비활성 Spawn record의 영역화 경로가 다르므로 원인 분리 및 중복 보상 검증 필요.
-- Trigger 전환 후 기존 무기·스킬 적중 query가 외형 Collider를 감지하는지 실제 확인 필요. 추가 공용 코드 변경이 필요하면 범위 확장 절차를 따른다.
+### 2026-09-19 방향별 투사체 누락 수정
+
+- 지면 충돌 추정을 철회하고 Unity 6000.0.69f1 독립 임시 프로젝트에서 초기 물리 위치 불일치를 재현했다. autoSyncTransforms=false에서 Instantiate 후 Transform을 (100,1,100)에 배치해도 Rigidbody.position은 (0,0,0)이었다. 기존 사거리 계산은 180·225·270도에서 이미 10m를 넘었다고 판정했다.
+- MonsterProjectile.Initialize에서 발사 Transform의 위치·회전을 Rigidbody에 먼저 적용하고 같은 물리 위치를 사거리 시작점으로 저장하도록 수정했다. 전역 Physics.SyncTransforms나 ProjectSettings 변경은 없다.
+- 독립 Unity 재현 검사에서 수정 후 3개 생성 위치 × 16방향=48개 사례 모두 초기 이동거리 0 및 조기 사거리 종료 없음 확인. Temp/RafflesiaSpawnProbe/probe-fixed.log에 결과를 기록했다. 이후 작업자가 게임에서 정상 발사를 확인했다. Host·Client·Late Join 전체 검증을 확인한 것으로 확대 해석하지 않는다.
+- 현재 생성된 Assembly-CSharp.csproj의 338개 소스를 직접 컴파일하여 오류 0. 기존 경고는 유지된다.
+- 작업자가 변경한 GameScene.unity 및 Rafflesia prefab의 외형·발사 수치는 작업 트리에 보존한다. 프리팹은 구현 기본값만 index에 분리 stage한다. Collider 우선순위는 Unity가 직렬화한 유효값 64를 사용한다.
+
+- 활성·비활성 영역화는 공통 record 종료로 통합했다. 실제 Host·Client 이벤트 횟수 검증은 남아 있다.
+- 산탄총 검색용 비Trigger Collider와 접촉 Trigger를 구성했다. 실제 Unity에서 충돌 제외·총/스킬 적중·접촉 콜백을 함께 확인해야 한다.
 - 외형과 접촉 크기는 작업자가 최종 편집하며 지름 3타일 일치 여부를 수동 확인한다.

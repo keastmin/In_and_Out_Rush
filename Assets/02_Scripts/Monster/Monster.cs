@@ -95,7 +95,8 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
     public bool TryRestoreCurrentHealth(float currentHealth)
     {
         if (!CanAccessNetworkState || !Object.HasStateAuthority ||
-            float.IsNaN(currentHealth) || float.IsInfinity(currentHealth) || currentHealth <= 0f)
+            float.IsNaN(currentHealth) || float.IsInfinity(currentHealth) ||
+            currentHealth < 0f || (currentHealth == 0f && !CanRestoreZeroHealth))
             return false;
 
         Health = Mathf.Min(currentHealth, MaxHealth);
@@ -106,13 +107,19 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
     {
         if (CanAccessNetworkState && Object.HasStateAuthority)
         {
-            Health -= damage;
+            Health = Mathf.Max(0f, Health - damage);
             if (Health <= 0)
             {
-                DestroyMonster();
+                OnHealthDepleted();
             }
         }
     }
+
+    protected virtual void OnHealthDepleted() => DestroyMonster();
+
+    protected virtual bool CanRestoreZeroHealth => false;
+
+    protected virtual void OnCapturedByTerritory() => DestroyMonster();
 
     public void ApplyStun(float duration)
     {
@@ -281,7 +288,7 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
         if (!IsPositionInTerritory(xzPosition))
             return false;
 
-        DestroyMonster();
+        OnCapturedByTerritory();
         return true;
     }
 
@@ -297,10 +304,13 @@ public class Monster : NetworkBehaviour, IMonster, IDamageable
             return;
         }
 
+        if (!HasStateAuthority)
+            return;
+
         var xzPosition = new Vector2(RigidbodyPosition.x, RigidbodyPosition.z);
         if (territory.IsPointInPolygon(xzPosition))
         {
-            DestroyMonster();
+            OnCapturedByTerritory();
         }
     }
 }

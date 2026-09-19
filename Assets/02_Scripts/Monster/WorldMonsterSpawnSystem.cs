@@ -43,6 +43,10 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
     private bool _hasPreparedSpawnRecords;
     private TimeSystem _timeSystem;
     private readonly WorldMonsterPopulationPolicy _populationPolicy = new();
+    private TerritorySystem _captureTerritorySystem;
+
+    // Future token economy subscribes here. State Authority emits once per stable record ID.
+    public event global::System.Action<int, Vector3, int> RafflesiaTokenRewardRequested;
 
     public void InitializeStageTime(TimeSystem timeSystem) => _timeSystem = timeSystem;
 
@@ -124,6 +128,9 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
             PrepareMonsterGroup(spawnGroups[i], territory, sacredZoneSystem, stageBootstrapper);
 
         _hasPreparedSpawnRecords = true;
+        _captureTerritorySystem = territorySystem;
+        if (_captureTerritorySystem != null)
+            _captureTerritorySystem.OnTerritoryExpandedEvent += CaptureDormantRafflesias;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         TestAllMonstersActive = false;
         TestControlsReady = true;
@@ -155,6 +162,10 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
 
     protected override void OnTearDown()
     {
+        if (_captureTerritorySystem != null)
+            _captureTerritorySystem.OnTerritoryExpandedEvent -= CaptureDormantRafflesias;
+        _captureTerritorySystem = null;
+        RafflesiaTokenRewardRequested = null;
         if (Object != null && Object.HasStateAuthority)
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -258,7 +269,7 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
                 continue;
             }
 
-            if (cull && monster == null)
+            if (cull && monster == null && !record.IsRafflesiaDisabled)
             {
                 float distance = new Vector2(record.Position.x, record.Position.z).magnitude;
                 float probability = WorldMonsterPopulationPolicy.GetCullProbability(distance, record.SpawnRadius);
@@ -326,7 +337,7 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
 
             if (candidate.IsInsideTerritory)
             {
-                record.IsDestroyed = true;
+                CaptureRecord(record);
                 continue;
             }
 
@@ -343,7 +354,7 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
 
             record.AdvanceDormantPosition(Runner.SimulationTime, dormantWanderRadius);
             if (territory.IsPointInPolygon(new Vector2(record.Position.x, record.Position.z)))
-                record.IsDestroyed = true;
+                CaptureRecord(record);
         }
     }
 
@@ -411,19 +422,21 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
                 continue;
 
             record.CurrentHealth = activeMonster.CurrentHealth;
+            if (activeMonster is ShooterWorldMonster rafflesia)
+                record.IsRafflesiaDisabled = rafflesia.IsDisabled;
             record.SetPosition(activeMonster.transform.position);
             record.ActiveMonster = null;
             _activeSpawnRecords.RemoveAt(i);
             Runner.Despawn(activeMonster.Object);
             record.AdvanceDormantPosition(Runner.SimulationTime, dormantWanderRadius);
             if (territory.IsPointInPolygon(new Vector2(record.Position.x, record.Position.z)))
-                record.IsDestroyed = true;
+                CaptureRecord(record);
         }
     }
 
     private void SpawnRecord(WorldMonsterSpawnRecord record, Territory territory, int spawnSequence)
     {
-        if (record.CurrentHealth <= 0f)
+        if (record.CurrentHealth <= 0f && !record.IsRafflesiaDisabled)
         {
             record.IsDestroyed = true;
             return;
@@ -460,7 +473,51 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
         }
 
         record.ActiveMonster = monster;
+        if (monster is ShooterWorldMonster rafflesia)
+        {
+            rafflesia.RestoreDisabledState(record.IsRafflesiaDisabled);
+            rafflesia.CapturedByTerritory += OnRafflesiaCaptured;
+        }
         _activeSpawnRecords.Add(record);
+    }
+
+    private void OnRafflesiaCaptured(ShooterWorldMonster monster)
+    {
+        for (int i = 0; i < _spawnRecords.Count; i++)
+        {
+            if (_spawnRecords[i].ActiveMonster == monster)
+            {
+                CaptureRecord(_spawnRecords[i]);
+                return;
+            }
+        }
+    }
+
+    private void CaptureDormantRafflesias(Territory territory, TerritorySystem system)
+    {
+        if (Object == null || !Object.IsValid || !HasStateAuthority)
+            return;
+        for (int i = 0; i < _spawnRecords.Count; i++)
+        {
+            WorldMonsterSpawnRecord record = _spawnRecords[i];
+            if (!record.IsDestroyed && record.Prefab is ShooterWorldMonster &&
+                territory.IsPointInPolygon(new Vector2(record.Position.x, record.Position.z)))
+                CaptureRecord(record);
+        }
+    }
+
+    private void CaptureRecord(WorldMonsterSpawnRecord record)
+    {
+        if (!HasStateAuthority || record.IsDestroyed)
+            return;
+        record.IsDestroyed = true;
+        WorldMonster monster = record.ActiveMonster;
+        record.ActiveMonster = null;
+        _activeSpawnRecords.Remove(record);
+        if (monster != null && monster.Object != null && monster.Object.IsValid)
+            monster.DestroyMonster();
+        if (record.Prefab is ShooterWorldMonster)
+            RafflesiaTokenRewardRequested?.Invoke(record.Seed, record.Position, 2);
     }
 
     private MonsterChunkCoordinate GetChunk(Vector3 position)
@@ -632,9 +689,12 @@ public class WorldMonsterSpawnSystem : Dev.Network.System, IWorldObstacleConsume
         public int SpawnSequence => Seed - 1;
         public WorldMonster ActiveMonster { get; set; }
         public bool IsDestroyed { get; set; }
+        public bool IsRafflesiaDisabled { get; set; }
 
         public void AdvanceDormantPosition(float simulationTime, float wanderRadius)
         {
+            if (Prefab is ShooterWorldMonster)
+                return;
             float phase = simulationTime * 0.17f + Seed * 0.6180339f;
             float radius = Mathf.Max(0f, wanderRadius) * (0.35f + 0.15f * Mathf.Sin(phase * 0.71f));
             Vector3 offset = new(

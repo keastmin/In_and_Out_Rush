@@ -67,8 +67,8 @@ public class PlayerRunnerUpgradeHandler
 
         switch (obtainable)
         {
-            case Item:
-                return runner.TryReceiveRandomItemSupply();
+            case Item item:
+                return runner.TryReceiveItemSupply(item.ItemType);
             case Weapon:
                 return runner.TryReceiveWeaponSupply();
             case Skill:

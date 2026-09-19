@@ -4,6 +4,7 @@ using Dev.Local;
 using UnityEngine;
 using KIM.Dev;
 using ProjectIO.ResourceEconomy.Adapters.Fusion;
+using ProjectIO.RunnerSupply;
 
 namespace Dev.Network
 {
@@ -150,6 +151,7 @@ namespace Dev.Network
 
             PlayerBuilder?.InjectTowerMoveDependencies(timeSystem, ResourceSystem, Grid);
             UIController.InitializeStageUIController(_towerUpgradeManager, ResourceSystem, timeSystem);
+            TryBindRunnerSupply();
         }
 
         private void KIMBindObjects()
@@ -203,6 +205,7 @@ namespace Dev.Network
         public void OnSpawnedLaboratory(Laboratory laboratory)
         {
             _localLaboratory = laboratory;
+            TryBindRunnerSupply();
             CinemachineSystem?.SetLaboratoryTarget(laboratory.transform);
             TryInjectBuilderUI(laboratory);
         }
@@ -229,6 +232,28 @@ namespace Dev.Network
 
             laboratory.InjectBuilderUI(UIController.BuilderUI);
             return true;
+        }
+
+        private void TryBindRunnerSupply()
+        {
+            if (_localLaboratory == null || UIController == null || PlayerBuilder == null ||
+                !_localLaboratory.TryGetComponent(out RunnerSupplyNetwork network))
+                return;
+
+            network.Initialize(ResourceSystem, Grid, PlayerBuilder);
+            SupplyTowerManager supplies = _towerUpgradeManager != null
+                ? _towerUpgradeManager.GetComponent<SupplyTowerManager>() : null;
+            supplies?.Initialize(network);
+            _towerBuildManager?.InitializeSupplies(supplies);
+            PlayerBuilder.BuilderTowerBuild?.InitializeSupplies(supplies);
+
+            PlayerBuilderUI builderUI = UIController.BuilderUI;
+            if (builderUI != null)
+            {
+                builderUI.GetComponentInChildren<RunnerSupplyUI>(true)?.Initialize(network);
+                builderUI.GetComponentInChildren<LaboratorySupplyInventoryUI>(true)?.Initialize(network);
+            }
+            PlayerRunner?.InitializeSupplyPresentation(UIController.RunnerUI);
         }
 
         private void TryInjectSpawnedLaboratory()

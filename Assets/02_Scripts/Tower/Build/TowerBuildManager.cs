@@ -17,6 +17,8 @@ namespace KIM.Dev
 
         private TowerUpgradeManager _towerUpgradeManager;
         private ResourcePaymentFusionAdapter _resourcePayment;
+        private SupplyTowerManager _supplies;
+        public void InitializeSupplies(SupplyTowerManager supplies) => _supplies = supplies;
 
         public override void Spawned()
         {
@@ -149,7 +151,7 @@ namespace KIM.Dev
             return ConstructionUseCase.Execute(operation) == TowerConstructionResult.Success;
         }
 
-        private static bool CanBuildSpecialTower(string towerId, int[] supplyArray)
+        private bool CanBuildSpecialTower(string towerId, int[] supplyArray)
         {
             if (towerId == TowerIDContainer.TELEPORT_TOWER_ID)
             {
@@ -160,8 +162,8 @@ namespace KIM.Dev
             if (towerId == TowerIDContainer.SUPPLY_TOWER_ID)
             {
                 return supplyArray == null
-                    ? SupplyTowerManager.Instance != null && SupplyTowerManager.Instance.HasPendingSupplies
-                    : supplyArray.Length > 0;
+                    ? _supplies != null && _supplies.HasPendingSupplies
+                    : _supplies != null && _supplies.MatchesPendingSupplies(supplyArray);
             }
 
             return true;
@@ -281,6 +283,11 @@ namespace KIM.Dev
 
                 _manager.InjectTowerDependencies(_tower);
                 RegisterCenterTower(_tower, _builder);
+                if (_tower.TowerID == TowerIDContainer.SUPPLY_TOWER_ID)
+                {
+                    bool consumed = _manager._supplies.TryConsumePendingSupplies(_supplyArray);
+                    Debug.Assert(consumed, "Validated supply queue must be consumed exactly once at construction commit.");
+                }
             }
 
             public void Rollback()

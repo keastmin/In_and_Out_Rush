@@ -18,6 +18,8 @@ namespace KIM.Dev
         private PlayerBuilder _builder;
         private bool _isBuildRequestPending;
         private int[] _pendingSupplyArray = System.Array.Empty<int>();
+        private SupplyTowerManager _supplies;
+        public void InitializeSupplies(SupplyTowerManager supplies) => _supplies = supplies;
 
         public TowerGhost TowerGhost => _towerGhost;
         public Cost BuildCost => _buildCost;
@@ -65,8 +67,8 @@ namespace KIM.Dev
 
             if (towerId == TowerIDContainer.SUPPLY_TOWER_ID)
             {
-                return SupplyTowerManager.Instance != null &&
-                       SupplyTowerManager.Instance.HasPendingSupplies;
+                return _supplies != null &&
+                       _supplies.HasPendingSupplies;
             }
 
             return true;
@@ -136,8 +138,8 @@ namespace KIM.Dev
                 return;
 
             bool isSupplyTower = TowerID == TowerIDContainer.SUPPLY_TOWER_ID;
-            int[] supplyArray = isSupplyTower && SupplyTowerManager.Instance != null
-                ? SupplyTowerManager.Instance.PeekSupplyNumArray()
+            int[] supplyArray = isSupplyTower && _supplies != null
+                ? _supplies.PeekSupplyNumArray()
                 : System.Array.Empty<int>();
 
             if (isSupplyTower && supplyArray.Length == 0)
@@ -216,13 +218,14 @@ namespace KIM.Dev
         {
             _isBuildRequestPending = false;
 
-            if (!success || !isSupplyTower || SupplyTowerManager.Instance == null)
+            if (!success || !isSupplyTower || _supplies == null)
             {
                 _pendingSupplyArray = System.Array.Empty<int>();
                 return;
             }
 
-            SupplyTowerManager.Instance.TryConsumePendingSupplies(_pendingSupplyArray);
+            // The server consumes purchased contents atomically with successful tower construction.
+            // A local completion notification must never consume the replicated queue again.
             _pendingSupplyArray = System.Array.Empty<int>();
         }
     }

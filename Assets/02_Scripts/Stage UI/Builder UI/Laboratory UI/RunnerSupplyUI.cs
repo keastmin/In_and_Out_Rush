@@ -1,99 +1,103 @@
+using ProjectIO.RunnerSupply;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace KIM.Dev
 {
     public sealed class RunnerSupplyUI : MonoBehaviour
     {
-        [Header("보급품 설정")]
-        [SerializeField, Min(1)] private int _maxSupplyCount = 10;
-        [SerializeField] private Cost _skillSupplyCost = new Cost(50, 50);
-        [SerializeField] private Cost _itemSupplyCost = new Cost(50, 50);
-        [SerializeField] private Cost _weaponSupplyCost = new Cost(50, 50);
+        [Header("Item selection")]
+        [SerializeField] private LaboratoryItemDropdownUI _items;
+        [Header("Existing supply actions")]
+        [SerializeField] private Button _skillButton;
+        [SerializeField] private Button _weaponButton;
+        [SerializeField] private TMP_Text _skillPrice;
+        [SerializeField] private TMP_Text _weaponPrice;
+        [Header("Resources and feedback")]
+        [SerializeField] private TMP_Text _mineral;
+        [SerializeField] private TMP_Text _gas;
+        [SerializeField] private TMP_Text _feedback;
+        private RunnerSupplyNetwork _network;
+        private float _nextRefresh;
 
-        [Header("비용 텍스트")]
-        [SerializeField] private TextMeshProUGUI _skillMineralCostText;
-        [SerializeField] private TextMeshProUGUI _skillGasCostText;
-        [SerializeField] private TextMeshProUGUI _itemMineralCostText;
-        [SerializeField] private TextMeshProUGUI _itemGasCostText;
-        [SerializeField] private TextMeshProUGUI _weaponMineralCostText;
-        [SerializeField] private TextMeshProUGUI _weaponGasCostText;
-
-        [SerializeField] private LaboratorySupplyInventoryUI _supplyInventoryUI;
-
-        private void OnEnable()
+        public void Initialize(RunnerSupplyNetwork network)
         {
-            RefreshAllSupplyCosts();
+            Unbind();
+            _network = network;
+            if (isActiveAndEnabled) Bind();
+            Refresh();
         }
 
-        public void InitializeRunnerSupplyUI()
+        public void InitializeRunnerSupplyUI() => Refresh();
+        private void OnEnable() { Bind(); Refresh(); }
+        private void OnDisable() => Unbind();
+        private void Bind()
         {
-            RefreshAllSupplyCosts();
-            _supplyInventoryUI?.RefreshFromPendingSupplies();
+            if (_network == null) return;
+            _network.Changed -= Refresh;
+            _network.PurchaseCompleted -= HandlePurchaseCompleted;
+            _network.Changed += Refresh;
+            _network.PurchaseCompleted += HandlePurchaseCompleted;
+        }
+        private void Unbind()
+        {
+            if (_network == null) return;
+            _network.Changed -= Refresh;
+            _network.PurchaseCompleted -= HandlePurchaseCompleted;
+        }
+        private void Update()
+        {
+            // Resource balances can also change through upgrades while this screen is open.
+            if (Time.unscaledTime < _nextRefresh) return;
+            _nextRefresh = Time.unscaledTime + 0.15f;
+            Refresh();
         }
 
-        public void OnClickSkillSupplyButton()
+        public void OnClickSkillSupplyButton() => Purchase(RunnerSupplyRules.SkillId);
+        public void OnClickWeaponSupplyButton() => Purchase(RunnerSupplyRules.WeaponId);
+        public void OnClickItemSupplyButton() => Purchase(_items != null ? _items.SelectedId : 0);
+
+        private void Purchase(int id)
         {
-            TryPurchaseSupply(
-                SupplyTowerManager.SKILL_SUPPLY_NUM,
-                _skillSupplyCost,
-                _skillMineralCostText,
-                _skillGasCostText);
+            if (_feedback != null) _feedback.text = RunnerSupplyRules.Message(RunnerSupplyResult.Pending);
+            RunnerSupplyResult result = _network != null ? _network.RequestPurchase(id) : RunnerSupplyResult.NotReady;
+            // Host-local RPC can return synchronously. Do not overwrite its success with Pending.
+            if (result != RunnerSupplyResult.Pending) HandlePurchaseCompleted(id, result);
+            Refresh();
         }
 
-        public void OnClickItemSupplyButton()
+        private void HandlePurchaseCompleted(int id, RunnerSupplyResult result)
         {
-            TryPurchaseSupply(
-                SupplyTowerManager.ITEM_SUPPLY_NUM,
-                _itemSupplyCost,
-                _itemMineralCostText,
-                _itemGasCostText);
+            RunnerSupplyDefinition product = null;
+            if (_network != null && _network.Catalog != null) _network.Catalog.TryGet(id, out product);
+            if (_feedback != null)
+            {
+                _feedback.text = result == RunnerSupplyResult.Success && product != null
+                    ? $"{product.Name} 1개를 보급 대기열에 추가했습니다."
+                    : RunnerSupplyRules.Message(result, product);
+                _feedback.color = result == RunnerSupplyResult.Success
+                    ? new Color(0.48f, 0.88f, 0.74f) : new Color(1f, 0.74f, 0.38f);
+            }
+            Refresh();
         }
 
-        public void OnClickWeaponSupplyButton()
+        public void Refresh()
         {
-            TryPurchaseSupply(
-                SupplyTowerManager.WEAPON_SUPPLY_NUM,
-                _weaponSupplyCost,
-                _weaponMineralCostText,
-                _weaponGasCostText);
+            _items?.Refresh(_network);
+            if (_mineral != null) _mineral.text = "광물  " + (_network != null && _network.IsReady ? _network.Mineral.ToString("N0") : "—");
+            if (_gas != null) _gas.text = "가스  " + (_network != null && _network.IsReady ? _network.Gas.ToString("N0") : "—");
+            RefreshSupply(RunnerSupplyRules.SkillId, _skillButton, _skillPrice);
+            RefreshSupply(RunnerSupplyRules.WeaponId, _weaponButton, _weaponPrice);
         }
 
-        private void TryPurchaseSupply(
-            int supplyNumber,
-            Cost cost,
-            TextMeshProUGUI mineralCostText,
-            TextMeshProUGUI gasCostText)
+        private void RefreshSupply(int id, Button button, TMP_Text price)
         {
-            SupplyTowerManager supplyManager = SupplyTowerManager.Instance;
-            if (supplyManager == null || supplyManager.PendingSupplyCount >= _maxSupplyCount)
-                return;
-
-            if (ResourceSystem.Instance == null || !ResourceSystem.Instance.IsResourceSufficient(cost))
-                return;
-
-            supplyManager.FillSupplyList(supplyNumber);
-            ResourceSystem.Instance.DeductCost(cost);
-            RefreshSupplyCost(cost, mineralCostText, gasCostText);
-            _supplyInventoryUI?.RefreshFromPendingSupplies();
-        }
-
-        private void RefreshAllSupplyCosts()
-        {
-            RefreshSupplyCost(_skillSupplyCost, _skillMineralCostText, _skillGasCostText);
-            RefreshSupplyCost(_itemSupplyCost, _itemMineralCostText, _itemGasCostText);
-            RefreshSupplyCost(_weaponSupplyCost, _weaponMineralCostText, _weaponGasCostText);
-        }
-
-        private static void RefreshSupplyCost(
-            Cost cost,
-            TextMeshProUGUI mineralCostText,
-            TextMeshProUGUI gasCostText)
-        {
-            if (mineralCostText != null)
-                mineralCostText.text = cost.Mineral.ToString();
-            if (gasCostText != null)
-                gasCostText.text = cost.Gas.ToString();
+            if (button != null) button.interactable = _network != null && !_network.IsPurchasePending &&
+                _network.Evaluate(id) == RunnerSupplyResult.Success;
+            if (price != null && _network != null && _network.Catalog != null &&
+                _network.Catalog.TryGet(id, out RunnerSupplyDefinition product))
+                price.text = LaboratoryItemDropdownUI.Price(product);
         }
     }
 }

@@ -1,117 +1,50 @@
+using System;
+using ProjectIO.RunnerSupply;
+using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace KIM.Dev
 {
     public sealed class LaboratorySupplyInventoryUI : MonoBehaviour
     {
-        [SerializeField] private Image[] _slotIcons = System.Array.Empty<Image>();
-        [SerializeField] private GameObject[] _emptySlotMarkers = System.Array.Empty<GameObject>();
-        [SerializeField] private Sprite _skillSupplyIcon;
-        [SerializeField] private Sprite _itemSupplyIcon;
-        [SerializeField] private Sprite _weaponSupplyIcon;
+        [SerializeField] private LaboratorySupplySlotUI[] _slots = Array.Empty<LaboratorySupplySlotUI>();
+        [SerializeField] private TMP_Text _count;
+        private RunnerSupplyNetwork _network;
 
-        private SupplyTowerManager _supplyManager;
-        private bool _hasStarted;
-
-        private void Awake()
+        public void Initialize(RunnerSupplyNetwork network)
         {
-            ClearSlots();
-        }
-
-        private void OnEnable()
-        {
-            if (!_hasStarted)
-                return;
-
-            BindSupplyManager();
+            Unbind();
+            _network = network;
+            if (isActiveAndEnabled) Bind();
             RefreshFromPendingSupplies();
         }
 
-        private void Start()
+        private void OnEnable() { Bind(); RefreshFromPendingSupplies(); }
+        private void OnDisable() => Unbind();
+        private void Bind()
         {
-            _hasStarted = true;
-            BindSupplyManager();
-            RefreshFromPendingSupplies();
+            if (_network == null) return;
+            _network.Changed -= RefreshFromPendingSupplies;
+            _network.Changed += RefreshFromPendingSupplies;
+        }
+        private void Unbind()
+        {
+            if (_network != null) _network.Changed -= RefreshFromPendingSupplies;
         }
 
-        private void OnDisable()
-        {
-            UnbindSupplyManager();
-        }
+        public void RefreshFromPendingSupplies() =>
+            DisplaySnapshot(_network != null ? _network.Catalog : null,
+                _network != null ? _network.Snapshot() : Array.Empty<int>());
 
-        public void RefreshFromPendingSupplies()
+        public void DisplaySnapshot(RunnerSupplyCatalog catalog, int[] products)
         {
-            BindSupplyManager();
-            int[] pendingSupplies = _supplyManager != null
-                ? _supplyManager.PeekSupplyNumArray()
-                : System.Array.Empty<int>();
-
-            for (int i = 0; i < _slotIcons.Length; i++)
+            for (int i = 0; i < _slots.Length; i++)
             {
-                Sprite supplyIcon = i < pendingSupplies.Length
-                    ? GetSupplyIcon(pendingSupplies[i])
-                    : null;
-                SetSlot(i, supplyIcon);
+                RunnerSupplyDefinition product = null;
+                if (i < products.Length && catalog != null) catalog.TryGet(products[i], out product);
+                _slots[i]?.Display(i, product);
             }
-        }
-
-        private void BindSupplyManager()
-        {
-            SupplyTowerManager currentManager = SupplyTowerManager.Instance;
-            if (_supplyManager == currentManager)
-                return;
-
-            UnbindSupplyManager();
-            _supplyManager = currentManager;
-            if (_supplyManager != null)
-                _supplyManager.OnUIRevertAction += HandlePendingSuppliesConsumed;
-        }
-
-        private void UnbindSupplyManager()
-        {
-            if (_supplyManager != null)
-                _supplyManager.OnUIRevertAction -= HandlePendingSuppliesConsumed;
-
-            _supplyManager = null;
-        }
-
-        private void HandlePendingSuppliesConsumed()
-        {
-            RefreshFromPendingSupplies();
-        }
-
-        private void ClearSlots()
-        {
-            for (int i = 0; i < _slotIcons.Length; i++)
-                SetSlot(i, null);
-        }
-
-        private void SetSlot(int index, Sprite supplyIcon)
-        {
-            if (index < 0 || index >= _slotIcons.Length)
-                return;
-
-            Image slotIcon = _slotIcons[index];
-            if (slotIcon != null)
-            {
-                slotIcon.sprite = supplyIcon;
-                slotIcon.enabled = supplyIcon != null;
-            }
-
-            if (index < _emptySlotMarkers.Length && _emptySlotMarkers[index] != null)
-                _emptySlotMarkers[index].SetActive(supplyIcon == null);
-        }
-
-        private Sprite GetSupplyIcon(int supplyNumber)
-        {
-            return supplyNumber switch
-            {
-                SupplyTowerManager.SKILL_SUPPLY_NUM => _skillSupplyIcon,
-                SupplyTowerManager.ITEM_SUPPLY_NUM => _itemSupplyIcon,
-                SupplyTowerManager.WEAPON_SUPPLY_NUM => _weaponSupplyIcon,
-                _ => null
-            };
+            if (_count != null) _count.text = $"{products.Length} / {RunnerSupplyRules.Capacity}";
         }
     }
 }

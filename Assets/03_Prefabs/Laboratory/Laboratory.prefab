@@ -270,6 +270,7 @@ GameObject:
   - component: {fileID: 1113385613191258577}
   - component: {fileID: -994325378248675283}
   - component: {fileID: 3975940740451406387}
+  - component: {fileID: 6325679037352072558}
   m_Layer: 0
   m_Name: Laboratory
   m_TagString: Untagged
@@ -303,8 +304,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a8bdc5ca5e3b5014db9ccfd451aa7379, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name:
+  m_EditorClassIdentifier:
   _buildRange: 1
   _requireTerritory: 1
   _BuiltIndex: {x: 0, y: 0}
@@ -320,14 +321,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name:
+  m_EditorClassIdentifier:
   SortKey: 1304593629
   ObjectInterest: 1
   Flags: 262145
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 1113385613191258577}
+  - {fileID: 6325679037352072558}
   ForceRemoteRenderTimeframe: 0
 --- !u!136 &3975940740451406387
 CapsuleCollider:
@@ -352,6 +354,19 @@ CapsuleCollider:
   m_Height: 5.35
   m_Direction: 1
   m_Center: {x: 0, y: 2.05, z: 0}
+--- !u!114 &6325679037352072558
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5528802654777136540}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14dc5e123f6d2a444b6b57bbae1aebd7, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  _catalog: {fileID: 11400000, guid: 93c6e0a625bfbdf4d9d360fb89471684, type: 2}
 --- !u!1 &5951810586524426839
 GameObject:
   m_ObjectHideFlags: 0

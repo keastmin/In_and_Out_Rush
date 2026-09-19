@@ -25,6 +25,8 @@ clear를 건너뛴다.
 
 ## 공개 연결부
 
+`StageBootstrapper.KIM.TryBindRunnerSupply`는 KIM 시스템 초기화와 Laboratory Spawn 알림 양쪽에서 보급 참조를 연결한다. Laboratory의 `RunnerSupplyNetwork`에 ResourceSystem·Grid·PlayerBuilder를, 건설 소비자에 SupplyTowerManager를, 비활성 상태를 포함한 연구소 UI에 네트워크 상태를, Runner에 수령 메시지 UI를 전달한다. UI 컴포넌트가 다른 시스템으로 참조를 전달하지 않는다.
+
 - `StageBootstrapper.Instance`
 - `PlayerRunner`, `PlayerBuilder`, `Grid`, `TerritorySystem`
 - `LocalPlayerRunnerSpawned`, Laboratory 주입 메서드

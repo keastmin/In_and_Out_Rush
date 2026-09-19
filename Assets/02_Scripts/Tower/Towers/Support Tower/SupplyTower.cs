@@ -1,97 +1,65 @@
 using Fusion;
-using System.Collections.Generic;
+using ProjectIO.RunnerSupply;
 using UnityEngine;
 
 namespace KIM.Dev
 {
     public class SupplyTower : SupportTower, IRunnerInteractableTower
     {
-        private const int MaxSlots = 10;
-
-        [Networked, Capacity(MaxSlots), OnChangedRender(nameof(OnSuppliesChanged))]
+        [Networked, Capacity(RunnerSupplyRules.Capacity)]
         private NetworkLinkedList<int> Supplies => default;
 
-        protected override void TowerAwake()
-        {
-            SetId(TowerIDContainer.SUPPLY_TOWER_ID);
-        }
+        protected override void TowerAwake() => SetId(TowerIDContainer.SUPPLY_TOWER_ID);
 
-        /// <summary>
-        /// 러너에게 보급물자를 전달하는 인터페이스 함수
-        /// </summary>
-        /// <param name="runner">전달 받을 플레이어 러너</param>
         public void Interact(PlayerRunner runner)
         {
-            if (runner == null || !IsSpawnedInSimulation())
+            // F is already carried by the Runner's Fusion input to State Authority.
+            if (!IsSpawnedInSimulation() || !HasStateAuthority || runner == null ||
+                runner.Runner != Runner || !runner.HasStateAuthority || runner.IsDead)
                 return;
 
-            if (Supplies.Count == 0)
+            Collider targetCollider = GetComponent<Collider>();
+            Vector3 origin = runner.transform.position + Vector3.up;
+            Vector3 target = targetCollider != null ? targetCollider.ClosestPoint(origin) : transform.position;
+            if ((target - origin).sqrMagnitude > 3.25f * 3.25f || Supplies.Count == 0)
                 return;
 
-            var supplyManager = SupplyTowerManager.Instance;
-            if (supplyManager == null)
-                return;
-
-            foreach (var suppliesNum in Supplies)
+            int received = 0;
+            for (int i = 0; i < Supplies.Count;)
             {
-                if (supplyManager.NumToSupplies.TryGetValue(suppliesNum, out var supply))
+                int productId = Supplies[i];
+                if (runner.TryReceiveSupply(productId))
                 {
-                    runner.Supply(supply());
+                    Supplies.Remove(productId);
+                    received++;
                 }
+                else i++;
             }
 
-            RPC_RunnerGetSupplies();
+            runner.NotifySupplyResult(received, Supplies.Count);
+            if (Supplies.Count == 0)
+            {
+                ReleaseGridOccupation();
+                Runner.Despawn(Object);
+            }
         }
 
         public bool TryLoadSupplies(int[] supplyArray)
         {
-            if (!IsSpawnedInSimulation() || !HasStateAuthority || supplyArray == null || supplyArray.Length == 0)
+            if (!IsSpawnedInSimulation() || !HasStateAuthority || supplyArray == null ||
+                supplyArray.Length == 0 || supplyArray.Length > RunnerSupplyRules.Capacity)
                 return false;
 
-            Supplies.Clear();
-
-            var supplyManager = SupplyTowerManager.Instance;
-            for (int i = 0; i < supplyArray.Length && Supplies.Count < MaxSlots; i++)
-            {
-                int supplyNum = supplyArray[i];
-                if (supplyManager != null && !supplyManager.NumToSupplies.ContainsKey(supplyNum))
-                {
-                    continue;
-                }
-
-                Supplies.Add(supplyNum);
-            }
-
-            return Supplies.Count > 0;
-        }
-
-        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-        private void RPC_RunnerGetSupplies()
-        {
-            if (!IsSpawnedInSimulation() || !HasStateAuthority)
-                return;
+            foreach (int id in supplyArray)
+                if (id != RunnerSupplyRules.SkillId && id != RunnerSupplyRules.WeaponId &&
+                    RunnerSupplyRules.GetItemType(id) == RunnerItemType.None)
+                    return false;
 
             Supplies.Clear();
-            DespawnIfEmpty();
+            foreach (int id in supplyArray) Supplies.Add(id);
+            return true;
         }
 
-        private void OnSuppliesChanged()
-        {
-            DespawnIfEmpty();
-        }
-
-        private void DespawnIfEmpty()
-        {
-            if (!IsSpawnedInSimulation() || !HasStateAuthority || Supplies.Count > 0)
-                return;
-
-            ReleaseGridOccupation();
-            Runner.Despawn(Object);
-        }
-
-        private bool IsSpawnedInSimulation()
-        {
-            return Object != null && Object.IsValid && Object.IsInSimulation;
-        }
+        private bool IsSpawnedInSimulation() => Object != null && Object.IsValid && Object.IsInSimulation;
     }
 }

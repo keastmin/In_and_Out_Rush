@@ -1,6 +1,6 @@
 # W-20260920-002 연구소 UI 재구성과 개별 아이템 구매·보급
 
-Status: Reserved
+Status: Completed
 
 ## 동기화 기준
 
@@ -174,17 +174,51 @@ CheckStart와 Docs/Work/Active 조사 결과 README 외 예약이 없어 현재 
 
 ## 실제 변경
 
-예약 문서만 작성. 구현·이미지 생성·Asset 변경은 예약 진행 요청과 Push 검증 후 시작한다.
+- 예약 진행 요청 후 `a7f88132661d83e26d4807c1b430bf0e62ab6127`을 Push하고 VerifyReservation의 READY_TO_IMPLEMENT를 확인했다.
+- RunnerSupply 도메인에 Catalog/Definition/Rules/Result, Laboratory의 authoritative 구매·대기열 NetworkBehaviour, 탭·드롭다운·개별 슬롯 표시 컴포넌트를 추가했다.
+- `LaboratoryUI`, `RunnerSupplyUI`, `LaboratorySupplyInventoryUI`를 표시·입력 역할로 정리했다. 기존 13개 강화 버튼의 컴포넌트/이벤트/비용·레벨 참조를 보존했다.
+- `SupplyTowerManager`, `TowerBuildManager`, `PlayerBuilderTowerBuild`는 서버 구매 목록을 검증한 뒤 건설 Commit에서만 적재 목록을 소비한다. Client 결과 수신 시 중복 로컬 소비를 제거했다.
+- `SupplyTower`, `PlayerRunner`, `PlayerRunnerUpgradeHandler`, `Item`에서 개별 ID/RunnerItemType으로 지급한다. 소지 한도에 걸린 항목은 타워에 보존하며 실제로 비었을 때만 제거한다. Runner 슬롯 수량은 NetworkArray로 복제하고 HUD 준비 시 현재 수량을 다시 표시한다.
+- `StageBootstrapper.KIM`이 공급 네트워크·건설 소비자·연구소 UI·Runner 수량 HUD와 수령 피드백을 주입한다.
+- `Builder Laboratory UI.prefab`을 Header / Research tabs / Runner Supply / 10-slot queue로 재구성했다. 생성한 헤더와 sliced panel을 적용했다. TMP 드롭다운은 기존 Runner UI의 5종 Sprite를 그대로 사용한다.
+- `Player Builder UI.prefab`, `GamePresentation.unity`에서 해당 연구소의 이전 레이아웃 override를 제거하고 닫기 이벤트·초기 활성 상태를 보존했다. Scene 카메라의 Editor 자동 갱신 값은 작업 전 값으로 복원한다.
+- `Laboratory.prefab`에 NetworkBehaviour와 Catalog를 연결했다. 기존 Global interest는 유지한다. Supply Tower/Player Runner prefab은 타입 배치 변경이 필요하지 않아 수정하지 않았다.
+- 신규 `Runner Supply Catalog.asset`, 생성 PNG 2개 및 프롬프트 문서, `BuilderLaboratoryUIBuilder.cs`, `RunnerSupplyVerification.cs`와 신규 Asset/폴더의 .meta를 추가했다.
+- 변경된 진입점·주입·편집 경로에 따른 문서 갱신: `Docs/Features/StageUI.md`, `TowerAndLaboratory.md`, `RunnerItemsAndSkills.md`, `StageInitialization.md`, `Docs/PROJECT_MAP.md`. manage-feature-work의 구현 후 통상 문서 갱신 단계이며 별도 기능 확장은 없다.
+- 초기 소지량/상한, 기존 아이템 효과, 스킬/무기 보급의 의미, 업그레이드 가격과 성장 규칙, 입력 키는 변경하지 않았다.
 
 ## 검증 결과
 
 - CheckStart: 동기화 확인, Active 충돌 없음.
 - Item!A4:M9에서 5종의 실제 가격·해금 조건을 읽었다. Excel 수정 없음.
 - 기존 UI 버튼 이벤트, Runner UI Sprite 참조, 구매 → 대기열 → 건설 배열 → SupplyTower → Runner 무작위 지급 연결부를 조사했다.
-- 구현 검증은 아직 수행하지 않았다.
+- Unity 6000.0.69f1에서 Assembly-CSharp와 Assembly-CSharp-Editor 컴파일 및 Fusion IL weaving을 확인했다.
+- `RunnerSupplyVerification.Verify`: 7종 상품 및 5종 시트 가격·아이콘·타입, 정확한 잔액, 자원 부족, 10칸 한도, 센터 해금, manifest 순서/중복/위조/빈 목록, 선택 인벤토리 슬롯만 증가, 가득 찬 슬롯 거부를 통과했다. 이는 순수 규칙/인벤토리 검사이며 실제 네트워크 수령 증거와 구분한다.
+- 프리팹 검사: 기존 강화 13개/탭 2개/구매 3개/닫기 1개, 드롭다운 5옵션과 pointer raycast, 슬롯 10개, 표시 컴포넌트의 직렬화 참조, 상위 프리팹 닫기 이벤트를 확인했다.
+- Unity Camera 렌더링: 1920×1080, 1280×720, 실제 TMP 드롭다운을 펼친 상태, 개별/중복 아이템이 든 10칸 대기열을 확인했다. 소해상도 슬롯 이름은 18px(1920 기준)로 확대했다. 스크롤바와 첫 항목 시작 상태를 구성했다. 이미지의 자원·대기열은 검사용 데이터다.
+- 검사 보고서와 프리뷰: `Library/RunnerSupplyTools/verification.txt`, `laboratory-1920.png`, `laboratory-1280.png`, `laboratory-1920-dropdown.png` (Git 제외).
+- Host 실행 시도: GameRoot 테스트 진입의 Fusion Scene 로딩이 Presentation을 제외하여 `CinemachineSystem requires scene camera references`와 Territory 초기화 NullReferenceException이 발생했고, 65초 안에 공급 시스템 준비 상태에 도달하지 못했다. 자동 테스트를 종료하고 추가로 연 GameWorld/GameRoot를 닫았다. `playtest.txt`에 실패 원인을 기록했다. 구매·건설·수령의 실제 Host 검증 통과로 간주하지 않는다.
+- 실제 Host·Client, 권한 없는 RPC, Late Join, 건설 실패/부분 수령/Despawn 실행 검증은 아래 절차로 남긴다. 정적 Authority 검토나 프리뷰로 Peer 동등성을 완료 처리하지 않는다.
+- 최종 `git diff --check` 통과. 신규 Asset의 .meta와 기존 컴포넌트 참조, 무작위 Item 진입점 제거를 확인했다. Unity가 재직렬화한 UI/Laboratory YAML의 빈 값 끝 공백을 정리했으며, 최종 stage 전 공백 검사를 통과했다.
 
 ## 남은 위험
 
 - 기존 초기 소지량이 상당수 최대치이며 방벽 Prefab은 99/99이다. 테스트 시 해당 아이템을 먼저 사용하거나 소지 한도로 타워에 남는 동작을 확인해야 한다.
-- UI 변경은 큰 계층 재구성이므로 Unity Editor API로 작성하고 외부 Prefab/Scene override와 TMP Font 참조를 점검한다.
-- Host·Client 실행 검증은 구현 단계에서 가능한 실행 환경을 확인하고, 수행하지 못한 시나리오는 수동 절차와 함께 남긴다.
+- 기존 테스트 진입의 Additive Scene 준비 문제는 이번 보급/UI 작업의 범위 밖이다. 정상 Lobby 경유 2-Peer 세션으로 아래 검증이 필요하다.
+- 수동 레이아웃 편집은 저장된 프리팹에서 한다. Editor Build Laboratory 명령은 명시적으로 재구성하며 수동 편집/카탈로그 값을 기획 기본값으로 덮어쓴다.
+
+## 남은 Host·Client 실행 절차
+
+1. 정상 Lobby 경로로 Host=Builder, Client=Runner 세션을 시작하고 세 Game 씬이 모두 준비됐는지 확인한다. 반대 역할 조합으로도 반복한다.
+2. 연구소 R/버튼으로 열고 5종 드롭다운 아이콘·가격, 탭의 모든 강화 항목, 닫기 버튼을 확인한다. 센터 없이 소각기/전류탄/생분해 구매가 잠기고 해당 센터 건설 후 열리는지 확인한다.
+3. 서로 다른 아이템과 같은 아이템을 섞어 구매하고 비용이 한 번 차감되는지, 양 Peer에서 같은 순서·아이콘과 10칸 한도를 보는지 확인한다. 자원 부족/상한/연속 요청 거부 시 비용·목록이 변하지 않아야 한다.
+4. 유효하지 않은 건설 위치·건설 비용 부족·위조 적재 목록은 구매 대기열을 보존해야 한다. 정상 보급 타워 건설은 실제 구매 목록을 적재하고 해당 항목만 대기열에서 한 번 제거해야 한다.
+5. Runner가 3m 이내에서 타워를 바라보고 F를 누른다. 구매한 종류만 증가하고 full 슬롯의 항목은 타워에 남아야 한다. 일부 아이템을 사용한 뒤 다시 F를 눌러 남은 항목을 받고 빈 타워의 점유 해제/Despawn 및 수령 메시지를 확인한다.
+6. 권한 없는 Peer의 구매/건설 요청이 거부되는지, 뒤늦게 들어온 Peer가 구매 대기열·적재 내용·현재 슬롯 수량을 복원하는지 확인한다. UI 닫기/다시 열기, 타워/연구소 Despawn 및 Scene 종료 시 중복 구독·NullReference가 없어야 한다.
+
+## 최종 전달 상태
+
+2026-09-20 사용자가 구현 내용과 질문·답변의 문서화 및 커밋을 명시적으로 요청했다. 이에 따라 작업 기록을 Completed로 이동하고 이번 작업의 구현·Asset·문서만 최종 커밋 대상으로 확정한다. 이 상태는 작업 기록의 인계를 뜻하며 실제 네트워크 플레이 검증 통과를 뜻하지 않는다. 실제 Host·Client 수령 검증은 미완료다.
+
+- 별도 질의응답: `Docs/개발 일지/2026-09-20-연구소-보급-질의응답.md`. 센터 해금 조건, 시작 소지량, 수령 한도, F Raycast 판정과 아직 확정하지 못한 원인을 구분하여 기록했다.
+- 기능 문서에서 완료 작업 및 질의응답으로 연결했다. 이번 문서화 단계에서는 게임 동작을 추가 변경하지 않았다.

@@ -1,0 +1,81 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf0e9c3a2ad29b547b1410b07590f965, type: 3}
+  m_Name: Runner Supply Catalog
+  m_EditorClassIdentifier:
+  _products:
+  - Id: 1
+    Name: "\uC2A4\uD0AC \uBCF4\uAE09"
+    Icon: {fileID: 21300000, guid: efef7a95ba0b75349a99640e44928620, type: 3}
+    Cost:
+      Mineral: 50
+      Gas: 50
+    ItemType: 0
+    RequiredCenter: 0
+    Description: "\uB7EC\uB108 \uC2A4\uD0AC \uBCF4\uAE09"
+  - Id: 2
+    Name: "\uBB34\uAE30 \uBCF4\uAE09"
+    Icon: {fileID: 21300000, guid: ec1a2e7b224633e408a0f0b87af75fe0, type: 3}
+    Cost:
+      Mineral: 50
+      Gas: 50
+    ItemType: 0
+    RequiredCenter: 0
+    Description: "\uB7EC\uB108 \uBB34\uAE30 \uBCF4\uAE09"
+  - Id: 7000
+    Name: "\uC0DD\uBA85\uC120"
+    Icon: {fileID: 1437580609, guid: 4c3f36af967ba69459e7ea216dfe72cf, type: 3}
+    Cost:
+      Mineral: 30
+      Gas: 0
+    ItemType: 1
+    RequiredCenter: 0
+    Description: "\uACBD\uB85C \uBCF5\uADC0\uB97C \uB3D5\uB294 \uC0DD\uC874 \uC544\uC774\uD15C"
+  - Id: 7001
+    Name: "\uBC29\uBCBD"
+    Icon: {fileID: 1669323852, guid: 4c3f36af967ba69459e7ea216dfe72cf, type: 3}
+    Cost:
+      Mineral: 30
+      Gas: 0
+    ItemType: 2
+    RequiredCenter: 0
+    Description: "\uD53C\uD574\uB97C \uB9C9\uB294 \uBC29\uC5B4 \uC544\uC774\uD15C"
+  - Id: 7002
+    Name: "\uC18C\uAC01\uAE30"
+    Icon: {fileID: -660558177, guid: 4c3f36af967ba69459e7ea216dfe72cf, type: 3}
+    Cost:
+      Mineral: 30
+      Gas: 20
+    ItemType: 3
+    RequiredCenter: 1
+    Description: "\uD654\uC5FC\uC73C\uB85C \uC801\uC744 \uACF5\uACA9\uD558\uB294
+      \uC544\uC774\uD15C"
+  - Id: 7003
+    Name: "\uC804\uB958\uD0C4"
+    Icon: {fileID: 35392563, guid: 4c3f36af967ba69459e7ea216dfe72cf, type: 3}
+    Cost:
+      Mineral: 50
+      Gas: 0
+    ItemType: 4
+    RequiredCenter: 2
+    Description: "\uC804\uB958\uB85C \uC801\uC744 \uC81C\uC555\uD558\uB294 \uD22C\uCC99
+      \uC544\uC774\uD15C"
+  - Id: 7004
+    Name: "\uC0DD\uBD84\uD574 \uC7A5\uCE58"
+    Icon: {fileID: -1526726504, guid: 4c3f36af967ba69459e7ea216dfe72cf, type: 3}
+    Cost:
+      Mineral: 0
+      Gas: 60
+    ItemType: 5
+    RequiredCenter: 3
+    Description: "\uC0DD\uBD84\uD574 \uD6A8\uACFC\uB85C \uC801\uC744 \uACF5\uACA9\uD558\uB294
+      \uC544\uC774\uD15C"

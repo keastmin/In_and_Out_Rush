@@ -17,7 +17,7 @@
 | Player Runner | 이동, 전투, 체력, 장비 사용 | `PlayerRunner`, `NetworkInputSystem` | Territory, Monster, UI, Camera | [PlayerRunner](Features/PlayerRunner.md) |
 | Runner Item·Skill | 아이템 소비 전략, 스킬 선택·실행 | `RunnerItemInventory`, `RunnerSkillCaster` | Runner, Network Spawn, Laboratory | [RunnerItemsAndSkills](Features/RunnerItemsAndSkills.md) |
 | Player Builder | 건설·이동·판매 상태와 입력 | `PlayerBuilder`, `PlayerBuilderStateMachine` | Grid, Tower, Resource, Builder UI | [PlayerBuilder](Features/PlayerBuilder.md) |
-| Tower와 Laboratory | 타워 생명주기·공격·지원·업그레이드 | `Tower`, `TowerBuildManager`, `Laboratory` | Grid, Resource, Runner, Builder | [TowerAndLaboratory](Features/TowerAndLaboratory.md) |
+| Tower와 Laboratory | 타워 생명주기·공격·지원·업그레이드, 개별 보급 구매·적재 | `Tower`, `TowerBuildManager`, `Laboratory`, `RunnerSupplyNetwork` | Grid, Resource, Runner, Builder, Runner Supply Catalog | [TowerAndLaboratory](Features/TowerAndLaboratory.md) |
 | Monster와 Projectile | 월드·트랙 몬스터와 투사체 | `Monster`, `WorldMonsterSpawnSystem`, `TrackMonsterSpawnSystem` | Track, Territory, Runner, Stage | [MonstersAndProjectiles](Features/MonstersAndProjectiles.md) |
 | Sacred Zone·Sanctuary·Gate | 정화 구역, 안식처, 출구와 승패 흐름 | `SacredZoneSystem`, `SanctuaryView`, `Gate` | Territory, Monster, StageSystem | [SacredZoneSanctuaryGate](Features/SacredZoneSanctuaryGate.md) |
 | Stage UI | Builder·Runner HUD와 입력 전달 | `StageUIController`, `PlayerBuilderUI`, `PlayerRunnerUI` | StageBootstrapper, Resource, Time | [StageUI](Features/StageUI.md) |
@@ -38,6 +38,7 @@
 | `Resource/Network` | ResourceSpawn |
 | `Resource/Local`, `System/ResourceSystem.cs` | ResourceEconomy |
 | `Features/Construction` | TowerAndLaboratory |
+| `Features/RunnerSupply` | TowerAndLaboratory, RunnerItemsAndSkills, StageUI |
 | `Player/Player Runner` | PlayerRunner, RunnerItemsAndSkills |
 | `Player/Player Builder`, `Drag`, `Interactable Object` | PlayerBuilder |
 | `Tower`, `Laboratory` | TowerAndLaboratory |

@@ -79,6 +79,11 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
 
     private Rigidbody _rigidbody;
     private PlayerRunnerMovement _movement;
+    [Networked, Capacity(RunnerItemInventory.SlotCount), OnChangedRender(nameof(RefreshReplicatedItemSlots))]
+    private NetworkArray<int> ItemCounts => default;
+    private RunnerMessagePopup _supplyFeedback;
+    private PlayerRunnerUI _supplyUI;
+
     private RunnerItemConsumer _itemConsumer;
     private RunnerItemInventory _itemInventory;
     private RunnerSkillCaster _skillCaster;
@@ -456,14 +461,45 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
 
     private void RefreshItemSlots()
     {
+        if (Object == null || !Object.IsValid) return;
+        if (HasStateAuthority)
+            for (int i = 0; i < RunnerItemInventory.SlotCount; i++)
+                ItemCounts.Set(i, _itemInventory.GetSlot(i).Count);
+        RefreshReplicatedItemSlots();
+    }
+
+    private void RefreshReplicatedItemSlots()
+    {
+        if (!HasInputAuthority || Object == null || !Object.IsValid) return;
         for (int i = 0; i < RunnerItemInventory.SlotCount; i++)
-        {
-            RunnerItemSlot slot = _itemInventory.GetSlot(i);
-            if (HasInputAuthority)
-                SetItemSlotUI(i, slot.ItemType, slot.Count);
-            else if (HasStateAuthority)
-                RPC_SetItemSlot(i, (int)slot.ItemType, slot.Count);
-        }
+            SetItemSlotUI(i, (RunnerItemType)(i + 1), ItemCounts[i]);
+    }
+
+    public int GetItemCount(RunnerItemType itemType)
+    {
+        int index = (int)itemType - 1;
+        return Object != null && Object.IsValid && index >= 0 && index < RunnerItemInventory.SlotCount
+            ? ItemCounts[index] : 0;
+    }
+
+    public void InitializeSupplyPresentation(PlayerRunnerUI ui)
+    {
+        _supplyUI = ui;
+        _supplyFeedback = ui != null ? ui.Popup?.MessagePopup : null;
+        RefreshReplicatedItemSlots();
+    }
+
+    public void NotifySupplyResult(int received, int remaining)
+    {
+        if (HasStateAuthority) RPC_NotifySupplyResult(received, remaining);
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
+    private void RPC_NotifySupplyResult(int received, int remaining)
+    {
+        string message = received > 0 ? $"보급품 {received}개 수령" : "소지량이 가득 차서 받을 수 없습니다.";
+        if (remaining > 0) message += $"\n받지 못한 {remaining}개는 보급 타워에 남아 있습니다.";
+        _supplyFeedback?.ShowMessage(message);
     }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -513,13 +549,7 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
 
     private void SetItemSlotUI(int slotIndex, RunnerItemType itemType, int count)
     {
-        StageBootstrapper.Instance.UIController.RunnerUI.SetItemSlot(slotIndex, itemType, count);
-    }
-
-    [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
-    private void RPC_SetItemSlot(int slotIndex, int itemType, int count)
-    {
-        SetItemSlotUI(slotIndex, (RunnerItemType)itemType, count);
+        _supplyUI?.SetItemSlot(slotIndex, itemType, count);
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
@@ -652,32 +682,22 @@ public class PlayerRunner : Player, IDamageable, IBuffReceiver, IHeal, IRunnerLa
     public void SpeedUp(float amount) => _upgradeHandler.SpeedUp(this, amount);
     public bool Supply(IObtainable obtainable) => _upgradeHandler.Supply(this, obtainable);
 
-    public bool TryReceiveRandomItemSupply()
+    public bool TryReceiveSupply(int productId)
     {
-        if (!HasStateAuthority)
+        if (!HasStateAuthority || IsDead) return false;
+        if (productId == ProjectIO.RunnerSupply.RunnerSupplyRules.SkillId) return TryReceiveRandomSkillSupply();
+        if (productId == ProjectIO.RunnerSupply.RunnerSupplyRules.WeaponId) return TryReceiveWeaponSupply();
+        return TryReceiveItemSupply(ProjectIO.RunnerSupply.RunnerSupplyRules.GetItemType(productId));
+    }
+
+    public bool TryReceiveItemSupply(RunnerItemType itemType)
+    {
+        if (!HasStateAuthority || IsDead) return false;
+        int index = (int)itemType - 1;
+        if (index < 0 || index >= RunnerItemInventory.SlotCount || !_itemInventory.TryAdd(index, 1))
             return false;
-
-        int[] availableSlotIndices = new int[RunnerItemInventory.SlotCount];
-        int availableSlotCount = 0;
-        for (int i = 0; i < RunnerItemInventory.SlotCount; i++)
-        {
-            RunnerItemSlot slot = _itemInventory.GetSlot(i);
-            if (slot.HasUnlimitedCapacity || slot.Count < slot.MaxCount)
-            {
-                availableSlotIndices[availableSlotCount] = i;
-                availableSlotCount++;
-            }
-        }
-
-        if (availableSlotCount == 0)
-            return false;
-
-        int randomIndex = UnityEngine.Random.Range(0, availableSlotCount);
-        bool added = _itemInventory.TryAdd(availableSlotIndices[randomIndex], 1);
-        if (added)
-            RefreshItemSlots();
-
-        return added;
+        RefreshItemSlots();
+        return true;
     }
 
     public bool TryReceiveWeaponSupply()

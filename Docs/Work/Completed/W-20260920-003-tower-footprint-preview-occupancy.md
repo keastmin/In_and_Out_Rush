@@ -1,6 +1,6 @@
 # W-20260920-003 타워 점유 셀의 범위형 설치 미리보기 수정
 
-Status: Reserved
+Status: Completed
 
 ## 동기화 기준
 
@@ -62,12 +62,18 @@ Grid 점유 조회와 Player Builder의 범위형 타워 설치 미리보기.
 
 ## 실제 변경
 
-진행 전.
+- `Assets/02_Scripts/Grid/InfiniteGrid.cs`: `CanUseNetworkGrid`의 `Object.IsInSimulation` 조건을 제거했다. Spawn이 끝난 유효한 Grid 프록시도 복제된 `NetworkGrid`를 읽을 수 있으며, `IsCellOccupied`를 공유하는 범위 셀 미리보기와 고스트 판정에 타워 점유가 반영된다.
+- 점유 추가·제거의 `HasStateAuthority` 검사, 타워 건설 RPC·Spawn·지불, Scene·Prefab·Shader는 변경하지 않았다.
 
 ## 검증 결과
 
-진행 전.
+- 정적 경로 확인: `PlayerBuilderTowerBuild.EvaluateBuildFootprint`가 `IsCellOccupied`로 차단 셀을 정하고 `PlayerBuilderTowerBuildState.SnapshotTowerGhost`가 같은 결과로 고스트 색상을 고른다. `TowerBuildManager.CanBuildAt`도 `InfiniteGrid.CanPlaceAt`을 사용한다.
+- Unity 6000.0.69f1 배치 모드에서 프로젝트 스크립트 컴파일 완료. 컴파일 오류 기록 없음.
+- EditMode `ProjectIO.GridPlacement.Tests.TowerPlacementPolicyTests`: 4 passed, 0 failed. 테스트 결과 파일: `C:/Users/kemin/AppData/Local/Temp/projectio-tower-preview-tests.xml`.
+- `git diff --check` 통과. 변경 파일은 예약된 `InfiniteGrid.cs`와 이 작업 문서뿐이다.
+- Host 로컬 및 Client Input Authority의 실제 게임 미리보기·건설 결과는 이 환경에서 다중 Peer를 실행하지 않아 각각 미검증이다.
 
 ## 남은 위험
 
-진행 전.
+- Fusion 복제 점유가 Client에 도착하는 시점까지의 일시적인 표시 차이와 실제 색상은 런타임에서 확인해야 한다.
+- 작업자 확인 절차: Host와 Client에서 각각 Builder로 접속한다. 기존 타워를 설치한 뒤 센터타워 고스트의 범위를 그 타워의 점유 셀 위로 옮겨 해당 셀과 고스트가 빨간색인지 확인한다. 빈 범위에서는 녹색인지 확인하고 설치 성공을 확인한다. 기존 타워를 제거한 뒤 다시 녹색으로 갱신되는지 확인한다. 가능하면 타워 설치 후 새 Client로 참가해 같은 차단 표시가 나타나는지도 확인한다.

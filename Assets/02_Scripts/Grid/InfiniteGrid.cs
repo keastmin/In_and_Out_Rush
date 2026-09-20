@@ -631,7 +631,7 @@ namespace KIM.Dev
 
         private bool CanUseNetworkGrid()
         {
-            return Application.isPlaying && _hasSpawned && Object != null && Object.IsValid && Object.IsInSimulation;
+            return Application.isPlaying && _hasSpawned && Object != null && Object.IsValid;
         }
 
         private void BindTerritoryEventsIfNeeded()
